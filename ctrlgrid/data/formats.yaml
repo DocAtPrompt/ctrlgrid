@@ -1,0 +1,52 @@
+# Paper formats — see § 9.1 of the specification.
+#
+# Sizes are ALWAYS given in portrait; `orientation: landscape` swaps them.
+# The same convention holds in devices.yaml, so the two files never disagree.
+#
+# `margin` is the non-printable border typical of consumer printers (§ 8.1).
+# `assumed_dpi` exists only so the media check (§ 12.1) has a yardstick on
+# paper; it asserts nothing about any real printer and must never influence
+# geometry — see the guard on `snap: pixel` in § 8.3.1.
+
+formats:
+  - id: a3
+    name: "A3"
+    size: { x: 297mm, y: 420mm }
+    margin: 5mm
+    assumed_dpi: 600
+
+  - id: a4
+    name: "A4"
+    size: { x: 210mm, y: 297mm }
+    margin: 5mm
+    assumed_dpi: 600
+
+  - id: a5
+    name: "A5"
+    size: { x: 148mm, y: 210mm }
+    margin: 5mm
+    assumed_dpi: 600
+
+  - id: a6
+    name: "A6"
+    size: { x: 105mm, y: 148mm }
+    margin: 5mm
+    assumed_dpi: 600
+
+  - id: letter
+    name: "US Letter"
+    size: { x: 8.5in, y: 11in }
+    margin: 5mm
+    assumed_dpi: 600
+
+  - id: legal
+    name: "US Legal"
+    size: { x: 8.5in, y: 14in }
+    margin: 5mm
+    assumed_dpi: 600
+
+  - id: tabloid
+    name: "US Tabloid"
+    size: { x: 11in, y: 17in }
+    margin: 5mm
+    assumed_dpi: 600

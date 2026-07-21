@@ -1,0 +1,17 @@
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+dist/
+build/
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.DS_Store
+
+# local agent settings, personal to each checkout
+.claude/settings.local.json
+
+# generated output while testing by hand
+*.pdf
+!docs/**/*.pdf

@@ -1,0 +1,44 @@
+# Device profiles — see § 9.2 of the specification.
+#
+# Conventions, both mandatory:
+#   * Pixels are given in PORTRAIT, even where the manufacturer counts
+#     landscape. One convention, or a profile eventually flips.
+#   * Physical size is COMPUTED from pixels ÷ density, not copied from rounded
+#     marketing figures. Where the two disagree, say so in `source`.
+#
+# `source` and `verified` are mandatory. Device specifications are exactly the
+# kind of data that spreads quietly and becomes quietly wrong — the widely
+# repeated 2160x2880 figure for the Paper Pro is simply false. A profile
+# checked against a real device outranks any spec sheet.
+#
+# `margin` is 0 on e-ink: there is no non-printable border. `quirks` is for
+# device behaviour no px/mm model predicts (§ 9.2).
+
+devices:
+  - id: remarkable-paper-pro
+    name: "reMarkable Paper Pro"
+    pixels:   { x: 1620, y: 2160 }
+    physical: { x: 179.7mm, y: 239.6mm }
+    density: 229dpi
+    diagonal: 11.8in
+    color: grayscale
+    margin: 0mm
+    quirks: []
+    source: "owner-verified — a PDF built to these dimensions fits the device exactly"
+    verified: 2026-07
+    # Internally consistent: 1620/229 = 7.07in, 2160/229 = 9.43in,
+    # diagonal 11.79in (advertised 11.8), aspect ratio exactly 3:4.
+    # Open: whether this should be profiled as a colour device (§ 15, item 1).
+
+  - id: remarkable-2
+    name: "reMarkable 2"
+    pixels:   { x: 1404, y: 1872 }
+    physical: { x: 157.8mm, y: 210.4mm }
+    density: 226dpi
+    diagonal: 10.3in
+    color: grayscale
+    margin: 0mm
+    quirks: []
+    source: "UNVERIFIED — consistent across secondary sources, not checked on a device"
+    verified: 2026-07
+    # Do not treat as settled. If you own one, verify and replace `source`.
