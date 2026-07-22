@@ -4,7 +4,10 @@ build-backend = "hatchling.build"
 
 [project]
 name = "ctrlgrid"
-version = "0.1.0.dev0"
+# Read from ctrlgrid/__init__.py, so there is one version and not two. The
+# release workflow compares the git tag against `ctrlgrid.__version__`, and
+# that check only means something if the package cannot disagree with itself.
+dynamic = ["version"]
 description = "Dimensionally accurate PDF templates: grid paper, staves, mazes, polar targets, tilings, forms"
 readme = "README.md"
 license = "MIT"
@@ -47,6 +50,9 @@ Issues = "https://github.com/DocAtPrompt/ctrlgrid/issues"
 
 [project.scripts]
 ctrlgrid = "ctrlgrid.cli:main"
+
+[tool.hatch.version]
+path = "ctrlgrid/__init__.py"
 
 [tool.hatch.build.targets.wheel]
 packages = ["ctrlgrid"]
