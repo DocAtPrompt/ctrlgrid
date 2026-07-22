@@ -486,6 +486,36 @@ Both are therefore gated on a device being active. The **sub-1px** and
 **under-3px-merge** findings stay general: a stroke that rounds away and a
 spacing that flows into a grey area are as real on paper as on a pad.
 
+## 34. Pixel snapping reaches the blade through the page context
+
+**§ 8.3.1, § 3.3.** `snap: pixel` is unlike the other two snap modes: they
+shrink the pattern area (handle-side) while the blade fills it with its own
+unchanged spacing, but pixel snapping changes the *step* — it rounds every gap
+to a whole pixel — so it has to reach where positions are computed, inside the
+blade's call to `Cycle.positions`.
+
+That needs the device to reach the blade, which § 3.3 keeps geometry out of.
+The resolution: `PageContext` grows a `pixel_snap` field carrying, per axis,
+the device density in dpi. A density is a property of the *medium*, not of the
+page's layout — it says nothing about margins or where the pattern sits — so
+§ 3.3 holds. The handle computes it in `place_pattern`, the blade reads it as
+`page.pixel_of(axis)`, and only `lines` and `dots` (the snap-capable periodic
+blades) consult it. `generate`'s signature still has not changed.
+
+## 35. Pixel snapping rounds steps in whole pixels, and keeps the pixel exact
+
+**§ 8.3.1.** Two traps, both from the arithmetic. First, § 8.3.1 says round
+every *step*, not the accumulated position — because rounding accumulated
+micrometre positions leaves a uniform 45.08px grid alternating 45/46px, the
+very unevenness the mode removes. `Cycle._walk_pixels` therefore keeps a
+running total in whole pixels and turns only the emitted position into µm.
+
+Second, the pixel size must stay exact — `25400 / dpi`, not pre-rounded to a
+whole micrometre. Rounding 25400/229 to 111µm and multiplying by 45 gives
+4.995mm; the true 45-pixel measure is 4.991mm, which is what § 8.3.1 quotes and
+what the device actually draws. So the density is carried, not a rounded pixel,
+and the exact size is used in the one final rounding to µm.
+
 ---
 
 ## Smaller calls, for completeness

@@ -44,18 +44,29 @@ MERGE_PX = 3.0
 GREY_COLLISION = 48
 
 
-def media_findings(document: Document, q: WriterQuery, *, strict: bool = False) -> list[str]:
+def media_findings(
+    document: Document,
+    q: WriterQuery,
+    *,
+    strict: bool = False,
+    snapped: set[str] | None = None,
+) -> list[str]:
     """What will not work on this medium (§ 12.1), gathered before rendering.
 
     Returns the warnings as strings. A value that rounds to zero pixels is
     raised straight away; `strict` raises the first of everything else.
+
+    `snapped` names the axes under `snap: pixel` (§ 8.3.1): pixel snapping lands
+    every position on a whole pixel, which is exactly what the uneven-cells
+    finding warns is missing, so that finding is cancelled there — § 8.3.1 says
+    so outright.
     """
     dpi = _dpi(document)
     marks = list(_sample(document, q))
 
     warnings: list[str] = []
     warnings += _weight_findings(marks, dpi, document)
-    warnings += _spacing_findings(document, dpi)
+    warnings += _spacing_findings(document, dpi, snapped or set())
     warnings += _colour_findings(marks, document)
 
     if strict and warnings:
@@ -95,7 +106,7 @@ def _weight_findings(marks: list[object], dpi: int, document: Document) -> list[
     return findings
 
 
-def _spacing_findings(document: Document, dpi: int) -> list[str]:
+def _spacing_findings(document: Document, dpi: int, snapped: set[str]) -> list[str]:
     """Periodic spacings against the pixel grid (§ 12.1).
 
     Only periodic families have a spacing to check, so this reads
@@ -117,7 +128,7 @@ def _spacing_findings(document: Document, dpi: int) -> list[str]:
                     f"{axis} spacing {period.label} = {px:.1f}px at {dpi}dpi — under "
                     "three pixels, so neighbouring lines flow into one grey area (§ 12.1)"
                 )
-            elif on_device and abs(px - round(px)) > 0.02:
+            elif on_device and axis not in snapped and abs(px - round(px)) > 0.02:
                 low, high = int(px), int(px) + 1
                 findings.append(
                     f"{axis} cells are {px:.2f}px at {dpi}dpi ({period.label}), so the "
@@ -169,8 +180,9 @@ def _sample(document: Document, q: WriterQuery):
         footer=document.footer,
         pattern=document.pattern,
         blade_axes=document.axes,
+        density=document.device.density if document.device else None,
     )
-    page = next(page_contexts(count=1))
+    page = next(page_contexts(count=1, snap=geometry.pixel_snap))
     blade = generators.get(document.generator)
     return blade.generate(document.config, area=geometry.area, page=page, q=q)
 

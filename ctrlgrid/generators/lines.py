@@ -325,7 +325,7 @@ class LinesGenerator:
         q: WriterQuery,
     ) -> Iterator[Mark]:
         for family in cfg.families:
-            yield from self._family(family, area)
+            yield from self._family(family, area, page.pixel_of(family.axis))
 
     def _log_family(
         self, family: Family, *, span: int, horizontal: bool
@@ -353,12 +353,16 @@ class LinesGenerator:
                 layer=Layer.PATTERN,
             )
 
-    def _family(self, family: Family, area: Area) -> Iterator[Segment]:
+    def _family(
+        self, family: Family, area: Area, pixel_dpi: int | None = None
+    ) -> Iterator[Segment]:
         horizontal = family.direction == "horizontal"
         extent = area.height if horizontal else area.width
         span = area.width if horizontal else area.height
 
         if family.is_log:
+            # A log family is `fixed_block` and snapping is refused for it
+            # upstream (§ 7.9), so it never reaches here pixel-snapped.
             yield from self._log_family(family, span=span, horizontal=horizontal)
             return
 
@@ -370,6 +374,7 @@ class LinesGenerator:
             base_um=family.base_spacing.um,
             extent_um=extent,
             offset_um=family.offset.um,
+            pixel_dpi=pixel_dpi,
         ):
             # The index keeps counting through positions that are skipped, so
             # weight and colour stay in step with the spacing cycle. Otherwise

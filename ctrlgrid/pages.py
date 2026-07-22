@@ -52,6 +52,18 @@ class PageContext:
     seed_material: bytes
     """Stable bytes from seed and index, for procedural blades (§ 3.3)."""
 
+    pixel_snap: tuple[tuple[str, int], ...] = ()
+    """Axes under `snap: pixel`, each with the device density in dpi (§ 8.3.1).
+
+    A medium property, not a geometry one: it tells a periodic blade to round
+    every step to whole pixels, and it carries no margin or origin, so § 3.3
+    still holds. Empty on paper and wherever pixel snapping is off — which is
+    almost always. A blade reads it as `self.pixel_of(axis)`."""
+
+    def pixel_of(self, axis: str) -> int | None:
+        """The device density in dpi for `axis`, if it is pixel-snapped (§ 8.3.1)."""
+        return dict(self.pixel_snap).get(axis)
+
 
 @dataclass(frozen=True, slots=True)
 class SheetPlan:
@@ -120,6 +132,13 @@ class Geometry:
     """Things worth saying but not worth refusing over — a setting that cannot
     take effect where it stands (§ 8.3). Reported once per run, never per page."""
 
+    pixel_snap: tuple[tuple[str, int], ...] = ()
+    """Axes set to `snap: pixel`, each with the device density in dpi (§ 8.3.1).
+    The handle passes it to the blade through the page context so the blade
+    rounds every *step* to whole pixels — the one thing that lands fractional
+    cycle multiples on the pixel grid too. The density and not a rounded pixel
+    size, so the grid stays exact (25400 / dpi per pixel)."""
+
     @classmethod
     def of(
         cls,
@@ -129,6 +148,7 @@ class Geometry:
         footer: Band | None,
         pattern: PatternSpec | None = None,
         blade_axes: dict[str, list[AxisPeriod]] | None = None,
+        density: int | None = None,
     ) -> Geometry:
         """Work out § 8.1, and refuse with the arithmetic if nothing is left."""
         margin = sheet.margin
@@ -177,11 +197,17 @@ class Geometry:
         # The bands keep the full content width; only the pattern area shrinks
         # and moves when it snaps and its surplus is placed (§ 8.3, § 8.5).
         notices: list[str] = []
-        inner_width, shift_x = place_pattern(width, "x", pattern, blade_axes, notices)
-        inner_height, shift_y = place_pattern(height, "y", pattern, blade_axes, notices)
+        snapped: dict[str, int] = {}
+        inner_width, shift_x = place_pattern(
+            width, "x", pattern, blade_axes, notices, density, snapped
+        )
+        inner_height, shift_y = place_pattern(
+            height, "y", pattern, blade_axes, notices, density, snapped
+        )
 
         return cls(
             notices=tuple(notices),
+            pixel_snap=tuple(sorted(snapped.items())),
             area=Area(width=inner_width, height=inner_height),
             origin=Point(left + shift_x, bottom + shift_y),
             header=(
@@ -229,6 +255,7 @@ class Geometry:
             header=_shift(self.header, shift),
             footer=_shift(self.footer, shift),
             notices=self.notices,
+            pixel_snap=self.pixel_snap,
         )
 
 
@@ -259,6 +286,8 @@ def place_pattern(
     pattern: PatternSpec | None,
     blade_axes: dict[str, list[AxisPeriod]] | None,
     notices: list[str],
+    density: int | None = None,
+    snapped: dict[str, int] | None = None,
 ) -> tuple[Um, Um]:
     """Snap one axis and place its surplus (§ 8.3, § 8.5).
 
@@ -303,6 +332,18 @@ def place_pattern(
             "lengths do not divide into grid steps. Remove pattern.snap",
             field=f"pattern.snap.{axis}",
         )
+
+    if snap == "pixel":
+        # § 8.3.1: the one exception to dimensional accuracy, and unlike the
+        # other two it does not shrink the area — it changes the step, so the
+        # blade does the rounding and the area is left whole. The handle only
+        # says which axis is snapped, at what density, and reports the cost.
+        _require_device(density, axis)
+        if snapped is not None:
+            snapped[axis] = density  # type: ignore[assignment]
+        _report_pixel_snap(period, density, notices)
+        return available, 0
+
     room = _snap(available, snap, period, axis)
 
     if snap == "cycle" and mode == "whole_cycles":
@@ -327,21 +368,42 @@ def place_pattern(
     return (available if (snap == "none" and mode == "end") else used), 0
 
 
+def _require_device(density: int | None, axis: str) -> None:
+    """§ 8.3.1: `snap: pixel` is legal only with a device profile.
+
+    On a paper format `assumed_dpi` is a yardstick for the media check and not
+    a real resolution — geometry must never rest on a guessed number.
+    """
+    if density is None:
+        raise DefinitionError(
+            "`snap: pixel` needs a device profile: it rounds to whole device pixels, "
+            "and a paper format has no real resolution to round to — its `assumed_dpi` "
+            "is a yardstick for the media check, not a raster (§ 8.3.1, § 9.1). Set "
+            "`page.device`",
+            field=f"pattern.snap.{axis}",
+        )
+
+
+def _report_pixel_snap(period: AxisPeriod, density: int, notices: list[str]) -> None:
+    """§ 8.3.1: report the actual measure, unprompted, in both units.
+
+    "spacing 5mm → 4.991mm (45px at 229dpi)" — a silent change of size is the
+    breach of trust § 8.2 exists to prevent, so pixel snapping says what it did.
+    The pixel size is kept exact so the reported millimetre is the true one.
+    """
+    pixel = 25400 / density
+    pixels = round(period.step_um / pixel)
+    rounded = round(pixels * pixel)
+    notices.append(
+        f"snap: pixel — {period.label} → {rounded / 1000:.3f}mm ({pixels}px at "
+        f"{density}dpi): even cells, at the cost of the nominal size (§ 8.3.1)"
+    )
+
+
 def _snap(available: Um, mode: str, period: AxisPeriod, axis: str) -> Um:
     """How much room the pattern may use after snapping (§ 8.3)."""
     if mode == "none":
         return available
-    if mode == "pixel":
-        # § 8.3.1: only ever legal with a device profile. On paper it stays an
-        # error for good — `assumed_dpi` (§ 9.1) is a yardstick for warnings,
-        # and geometry must never rest on a guessed number.
-        raise DefinitionError(
-            "`snap: pixel` needs a device profile: it rounds to whole device pixels, "
-            "and on a paper format there is no real resolution to round to — "
-            "`assumed_dpi` only feeds the media check (§ 8.3.1, § 9.1). "
-            "Device profiles arrive with milestone M5",
-            field=f"pattern.snap.{axis}",
-        )
 
     granularity = period.step_um if mode == "spacing" else period.cycle_um
     whole = (available // granularity) * granularity
@@ -388,12 +450,14 @@ def page_contexts(
     names: list[str] | None = None,
     seed: int = 0,
     per_item: int = 1,
+    snap: tuple[tuple[str, int], ...] = (),
 ) -> Iterator[PageContext]:
     """The page loop (§ 3.1): one context per sheet.
 
     `per_item` is how many sheets one entry of the run occupies (§ 7.5). It
     only affects the *name*: both sheets of a maze carry the same `{name}`,
-    while the numbering counts sheets, as § 7.5 states outright.
+    while the numbering counts sheets, as § 7.5 states outright. `snap` is the
+    pixel-snapped axes (§ 8.3.1), the same on every page.
     """
     for index in range(count):
         yield PageContext(
@@ -403,6 +467,7 @@ def page_contexts(
             name=names[(index // per_item) % len(names)] if names else None,
             is_even=(index + 1) % 2 == 0,
             seed_material=seed_material(seed, index),
+            pixel_snap=snap,
         )
 
 
@@ -484,6 +549,7 @@ def preflight(
         footer=document.footer,
         pattern=document.pattern,
         blade_axes=document.axes,
+        density=document.device.density if document.device else None,
     )
     # The blade's own pre-flight, once, against the area it will be handed
     # (§ 12 point 13). `polar` needs it for the two questions only the area can
@@ -495,7 +561,12 @@ def preflight(
     # and `--strict` (carried on the document) turns them into errors.
     from ctrlgrid.media import media_findings
 
-    findings = media_findings(document, q, strict=document.strict)
+    findings = media_findings(
+        document,
+        q,
+        strict=document.strict,
+        snapped={axis for axis, _ in geometry.pixel_snap},
+    )
     geometry = replace(geometry, notices=geometry.notices + tuple(findings))
 
     contexts = list(
@@ -503,6 +574,7 @@ def preflight(
             count=document.pages.count * plan.per_item,
             names=document.names,
             per_item=plan.per_item,
+            snap=geometry.pixel_snap,
         )
     )
 

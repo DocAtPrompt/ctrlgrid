@@ -124,15 +124,15 @@ class TestPerAxis:
 
 
 class TestSnapToPixel:
-    def test_it_needs_a_device_profile_and_says_which_milestone_brings_one(self) -> None:
+    def test_it_needs_a_device_profile(self) -> None:
         # § 8.3.1: on paper formats it is an error for good — `assumed_dpi` is
         # a yardstick for warnings (§ 9.1), and geometry must never rest on a
-        # guessed number.
+        # guessed number. M5 (test_snap_pixel.py) makes it work on a device.
         with pytest.raises(DefinitionError) as excinfo:
             geometry("pattern:\n  snap: pixel")
         message = str(excinfo.value)
         assert "device" in message.lower()
-        assert "M5" in message
+        assert "M5" not in message
 
 
 class TestWhenItCannotBeDone:

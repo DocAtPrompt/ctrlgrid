@@ -11,15 +11,16 @@ no "fit to page", no stretching a grid so it comes out even.
 
 ## Current state — read this first
 
-**M1 to M4 are complete** — the handle and all eight blades of § 7. 0.1.0 is
-the version in the code; nothing since M1 has been released, because releasing
-needs a human (see *Not done*).
+**M1 to M4 are complete, and M5 all but its edges** — the handle, all eight
+blades of § 7, device profiles, `px`, the media check and `snap: pixel`. 0.1.0
+is the version in the code; nothing since M1 has been released, because
+releasing needs a human (see *Not done*).
 
 ```bash
 uv sync --extra dev && uv run pytest && uv run ruff check .
 ```
 
-689 tests, all green, ruff clean. Twenty-one commits on `main`, linear history, **no
+699 tests, all green, ruff clean. Twenty-five commits on `main`, linear history, **no
 remote configured — nothing has ever been pushed.**
 
 ### Done
@@ -43,17 +44,36 @@ remote configured — nothing has ever been pushed.**
 | **M4** `grid` | count-driven block, square cells, § 7.10 labels, fills |
 | **M4** `dots` | two crossed cycles, `combine`, colour with a named axis |
 | **M3** — `polar` | rings, spokes, segment and ring labels, counting patterns (§ 7.10) |
+| **M5** device profiles | `page.device`, physical size from pixels ÷ density (§ 9.2) |
+| **M5** the `px` unit | resolves against the device density; refused on paper (§ 8.3.1) |
+| **M5** media check | § 12.1 resolution/colour findings, `--strict`, round-to-zero errors |
+| **M5** `snap: pixel` | every step to whole pixels, exact size reported (§ 8.3.1) |
 | pulled forward into M1 | format table, presets, `check`, overwrite protection, placeholders — the M1 acceptance criteria needed them |
 
 ### Not done
 
-**M5 is where to continue** — device profiles (§ 9.2): px/mm conversion, the
-`px` unit that `units.py` refuses today by naming M5, `snap: pixel` (§ 8.3.1),
-`quirks`, and relative measures. Two of § 15's open questions are device
-figures nobody has verified, and § 9.2 is explicit that a wrong number there
-is worse than no profile at all.
+**M5 remainder, then M6.** M5's core is done; what is left of it is small and
+each piece names why:
 
-**Later milestones**, untouched: M6 N-up, M7 PNG, M8 `perspective`/`mandala`. **`staves` refuses every named clef**, and
+- **`quirks` ships empty** (decision 31). § 9.2 provides the field with a Boox
+  dead-row example, but no shipped profile is a Boox and inventing a dead-row
+  pattern for a device nobody here can test is the guessed number § 9.2 warns
+  against. Modelled and carried, waiting for a verified contribution.
+- **Relative measures** (§ 9.2) — the 3:4 e-ink aspect is not A4's 1:√2, so a
+  fixed-mm definition does not fill a device the way it fills paper. `px` and a
+  device's own pixels are a device-relative measure already; a general
+  "fraction of the pattern area" mechanism at the handle level would be a new
+  design decision and is not built. `form` has `%`, but only inside its own
+  block.
+- Two of § 15's open questions are still device figures nobody has verified —
+  the rM2 numbers and whether the Paper Pro is a colour device — and § 9.2 is
+  explicit that a wrong number there is worse than no profile at all.
+
+**M6 is the next milestone proper** — N-up (§ 14): imposition at 100 %, never
+scaling, an error with the arithmetic when pages do not fit the sheet.
+
+**Later milestones**, untouched: M7 PNG, M8 `perspective`/`mandala`. **`staves`
+refuses every named clef**, and
 the reason is a genuine conflict rather than missing work: § 7.3 wants clefs as
 stored vector paths, § 6 fixes the vocabulary at six primitives with no curve
 path among them (decision 24). It needs a decision, and it belongs in § 15. Three things M3 built are
@@ -96,7 +116,7 @@ work around it.
 
 **Where the specification was genuinely silent**, the resolution is recorded in
 [`docs/implementation-decisions.md`](docs/implementation-decisions.md) —
-thirty-three of them so far, each with the section it belongs to and the
+thirty-five of them so far, each with the section it belongs to and the
 reasoning. Read it before changing a default; several look arbitrary and are not.
 
 ## Language split
@@ -122,7 +142,7 @@ and knows nothing about margins.
 | `axes.py` | `AxisPeriod` — what the handle needs from a blade for § 8.3/§ 8.5 |
 | `model.py` | pydantic sections; `Section` base with `extra="forbid"` + `deferred` |
 | `loader.py` | YAML → `Document`; formats, presets, devices, name lists |
-| `pages.py` | `Geometry`, page loop, placeholders, `preflight`, `build` |
+| `pages.py` | `Geometry`, page loop, placeholders, `preflight`, `build`, `snap: pixel` |
 | `frame.py` | header/footer layout, border, background, hole marks, stamp |
 | `labels.py` | counting patterns `n`/`a`/`A`, explicit lists (§ 7.10) |
 | `images.py` | PNG sources: signature check, pixel size, aspect (§ 5.2, § 13) |

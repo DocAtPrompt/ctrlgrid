@@ -4,7 +4,7 @@ Generate **dimensionally accurate** PDF templates from a small definition file:
 grid paper, ruled paper, dot grids, staff paper, mazes, polar targets, tilings
 and fillable forms — for paper formats **and** for e-ink tablets.
 
-> **Status: milestones M1 to M4 complete.** All eight generators of the table
+> **Status: M1–M4 complete, M5 core done.** All eight generators of the table
 > below work, and the dimensional test described below measures `lines` out of
 > a finished PDF on every commit. The handle around them is finished — multi-page output, headers
 > and footers, name lists, snapping, remainder handling, double-sided margins,
@@ -24,14 +24,14 @@ and fillable forms — for paper formats **and** for e-ink tablets.
 > ctrlgrid -d my-def.yaml --stamp DRAFT
 > ctrlgrid millimeter-a4 --cover              # + a calibration first sheet
 > ctrlgrid check my-def.yaml
+> ctrlgrid dots-5mm --device remarkable-paper-pro   # an e-ink profile
 > ctrlgrid presets | show <name> | devices
 > ```
 >
-> Flags: `--pages`, `--names`, `--format`, `--orientation`, `--stamp`,
-> `--cover`, `--seed`, `-o`, `--force`, `--quiet`.
+> Flags: `--pages`, `--names`, `--format`, `--device`, `--orientation`,
+> `--stamp`, `--cover`, `--seed`, `--strict`, `-o`, `--force`, `--quiet`.
 >
-> Not yet: `--device`, `--nup`, `--strict`,
-> `--skip-unsupported`, and the interactive mode.
+> Not yet: `--nup`, `--skip-unsupported`, and the interactive mode.
 >
 > **Not on PyPI yet**, so the `uvx`/`pip` lines below do not work until the
 > first release is published.
@@ -130,8 +130,17 @@ ctrlgrid dots-5mm --device remarkable-paper-pro
 ```
 
 Device profiles carry pixels **and** physical size, so millimetres stay
-millimetres. Using a profile also makes the PDF page match the screen exactly,
-which is what makes the usual "fit page" view show it at true size.
+millimetres, and a profile makes the PDF page match the screen exactly — which
+is what makes the usual "fit page" view show it at true size. On a device you
+can also write lengths in `px`, and `snap: pixel` rounds every step to whole
+device pixels so the grid looks even (§ 8.3.1) — it reports the size it settled
+on, e.g. `5mm → 4.991mm (45px at 229dpi)`, because a silent change of size is
+the one thing this tool will not do.
+
+As soon as the medium is fixed the tool checks the definition against it and
+warns about what will not work there — a line too thin to render, a spacing
+that merges, two colours that become the same grey (§ 12.1). `--strict` turns
+those warnings into errors, which is what a CI run needs to guard a preset set.
 
 Adding a profile for your device is the easiest useful contribution — see
 [`CONTRIBUTING.md`](CONTRIBUTING.md).

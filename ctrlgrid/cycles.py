@@ -76,12 +76,20 @@ class Cycle:
         extent_um: int,
         offset_um: int = 0,
         field: str | None = None,
+        pixel_dpi: int | None = None,
     ) -> Iterator[tuple[int, int]]:
         """Yield `(index, position)` for every mark inside `[0, extent_um]`.
 
         The index keeps counting through positions that fall outside the area,
         so a negative offset shifts the pattern without renumbering it — the
         weight and colour cycles must stay in step with the spacing cycle.
+
+        `pixel_dpi` is `snap: pixel` (§ 8.3.1): every **step** is rounded to a
+        whole number of device pixels, not just the base, so a cycle with
+        fractional multiples still lands every position on the pixel grid. The
+        pixel size is kept exact (25400 / dpi) rather than pre-rounded to whole
+        micrometres, or a 45-pixel cell would come out 4.995mm instead of the
+        true 4.991mm. Off (`None`) is the ordinary exact-micrometre path.
         """
         if base_um <= 0:
             raise DefinitionError(
@@ -92,6 +100,10 @@ class Cycle:
                 f"the spacing cycle {list(self.values)} sums to zero, so the pattern would "
                 "never advance — at least one entry must be greater than zero (§ 5.3)",
                 field=field,
+            )
+        if pixel_dpi:
+            return self._walk_pixels(
+                base_um=base_um, extent_um=extent_um, offset_um=offset_um, dpi=pixel_dpi
             )
         return self._walk(base_um=base_um, extent_um=extent_um, offset_um=offset_um)
 
@@ -108,6 +120,45 @@ class Cycle:
                 return
             if position >= 0:
                 yield index, position
+            index += 1
+
+    def _walk_pixels(
+        self, *, base_um: int, extent_um: int, offset_um: int, dpi: int
+    ) -> Iterator[tuple[int, int]]:
+        """§ 8.3.1: accumulate rounded *steps*, so every position is on a pixel.
+
+        The running total is kept in whole **pixels**, and only the emitted
+        position is turned into micrometres — rounding each accumulated
+        micrometre position instead would leave a uniform grid alternating
+        45/46 px, the very unevenness pixel snapping removes. Each step is a
+        whole number of pixels; summing them keeps the cells uniform and every
+        position exactly on the grid.
+        """
+        n = len(self.values)
+        base = Decimal(base_um)
+        pixel = Decimal(25400) / Decimal(dpi)  # exact µm per device pixel
+
+        def whole_pixels(value_um: Decimal) -> int:
+            return int((value_um / pixel).quantize(Decimal(1), rounding=ROUND_HALF_UP))
+
+        cumulative = whole_pixels(Decimal(offset_um))
+        index = 0
+        while True:
+            position = _round(Decimal(cumulative) * pixel)
+            if position > extent_um:
+                return
+            if position >= 0:
+                yield index, position
+            step = whole_pixels(base * self.values[index % n])
+            if step <= 0:
+                # A spacing that rounds to zero pixels cannot advance — the same
+                # failure § 12.1 makes an error for a stroke, here for a step.
+                raise DefinitionError(
+                    f"a spacing step rounds to zero pixels at {dpi}dpi — the pattern would "
+                    "never advance. `snap: pixel` cannot round a step under half a pixel "
+                    "onto the grid (§ 8.3.1)"
+                )
+            cumulative += step
             index += 1
 
 

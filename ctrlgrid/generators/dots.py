@@ -161,6 +161,7 @@ class DotsGenerator:
                 extent_um=area.width,
                 offset_um=cfg.grid.x.offset.um,
                 field="grid.x.base_spacing",
+                pixel_dpi=page.pixel_of("x"),
             )
         )
         rows = list(
@@ -169,6 +170,7 @@ class DotsGenerator:
                 extent_um=area.height,
                 offset_um=cfg.grid.y.offset.um,
                 field="grid.y.base_spacing",
+                pixel_dpi=page.pixel_of("y"),
             )
         )
         # Rows outside, columns inside: the writer draws in the order it is
