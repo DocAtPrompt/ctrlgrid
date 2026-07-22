@@ -237,6 +237,24 @@ the `dots` blade, which is why `cap` is in the mark vocabulary at all. Writing
 `dash:` or `base_dash:` next to `style: solid` is an error rather than a
 no-op (§ 5.1).
 
+## 18. A free page size is taken as written, never stood upright
+
+**§ 9.1.** The format table and the device profiles are stored portrait, "one
+single convention for both data files", and `orientation` turns them. A free
+size in a definition is not one of those files, and applying the same
+normalisation would break § 9.1's own example: `210x99mm` is a wide strip, and
+standing it upright hands back a sheet nobody asked for.
+
+So a free size is width first, exactly as written, and `orientation: landscape`
+swaps whatever it finds — which is the same sentence for both sources, even
+though "portrait" means the table's convention in one case and "as you wrote
+it" in the other.
+
+The unit may stand once at the end (`210x99mm`, the form § 9.1 uses) or on both
+sides (`210mmx99mm`), because that is what people type. Everything else goes
+through the ordinary unit parser, so `px` still refuses by naming device
+profiles (§ 9.2) rather than by looking like a typo.
+
 ---
 
 ## Smaller calls, for completeness

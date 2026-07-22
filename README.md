@@ -109,6 +109,10 @@ ctrlgrid show millimeter-a4   # print one, ready to copy
 ctrlgrid check my-def.yaml    # validate without generating
 ```
 
+Paper size is either a name from the built-in table or two measures of your
+own, width first — `format: 210x99mm`, `format: 8.5x11in`. A free size is used
+exactly as written; `orientation: landscape` swaps the two.
+
 **The presets are the documentation.** They are ordinary definition files, not a
 separate mechanism, so anything a preset does you can do too — and there is no
 second syntax reference here to drift out of date.

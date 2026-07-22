@@ -19,6 +19,7 @@ from __future__ import annotations
 import codecs
 import difflib
 import hashlib
+import re
 from collections.abc import Iterator, Mapping
 from dataclasses import dataclass
 from functools import lru_cache
@@ -264,20 +265,68 @@ def resolve_sheet(page: PageSpec) -> Sheet:
     and the device profiles alike — and `orientation` swaps them here.
     """
     table = formats()
-    if page.format not in table:
+    if page.format in table:
+        paper = table[page.format]
+        width, height = paper.width.um, paper.height.um
+        default_margin = paper.margin
+    elif _FREE_SIZE.match(page.format.strip()):
+        width, height = _free_size(page.format)
+        default_margin = FREE_MARGIN
+    else:
         known = ", ".join(sorted(table))
         raise DefinitionError(
-            f"unknown page format `{page.format}` (known: {known}). "
-            "Free sizes such as 210x99mm arrive with milestone M2 (§ 9.1)",
+            f"unknown page format `{page.format}` (known: {known}). A free size is "
+            "written as two measures, width first: 210x99mm, 8.5x11in (§ 9.1)",
             field="page.format",
         )
-    paper = table[page.format]
-    width, height = paper.width.um, paper.height.um
+
     if page.orientation == "landscape":
         width, height = height, width
     # The margin default is a property of the medium, not of the code (§ 8.1).
-    margin = page.margin or Margin.uniform(paper.margin)
+    margin = page.margin or Margin.uniform(default_margin)
     return Sheet(width=width, height=height, margin=margin)
+
+
+#: What a free size gets where a format table entry would have carried its own
+#: (§ 9.1: "then the general defaults apply"). 5 mm is the non-printable border
+#: of most consumer printers (§ 8.1).
+FREE_MARGIN = Length(um=5000, mm=5.0, raw="5mm")
+
+#: Two measures with an `x` between them, width first. The unit may stand once
+#: at the end or on each side; § 9.1 writes it once, and `210mmx99mm` is what
+#: people type anyway.
+_FREE_SIZE = re.compile(
+    r"^(?P<x>[\d.,]+\s*[a-z%]*)\s*[xX×]\s*(?P<y>[\d.,]+\s*[a-z%]+)$", re.IGNORECASE
+)
+
+
+def _free_size(text: str) -> tuple[int, int]:
+    """`210x99mm` to a pair of micrometre measures, taken exactly as written.
+
+    **Not normalised to portrait**, unlike the format table and the device
+    profiles. Those are data files with one convention; this is the user
+    writing down a sheet, and § 9.1's own example — 210x99mm — is a wide strip.
+    Standing it upright would hand back a sheet nobody asked for. `orientation`
+    still swaps the two, whatever their source.
+    """
+    match = _FREE_SIZE.match(text.strip())
+    assert match is not None  # only called after the same match succeeded
+    x_text, y_text = match.group("x").strip(), match.group("y").strip()
+    # A unit written once at the end governs both sides — the form § 9.1 uses.
+    if not any(character.isalpha() or character == "%" for character in x_text):
+        x_text += "".join(character for character in y_text if not character.isdigit()
+                          and character not in ".,").strip()
+
+    width = parse_length(x_text, field="page.format")
+    height = parse_length(y_text, field="page.format")
+    for side, value in (("width", width), ("height", height)):
+        if value.um <= 0:
+            raise DefinitionError(
+                f"a page {side} of {value.raw} is not a sheet of paper — both measures of "
+                "a free size must be positive (§ 9.1)",
+                field="page.format",
+            )
+    return width.um, height.um
 
 
 # --------------------------------------------------------------- data files
