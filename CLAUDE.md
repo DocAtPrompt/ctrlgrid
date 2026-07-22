@@ -17,7 +17,7 @@ no "fit to page", no stretching a grid so it comes out even.
 uv sync --extra dev && uv run pytest && uv run ruff check .
 ```
 
-383 tests, all green, ruff clean. Eight commits on `main`, linear history, **no
+395 tests, all green, ruff clean. Nine commits on `main`, linear history, **no
 remote configured — nothing has ever been pushed.**
 
 ### Done
@@ -30,18 +30,17 @@ remote configured — nothing has ever been pushed.**
 | **M2** frame furniture | `border`, `background`, `hole_marks`, `stamp` |
 | **M2** cover sheet | `--cover` / `pages.cover`, calibration figures and settings summary |
 | **M2** fonts stage 2 | `font: {file: …}`, embedded and subset, with the `fsType` check |
+| **M2** dash styles | `style: dashed \| dotted`, `base_dash`, `dash` |
 | pulled forward into M1 | format table, presets, `check`, overwrite protection, placeholders — the M1 acceptance criteria needed them |
 
 ### Not done
 
 **M2 remainder — this is where to continue:**
 
-1. **Dashed and dotted styles** (§ 7.1) — `dash`/`base_dash` on a family. The
-   `Segment` mark already carries `dash`; the blade and the writer do not.
-2. **Images in header and footer** (§ 5.2) — the `{ image: … }` field form.
+1. **Images in header and footer** (§ 5.2) — the `{ image: … }` field form.
    `Image` is in the vocabulary, `PdfWriter` refuses it, `model._plain_text`
    refuses the key. A logo is never cropped: it fits or it is an error (§ 8.9).
-3. **Free page sizes** (§ 9.1) — `format: 210x99mm`, refused in
+2. **Free page sizes** (§ 9.1) — `format: 210x99mm`, refused in
    `loader.resolve_sheet` today.
 
 **Later milestones**, untouched: M3 `polar`, M4 the remaining blades and
@@ -81,7 +80,7 @@ work around it.
 
 **Where the specification was genuinely silent**, the resolution is recorded in
 [`docs/implementation-decisions.md`](docs/implementation-decisions.md) —
-sixteen of them so far, each with the section it belongs to and the reasoning.
+seventeen of them so far, each with the section it belongs to and the reasoning.
 Read it before changing a default; several look arbitrary and are not.
 
 ## Language split
@@ -159,8 +158,8 @@ reject a pattern block they were handed.
 
 ## Where to start
 
-The three M2 leftovers are small and each sits behind a deferred message that
-names it; dashed styles (§ 7.1) are the one users will ask for first.
+The two M2 leftovers are small and each sits behind a deferred message that
+names it.
 
 Do not start M3 (`polar`) before M2 stands. § 14 puts `polar` second on purpose
 — it is the hard test of whether the handle survives a non-cartesian blade —

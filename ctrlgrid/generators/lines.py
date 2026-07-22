@@ -118,8 +118,6 @@ class Family(Section):
 
     deferred: ClassVar[dict[str, str]] = {
         "law": "— logarithmic axes (§ 7.9) arrive with milestone M4",
-        "base_dash": "— dashed and dotted styles arrive with milestone M2 (§ 7.1)",
-        "dash": "— dashed and dotted styles arrive with milestone M2 (§ 7.1)",
     }
 
     direction: DirectionField
@@ -127,7 +125,12 @@ class Family(Section):
     spacing: CycleField = Cycle.of([Decimal(1)])
     base_weight: LengthField = Length(um=53, mm=0.052916666666666667, raw="0.15pt")
     weight: CycleField = Cycle.of([Decimal(1)])
-    style: Literal["solid"] = "solid"
+    style: Literal["solid", "dashed", "dotted"] = "solid"
+    base_dash: LengthField = Length(um=1000, mm=1.0, raw="1mm")
+    #: Absent means the style decides (see `DEFAULT_DASH`). Unlike every other
+    #: cycle this one is **not** position-wise: § 5.3 calls it a dash pattern,
+    #: and a pattern describes one mark rather than a run of them.
+    dash: CycleField | None = None
     color: ColorField = ("#000000",)
     offset: LengthField = Length(um=0, mm=0.0, raw="0mm")
     extent: Extent | None = None
@@ -148,15 +151,46 @@ class Family(Section):
         """
         return "y" if self.direction == "horizontal" else "x"
 
-    @model_validator(mode="before")
-    @classmethod
-    def _name_the_deferred_styles(cls, data: Any) -> Any:
-        if isinstance(data, dict) and data.get("style") in {"dashed", "dotted"}:
+    @property
+    def dash_pattern(self) -> tuple[float, ...]:
+        """The stroke's dash array in millimetres, or empty for a solid line.
+
+        Every entry is a multiple of `base_dash`, exactly as § 5.3 defines a
+        cycle — the difference is only where it is applied.
+        """
+        if self.style == "solid":
+            return ()
+        cycle = self.dash or DEFAULT_DASH[self.style]
+        return tuple(self.base_dash.mm * float(value) for value in cycle.values)
+
+    @property
+    def cap(self) -> str:
+        """§ 10.1: a dot is a zero-length stroke with a round cap.
+
+        The same trick the `dots` blade uses, which is why `cap` is in the mark
+        vocabulary at all — `dotted` is a dash pattern whose on-lengths are 0.
+        """
+        return "round" if self.style == "dotted" else "butt"
+
+    @model_validator(mode="after")
+    def _a_dash_pattern_needs_a_style_that_uses_it(self) -> Family:
+        """§ 5.1: a key that cannot take effect where it stands is an error.
+
+        Quietly ignoring `dash:` next to `style: solid` would leave a sheet
+        that is *almost* what was asked for — the worst failure class there is.
+        """
+        named = {key for key in ("dash", "base_dash") if key in self.model_fields_set}
+        if self.style == "solid" and named:
             raise ValueError(
-                f"style {data['style']!r} arrives with milestone M2 (§ 7.1); "
-                "this milestone draws solid lines"
+                f"{', '.join(sorted(named))} given, but style is `solid` — a solid line "
+                "has no dash pattern. Set style: dashed or dotted (§ 7.1)"
             )
-        return data
+        if self.style != "solid" and not any(self.dash_pattern):
+            raise ValueError(
+                f"the dash pattern of this {self.style} family is all zeros, which draws "
+                "nothing at all. At least one entry must be positive (§ 5.3)"
+            )
+        return self
 
     @model_validator(mode="after")
     def _stroke_fits_between_the_lines(self) -> Family:
@@ -176,6 +210,15 @@ class Family(Section):
                 "A common cause is writing mm where pt was meant (§ 12)"
             )
         return self
+
+
+#: What a style dashes with when no cycle is written down (§ 7.1).
+#: `dotted` is `[0, 2]` because a zero-length on-segment with a round cap is a
+#: dot; `dashed` is the 3:2 that reads as a dash at every sensible line weight.
+DEFAULT_DASH = {
+    "dashed": Cycle.of([Decimal(3), Decimal(2)]),
+    "dotted": Cycle.of([Decimal(0), Decimal(2)]),
+}
 
 
 def _cycle(cycle: Cycle) -> str:
@@ -250,6 +293,9 @@ class LinesGenerator:
                 f"spacing {family.base_spacing.raw} x {_cycle(family.spacing)}",
                 f"weight {family.base_weight.raw} x {_cycle(family.weight)}",
             ]
+            if family.style != "solid":
+                pattern = family.dash or DEFAULT_DASH[family.style]
+                parts.append(f"{family.style} {family.base_dash.raw} x {_cycle(pattern)}")
             if len(family.color) > 1:
                 parts.append(f"{len(family.color)} colours")
             if family.offset.um:
@@ -309,6 +355,10 @@ class LinesGenerator:
                 end=end,
                 weight=family.base_weight.mm * float(family.weight.at(index)),
                 color=family.color[index % len(family.color)],
+                # The dash pattern belongs to the family, not to the position:
+                # every line of it is dashed the same way (§ 5.3).
+                dash=family.dash_pattern,
+                cap=family.cap,
                 layer=Layer.PATTERN,
             )
 

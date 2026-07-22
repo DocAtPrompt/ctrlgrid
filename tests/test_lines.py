@@ -249,20 +249,17 @@ class TestValidation:
             )
         assert "horizontal" in str(excinfo.value)
 
-    @pytest.mark.parametrize(
-        "key,value",
-        [
-            ("law", "log10"),
-            ("dash", [2, 1]),
-        ],
-    )
-    def test_a_key_from_a_later_milestone_names_it(self, key: str, value: object) -> None:
+    def test_a_key_from_a_later_milestone_names_it(self) -> None:
         with pytest.raises(ValidationError) as excinfo:
             LinesConfig.model_validate(
-                {"families": [{"direction": "horizontal", "base_spacing": "5mm", key: value}]}
+                {
+                    "families": [
+                        {"direction": "horizontal", "base_spacing": "5mm", "law": "log10"}
+                    ]
+                }
             )
         message = str(excinfo.value)
-        assert key in message and "M" in message
+        assert "law" in message and "M4" in message
 
     def test_governing_is_accepted_now_that_it_does_something(self) -> None:
         # It settles an axis several families share (§ 8.3, § 8.5).

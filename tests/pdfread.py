@@ -75,5 +75,22 @@ def lines_um(path: Path, page: int = 0) -> list[DrawnLine]:
         position = stroke.end()
 
 
+_DASH = re.compile(rb"\[([\d\.\s]*)\] *(-?[\d\.]+) d")
+
+
+def dash_arrays(path: Path, page: int = 0) -> list[list[float]]:
+    """Every non-empty dash array set on a page, in points, in drawing order.
+
+    `[] 0 d` — the reset back to a solid line — is not one: reportlab writes it
+    for every stroke, and counting it would say a solid family "has a dash".
+    """
+    stream = PdfReader(str(path)).pages[page].get_contents().get_data()
+    arrays = [
+        [float(value) for value in match.group(1).split()]
+        for match in _DASH.finditer(stream)
+    ]
+    return [array for array in arrays if array]
+
+
 def text_on(path: Path, page: int = 0) -> str:
     return PdfReader(str(path)).pages[page].extract_text()

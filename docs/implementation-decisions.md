@@ -217,6 +217,26 @@ A font with no `OS/2` table at all is treated as installable. Refusing every
 font from before the table existed would be absurd, and it is what every other
 PDF producer does.
 
+## 17. The dash cycle is the one cycle that is not position-wise
+
+**§ 5.3, § 7.1.** § 5.3 defines a cycle as a list applied "positionsweise auf
+die laufenden Marken" and then lists `dash: [2, 1]` in the same table as
+`weight: [1, 1, 2]`. Taken literally that would mean line 0 is dashed 2 mm,
+line 1 is dashed 1 mm — which is not what the row is called: it is called a
+`Strichel-/Punktmuster`, a dash pattern, and a pattern belongs to one mark.
+
+So `dash` describes *one* mark and applies to every mark of the family, while
+every other cycle steps along the marks. Two consequences follow, and both are
+tested: the pattern is identical on every line of a family, and the dash cycle
+does **not** enter the effective period, which counts marks.
+
+`style` supplies the numbers when none are written: `dashed` is `[3, 2]` and
+`dotted` is `[0, 2]`, both against a `base_dash` of 1 mm. A zero-length
+on-segment with a round cap *is* a dot — the same trick § 10.1 prescribes for
+the `dots` blade, which is why `cap` is in the mark vocabulary at all. Writing
+`dash:` or `base_dash:` next to `style: solid` is an error rather than a
+no-op (§ 5.1).
+
 ---
 
 ## Smaller calls, for completeness

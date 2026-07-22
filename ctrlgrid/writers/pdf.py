@@ -168,6 +168,7 @@ class PdfWriter:
         pdf.setLineWidth(_mm_to_pt(mark.weight))
         pdf.setStrokeColor(HexColor(mark.color))
         pdf.setLineCap({"butt": 0, "round": 1, "square": 2}[mark.cap])
+        _dash(pdf, mark.dash)
         if mark.opacity < 1.0:
             pdf.setStrokeAlpha(mark.opacity)
         pdf.line(*_pt(mark.start), *_pt(mark.end))
@@ -191,6 +192,7 @@ class PdfWriter:
         pdf.saveState()
         pdf.setLineWidth(_mm_to_pt(mark.weight))
         pdf.setStrokeColor(HexColor(mark.color))
+        _dash(pdf, mark.dash)
         if mark.opacity < 1.0:
             pdf.setStrokeAlpha(mark.opacity)
         x, y = _pt(mark.center)
@@ -238,6 +240,18 @@ class PdfWriter:
         }[mark.align]
         draw(x, y, mark.content)
         pdf.restoreState()
+
+
+def _dash(pdf: canvas.Canvas, dash: tuple[float, ...]) -> None:
+    """Set a dash pattern, or leave the line solid (§ 7.1).
+
+    An empty tuple is left alone rather than written as `[] 0 d`: every stroke
+    already runs inside its own `saveState`, so a solid line has nothing to
+    reset, and not writing the operator keeps solid sheets byte-for-byte what
+    they were before dashes existed (§ 10.1).
+    """
+    if dash:
+        pdf.setDash([_mm_to_pt(value) for value in dash], 0)
 
 
 def _font(family: str) -> str:
