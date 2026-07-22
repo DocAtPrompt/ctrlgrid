@@ -32,7 +32,15 @@ from ruamel.yaml.nodes import MappingNode, SequenceNode
 from ctrlgrid import generators
 from ctrlgrid.axes import AxisPeriod
 from ctrlgrid.errors import DefinitionError
-from ctrlgrid.model import Band, Margin, PageSpec, PagesSpec, PatternSpec
+from ctrlgrid.model import (
+    Band,
+    BorderSpec,
+    Margin,
+    PageSpec,
+    PagesSpec,
+    PatternSpec,
+    StampSpec,
+)
 from ctrlgrid.pages import Sheet
 from ctrlgrid.units import Length, parse_length
 
@@ -43,14 +51,14 @@ SUPPORTED_VERSION = 1
 
 #: Top-level keys owned by the handle (§ 3). Everything else on the top level
 #: belongs to the blade and is validated by its own config model.
-HANDLE_KEYS = {"version", "defs", "generator", "page", "header", "footer", "pattern", "pages"}
+HANDLE_KEYS = {
+    "version", "defs", "generator",
+    "page", "header", "footer", "border", "stamp", "pattern", "pages",
+}
 
 #: Keys the specification defines on the top level and this milestone does not
 #: implement. Named, so they cannot be mistaken for typos.
-DEFERRED_KEYS = {
-    "border": "arrives with milestone M2 (§ 5.2)",
-    "stamp": "arrives with milestone M2 (§ 8.6)",
-}
+DEFERRED_KEYS: dict[str, str] = {}
 
 #: Walking the loaded structure is where a YAML bomb detonates, because
 #: `ruamel` shares aliased objects rather than copying them. So the walk itself
@@ -78,6 +86,8 @@ class Document:
     page: PageSpec
     header: Band | None
     footer: Band | None
+    border: BorderSpec | None
+    stamp: StampSpec | None
     pattern: PatternSpec
     pages: PagesSpec
     generator: str
@@ -137,16 +147,21 @@ def loads(text: str, overrides: Mapping[str, Any] | None = None, *, source: str)
     page = _section(PageSpec, handle.get("page") or {}, raw, "page")
     header = _section(Band, handle["header"], raw, "header") if handle.get("header") else None
     footer = _section(Band, handle["footer"], raw, "footer") if handle.get("footer") else None
+    border = _section(BorderSpec, handle["border"], raw, "border") if handle.get("border") else None
+    stamp = _section(StampSpec, handle["stamp"], raw, "stamp") if handle.get("stamp") else None
     pattern = _section(PatternSpec, handle.get("pattern") or {}, raw, "pattern")
     pages = _section(PagesSpec, handle.get("pages") or {}, raw, "pages")
     config = _section(blade.config_model, data, raw, None)
     pages, names, notices = _resolve_names(pages, overrides)
+    notices += _hole_mark_notices(page)
 
     return Document(
         version=SUPPORTED_VERSION,
         page=page,
         header=header,
         footer=footer,
+        border=border,
+        stamp=stamp,
         pattern=pattern,
         pages=pages,
         generator=generator_name,
@@ -191,6 +206,25 @@ def _resolve_names(
     # Short lists repeat cyclically; long ones are cut by the same expression.
     laid_out = [names[index % len(names)] for index in range(count)]
     return pages, laid_out, notices
+
+
+def _hole_mark_notices(page: PageSpec) -> tuple[str, ...]:
+    """§ 8.7: warn when the punch marks will land on the pattern.
+
+    A warning and not an error, and no space is reserved: hole centres at 12 mm
+    against a 5 mm margin is simply what an ordinary sheet of paper looks like.
+    Whoever wants them clear of the grid sets a wider `margin.inner`, and that
+    is a design decision that stays with the user.
+    """
+    if not page.hole_marks or page.margin is None:
+        return ()
+    if page.margin.inner.um >= 12_000:
+        return ()
+    return (
+        f"hole marks sit 12mm from the binding edge, inside a margin.inner of "
+        f"{page.margin.inner.raw} — they will fall on the pattern. Set "
+        "margin.inner to 15mm or more to keep them clear (§ 8.7)",
+    )
 
 
 def resolve_sheet(page: PageSpec) -> Sheet:
@@ -442,6 +476,10 @@ def _apply_overrides(handle: dict[str, Any], overrides: Mapping[str, Any]) -> No
     for key in ("format", "orientation"):
         if key in overrides:
             handle["page"] = {**(handle.get("page") or {}), key: overrides[key]}
+    if "stamp" in overrides:
+        # § 8.6: the flag is the intended route, so it replaces the section
+        # outright rather than merging into it.
+        handle["stamp"] = {**(handle.get("stamp") or {}), "text": overrides["stamp"]}
 
 
 def _section(

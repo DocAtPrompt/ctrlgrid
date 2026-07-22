@@ -66,10 +66,10 @@ class TestPageSpec:
 
     def test_a_key_from_a_later_milestone_names_the_milestone(self) -> None:
         with pytest.raises(ValidationError) as excinfo:
-            PageSpec(hole_marks=True)
+            PageSpec(device="remarkable-2")
         message = str(excinfo.value)
-        assert "hole_marks" in message
-        assert "M2" in message
+        assert "device" in message
+        assert "M5" in message
 
     def test_an_unknown_key_is_an_error(self) -> None:
         with pytest.raises(ValidationError) as excinfo:

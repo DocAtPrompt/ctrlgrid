@@ -18,13 +18,158 @@ looks complete is worse than one that does not fit.
 from __future__ import annotations
 
 from ctrlgrid.errors import DefinitionError
-from ctrlgrid.marks import Layer, Point, Text, Um
-from ctrlgrid.model import Band
-from ctrlgrid.pages import Box, PageContext, resolve_placeholders
+from ctrlgrid.marks import Arc, Layer, Point, Polygon, Text, Um
+from ctrlgrid.model import Band, BorderSpec, PageSpec, StampSpec
+from ctrlgrid.pages import Box, Geometry, PageContext, Sheet, resolve_placeholders
 from ctrlgrid.writers import WriterQuery
 
 ELLIPSIS = "…"
 ELLIPSIS_FALLBACK = "..."
+
+# ISO 838 (§ 8.7): two holes 6 mm across, centres 80 mm apart and 12 mm in from
+# the binding edge, symmetric about the middle of the sheet.
+HOLE_SPACING = 80_000
+HOLE_INSET = 12_000
+HOLE_DIAMETER = 6_000
+
+#: How much of the sheet an `auto` stamp is asked to span (§ 8.6). Not the full
+#: width: a diagonal word that touched both edges would be cropped by the
+#: non-printable border on nearly every printer.
+STAMP_COVERAGE = 0.8
+
+
+def background_mark(color: str | None, sheet: Sheet) -> Polygon | None:
+    """Paint the whole sheet before anything else (§ 5.2).
+
+    It carries `Layer.PATTERN` and is emitted first rather than getting a layer
+    of its own: § 6 fixes the vocabulary at three layers, and since the writer
+    draws in the order marks arrive and never sorts (§ 3.6), being first is
+    what "underneath" actually means.
+    """
+    if color is None:
+        return None
+    return Polygon(
+        points=(
+            Point(0, 0),
+            Point(sheet.width, 0),
+            Point(sheet.width, sheet.height),
+            Point(0, sheet.height),
+        ),
+        closed=True,
+        weight=0.0,
+        color=color,
+        fill_color=color,
+        layer=Layer.PATTERN,
+    )
+
+
+def border_mark(border: BorderSpec | None, geometry: Geometry) -> Polygon | None:
+    """A rule around the pattern area (§ 5.2, § 8.1).
+
+    It sits on the pattern area's edge, and `gap` moves it *outwards* — the
+    pattern keeps every millimetre § 8.1 gave it. A quadrilateral rather than a
+    rectangle primitive, because § 6 grows the vocabulary by one and not two.
+    """
+    if border is None:
+        return None
+
+    gap = border.gap.um
+    left = geometry.origin.x - gap
+    bottom = geometry.origin.y - gap
+    right = geometry.origin.x + geometry.area.width + gap
+    top = geometry.origin.y + geometry.area.height + gap
+
+    if left < 0 or bottom < 0:
+        raise DefinitionError(
+            f"border.gap of {border.gap.raw} pushes the border off the sheet — "
+            f"it would start {_mm(-min(left, bottom))} outside the paper. "
+            "Reduce the gap or widen the margin (§ 5.2)",
+            field="border.gap",
+        )
+
+    return Polygon(
+        points=(Point(left, bottom), Point(right, bottom), Point(right, top), Point(left, top)),
+        closed=True,
+        weight=border.weight.mm,
+        color=border.color or "#000000",
+        fill_color=None,
+        layer=Layer.FRAME,
+    )
+
+
+def hole_marks(page: PageSpec, sheet: Sheet, *, is_even: bool) -> list[Arc]:
+    """ISO 838 punch marks at the binding edge (§ 8.7).
+
+    They travel with the orientation. Portrait sheets are filed along the inner
+    edge, so under duplex the marks swap sides with it. Landscape sheets are
+    filed along the **top** edge, and the top edge does not mirror when a sheet
+    is turned over — so there they stay where they are on both sides, while
+    `inner` and `outer` go on meaning the sides.
+
+    They sit *in* the pattern area rather than in the margin, and that is the
+    normal case, not a fault: with a 5 mm inner margin and hole centres at
+    12 mm they necessarily land over the grid. Hence `Layer.FRAME`, so they are
+    drawn on top, and no space is reserved for them.
+    """
+    if not page.hole_marks:
+        return []
+
+    if page.orientation == "landscape":
+        middle = sheet.width // 2
+        centres = [
+            Point(middle - HOLE_SPACING // 2, sheet.height - HOLE_INSET),
+            Point(middle + HOLE_SPACING // 2, sheet.height - HOLE_INSET),
+        ]
+    else:
+        edge = sheet.width - HOLE_INSET if (page.duplex and is_even) else HOLE_INSET
+        middle = sheet.height // 2
+        centres = [
+            Point(edge, middle - HOLE_SPACING // 2),
+            Point(edge, middle + HOLE_SPACING // 2),
+        ]
+
+    return [
+        Arc(
+            center=centre,
+            radius=HOLE_DIAMETER // 2,
+            start_angle=0.0,
+            sweep=360.0,
+            weight=0.2,
+            layer=Layer.FRAME,
+        )
+        for centre in centres
+    ]
+
+
+def stamp_mark(stamp: StampSpec | None, sheet: Sheet, *, q: WriterQuery) -> Text | None:
+    """A full-page diagonal overprint on the topmost layer (§ 8.6)."""
+    if stamp is None:
+        return None
+
+    size = (
+        _auto_stamp_size(stamp.text, sheet, q=q)
+        if stamp.size == "auto"
+        else stamp.size.um
+    )
+    return Text(
+        pos=Point(sheet.width // 2, sheet.height // 2),
+        content=stamp.text,
+        size=size,
+        align="center",
+        angle=stamp.angle.deg,
+        opacity=stamp.opacity,
+        layer=Layer.OVERLAY,
+    )
+
+
+def _auto_stamp_size(text: str, sheet: Sheet, *, q: WriterQuery) -> Um:
+    """Scale the word to the sheet by measuring it, not by guessing (§ 10.2)."""
+    reference = 10_000  # any size will do; text width is linear in it
+    width = q.text_width(text, family="sans", size=reference)
+    if width <= 0:
+        return reference
+    target = int(sheet.width * STAMP_COVERAGE)
+    return max(1, reference * target // width)
 
 
 def layout_band(

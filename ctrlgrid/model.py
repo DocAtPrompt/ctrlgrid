@@ -25,7 +25,7 @@ from typing import Annotated, Any, ClassVar, Literal
 from pydantic import BaseModel, BeforeValidator, ConfigDict, Field, model_validator
 
 from ctrlgrid.errors import DefinitionError
-from ctrlgrid.units import Length, parse_length
+from ctrlgrid.units import Angle, Length, parse_angle, parse_length
 
 
 def _as_length(value: Any) -> Any:
@@ -34,6 +34,15 @@ def _as_length(value: Any) -> Any:
         return value
     try:
         return parse_length(value)
+    except DefinitionError as error:
+        raise ValueError(error.message) from None
+
+
+def _as_angle(value: Any) -> Any:
+    if isinstance(value, Angle):
+        return value
+    try:
+        return parse_angle(value)
     except DefinitionError as error:
         raise ValueError(error.message) from None
 
@@ -55,6 +64,7 @@ def _plain_text(value: Any) -> Any:
 
 
 LengthField = Annotated[Length, BeforeValidator(_as_length)]
+AngleField = Annotated[Angle, BeforeValidator(_as_angle)]
 TextField = Annotated[str | None, BeforeValidator(_plain_text)]
 
 
@@ -211,6 +221,60 @@ REMAINDER_MODES = {"end", "center", "whole_cycles"}
 SNAP_MODES = {"none", "spacing", "cycle", "pixel"}
 
 
+def _as_color(value: Any) -> Any:
+    """`#rrggbb`, six digits, RGB — no names, no alpha, no CMYK (§ 5.3).
+
+    `none` and an absent key mean the same thing: no colour. § 5.1 lists `none`
+    among the keywords that stand where a measure could, so it is spelled out
+    rather than left to an empty value.
+    """
+    if value is None or value == "none":
+        return None
+    if not (
+        isinstance(value, str)
+        and len(value) == 7
+        and value.startswith("#")
+        and all(character in "0123456789abcdefABCDEF" for character in value[1:])
+    ):
+        raise ValueError(
+            f"colour must be #rrggbb, six digits, RGB — got {value!r}. "
+            "Opacity is a field of its own (§ 5.3)"
+        )
+    return value
+
+
+ColorField = Annotated[str | None, BeforeValidator(_as_color)]
+
+
+class BorderSpec(Section):
+    """An optional rule around the pattern area (§ 5.2, § 8.1).
+
+    It sits exactly on the pattern area's edge and `gap` pushes it *outwards*,
+    so switching a border on never moves a grid line: § 8.1 computes the
+    pattern area from margins and bands alone, and nothing here feeds back
+    into it.
+    """
+
+    weight: LengthField
+    color: ColorField = "#000000"
+    gap: LengthField = Length(um=0, mm=0.0, raw="0mm")
+
+
+class StampSpec(Section):
+    """A full-page diagonal overprint (§ 8.6).
+
+    "Draft" is a transient state of a run, not a property of the paper, which
+    is why `--stamp` is the intended route and this section exists mainly so
+    the definition *can* say it.
+    """
+
+    text: str
+    angle: AngleField = Angle(deg=45.0, raw="45deg")
+    opacity: float = Field(default=0.08, gt=0.0, le=1.0)
+    #: `auto` sizes the text to the sheet; a length is taken as written (§ 5.1).
+    size: LengthField | Literal["auto"] = "auto"
+
+
 class PatternSpec(Section):
     """The pattern block — anchor, snapping and remainder handling (§ 5.2).
 
@@ -268,8 +332,6 @@ class PageSpec(Section):
 
     deferred: ClassVar[dict[str, str]] = {
         "device": "— device profiles arrive with milestone M5 (§ 9.2)",
-        "background": "arrives with milestone M2 (§ 5.2)",
-        "hole_marks": "arrives with milestone M2 (§ 8.7)",
     }
 
     format: str = "a4"
@@ -278,6 +340,10 @@ class PageSpec(Section):
     #: wider margin stays at the binding edge. With it off, `inner` is simply
     #: always the left one.
     duplex: bool = False
+    #: `none` or a colour; the sheet is painted before anything else (§ 5.2).
+    background: ColorField = None
+    #: ISO 838 punch marks at the binding edge (§ 8.7). One line, one switch.
+    hole_marks: bool = False
     #: Left unset on purpose: the default is a property of the paper format,
     #: not of the code (§ 8.1), so the loader fills it from formats.yaml.
     margin: Margin | None = None

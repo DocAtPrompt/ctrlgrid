@@ -475,6 +475,7 @@ def build(document: Document, writer: Writer) -> Geometry:
     settled on — including any notice the settings earned (§ 8.3).
     """
     from ctrlgrid import generators
+    from ctrlgrid.frame import background_mark, border_mark, hole_marks, stamp_mark
 
     geometry, contexts, frames = preflight(document, writer)
     blade = generators.get(document.generator)
@@ -490,13 +491,29 @@ def build(document: Document, writer: Writer) -> Geometry:
         placed = geometry.for_page(
             is_even=context.is_even, sheet=document.sheet, duplex=document.page.duplex
         )
-        # Marks arrive in layer order; the writer does not sort (§ 3.6). The
-        # blade is handed the same area every time and never learns which side
-        # of the sheet it is on — only the shift below differs (§ 3.3, § 6).
+
+        # Marks arrive in layer order and the writer does not sort (§ 3.6), so
+        # this sequence *is* the stacking: background, pattern, frame, stamp.
+        background = background_mark(document.page.background, document.sheet)
+        if background is not None:
+            writer.draw(background)
+
+        # The blade is handed the same area every time and never learns which
+        # side of the sheet it is on — only the shift differs (§ 3.3, § 6).
         for mark in blade.generate(document.config, area=placed.area, page=context, q=writer):
             writer.draw(translate(mark, dx=placed.origin.x, dy=placed.origin.y))
+
+        border = border_mark(document.border, placed)
+        if border is not None:
+            writer.draw(border)
+        for mark in hole_marks(document.page, document.sheet, is_even=context.is_even):
+            writer.draw(mark)
         for mark in frame:
             writer.draw(mark)
+
+        stamp = stamp_mark(document.stamp, document.sheet, q=writer)
+        if stamp is not None:
+            writer.draw(stamp)
         writer.end_page()
     writer.end_document()
     return geometry

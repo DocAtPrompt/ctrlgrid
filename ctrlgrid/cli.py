@@ -80,12 +80,18 @@ def generate(
     ] = None,
     format: Annotated[str | None, typer.Option(help="Paper format, e.g. a4, letter.")] = None,
     orientation: Annotated[str | None, typer.Option(help="portrait | landscape")] = None,
+    stamp: Annotated[
+        str | None,
+        typer.Option(help='Full-page diagonal overprint, e.g. --stamp "DRAFT" (§ 8.6).'),
+    ] = None,
     force: Annotated[bool, typer.Option("--force", help="Overwrite an existing file.")] = False,
     quiet: Annotated[bool, typer.Option("--quiet", help="Report only the output path.")] = False,
 ) -> None:
     """Build a PDF from a preset or a definition file."""
     with _reporting():
-        document = _open(target, definition, _overrides(pages, format, orientation, names))
+        document = _open(
+            target, definition, _overrides(pages, format, orientation, names, stamp)
+        )
         destination = _destination(out, target, definition, force)
         geometry = build(document, PdfWriter(destination))
         _report(document, destination, geometry, quiet=quiet)
@@ -154,13 +160,18 @@ class _reporting:
 
 
 def _overrides(
-    pages: int | None, format: str | None, orientation: str | None, names: Path | None = None
+    pages: int | None,
+    format: str | None,
+    orientation: str | None,
+    names: Path | None = None,
+    stamp: str | None = None,
 ) -> dict:
     return {
         "pages": pages,
         "format": format,
         "orientation": orientation,
         "names": read_names(names) if names is not None else None,
+        "stamp": stamp,
     }
 
 
