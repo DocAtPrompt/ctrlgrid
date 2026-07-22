@@ -89,7 +89,7 @@ There are no double-clickable installers, and none are planned.
 | `lines` | squared, ruled, isometric, calligraphy, Cornell, log/semi-log — **works today** |
 | `dots` | dot grids with emphasised rows and columns — **works today** |
 | `staves` | blank music staves and guitar tab |
-| `grid` | labelled cell blocks — battleship, score sheets |
+| `grid` | labelled cell blocks — battleship, score sheets — **works today** |
 | `maze` | rectangular mazes, optionally with solutions |
 | `polar` | targets, score discs, polar paper — **works today** |
 | `tiling` | hexagons, triangles, rhombi — including colouring patterns |

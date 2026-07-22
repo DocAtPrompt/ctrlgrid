@@ -34,13 +34,14 @@ remote configured — nothing has ever been pushed.**
 | **M2** dash styles | `style: dashed \| dotted`, `base_dash`, `dash` |
 | **M2** free page sizes | `format: 210x99mm`, `format: 8.5x11in` |
 | **M2** images in bands | `left: {image: …, height: …}`, PNG, never cropped |
+| **M4** `grid` | count-driven block, square cells, § 7.10 labels, fills |
 | **M4** `dots` | two crossed cycles, `combine`, colour with a named axis |
 | **M3** — `polar` | rings, spokes, segment and ring labels, counting patterns (§ 7.10) |
 | pulled forward into M1 | format table, presets, `check`, overwrite protection, placeholders — the M1 acceptance criteria needed them |
 
 ### Not done
 
-**M4 is under way** — `dots` is done; `staves`, `grid`, `maze`, `tiling`,
+**M4 is under way** — `dots` and `grid` are done; `staves`, `maze`, `tiling`,
 `form` and `law: log10` (§ 7.9) are not. Three things M3 built are
 there to be reused: `labels.py` (§ 7.10) is what `grid` and `tiling` label
 with, `generators/common.py` holds the cycle and dash fields every family

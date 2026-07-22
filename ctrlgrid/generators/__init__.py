@@ -19,6 +19,7 @@ from pydantic import BaseModel
 from ctrlgrid.axes import AxisPeriod
 from ctrlgrid.errors import DefinitionError
 from ctrlgrid.generators.dots import DotsGenerator
+from ctrlgrid.generators.grid import GridGenerator
 from ctrlgrid.generators.lines import LinesGenerator
 from ctrlgrid.generators.polar import PolarGenerator
 from ctrlgrid.marks import Area, Mark
@@ -86,7 +87,12 @@ class Generator(Protocol):
 
 REGISTRY: dict[str, Generator] = {
     generator.name: generator
-    for generator in (DotsGenerator(), LinesGenerator(), PolarGenerator())
+    for generator in (
+        DotsGenerator(),
+        GridGenerator(),
+        LinesGenerator(),
+        PolarGenerator(),
+    )
 }
 
 
