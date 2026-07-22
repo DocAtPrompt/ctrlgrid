@@ -9,29 +9,57 @@ forms — for paper formats and for e-ink devices.
 **The one promise:** what says 5 mm measures 5 mm on the printout. No scaling,
 no "fit to page", no stretching a grid so it comes out even.
 
-## Current state
+## Current state — read this first
 
-**Specification plus an empty scaffold. No functionality exists yet.**
-
-| File | What it is |
-|---|---|
-| `pflichtenheft-vorlagengenerator.md` | The specification. **German.** Deliberately not shipped with the package. |
-| `docs/research.md` | Competitive analysis of ~60 comparable tools, July 2026. Backs the positioning claims. |
-| `pyproject.toml` | Packaging, dependencies, entry point. Builds and installs. |
-| `ctrlgrid/cli.py` | Stub. Prints "not implemented" and exits 1. |
-| `ctrlgrid/data/*.yaml` | **Real data.** Seven paper formats, two device profiles — already in the schema § 9.1/§ 9.2 specify. |
-| `tests/test_architecture.py` | **Live.** Enforces that `reportlab` stays in `writers/pdf.py`. |
-| `tests/test_dimensional.py` | Skipped placeholder. The test the project exists for; write it in M1. |
-| `.github/workflows/ci.yml` | Lint, test, build on Linux/macOS/Windows. Green today. |
-| `README.md`, `CONTRIBUTING.md`, `LICENSE` | Public face, English, MIT. |
+**M1 is complete and released as 0.1.0. M2 is three quarters done.**
 
 ```bash
 uv sync --extra dev && uv run pytest && uv run ruff check .
 ```
 
-CI is green from the first commit and stays that way — do not merge red. The
-architecture test already guards rule 1 below, before there is any code to
-break it.
+330 tests, all green, ruff clean. Six commits on `main`, linear history, **no
+remote configured — nothing has ever been pushed.**
+
+### Done
+
+| Milestone | State |
+|---|---|
+| **M1** — the vertical slice | complete; all seven acceptance criteria of § 14 met except the PyPI release, which needs a human (see *Not done* below) |
+| **M2** geometry | `count`, `extent`, `remainder`, `snap`, `duplex` |
+| **M2** name lists | `--names`, both modes, `{name}`, PDF outline |
+| **M2** frame furniture | `border`, `background`, `hole_marks`, `stamp` |
+| pulled forward into M1 | format table, presets, `check`, overwrite protection, placeholders — the M1 acceptance criteria needed them |
+
+### Not done
+
+**M2 remainder — this is where to continue:**
+
+1. **Cover sheet** (§ 8.8) — 50 mm calibration square, 100 mm rule, settings
+   summary. Three rules make it unlike any other page: it is not counted in the
+   numbering, it carries no header/footer/border/hole marks, and it must be
+   **excluded from golden-file tests** because it contains the tool version.
+   The summary needs far more from `LinesGenerator.describe` than the one
+   period line it returns today.
+2. **Fonts stage 2** (§ 10.3) — `font: {file: …}`. Brings `fontTools` as a new
+   dependency, embedding with subsetting, and an `fsType` check that refuses
+   rather than quietly substituting when a licence forbids embedding.
+
+**Later milestones**, untouched: M3 `polar`, M4 the remaining blades and
+`law: log10`, M5 device profiles, M6 N-up, M7 PNG, M8 `perspective`/`mandala`.
+
+**Two things only a human can do**, both needed before `uvx ctrlgrid` works:
+configure a git remote and push; set up trusted publishing on PyPI plus a
+`pypi` environment, then tag `v0.1.0` to trigger
+[`.github/workflows/release.yml`](.github/workflows/release.yml). CI has
+therefore **never actually run** — it is green locally on macOS only.
+
+### Deferred features name their milestone
+
+Anything specified but not built refuses with a message naming the milestone,
+never silently. `grep -rn "milestone M" ctrlgrid/` lists every one. This is
+deliberate: § 5.1 calls a PDF that is *almost* right the worst failure class
+there is, so `border:` must never have read as an unknown key while it was
+unbuilt, and `snap:` must never have been quietly ignored.
 
 ## Read this before writing anything
 
@@ -51,6 +79,11 @@ reasoning. Several decisions look arbitrary and are not:
 If you think a decision is wrong, say so and name the section. Do not silently
 work around it.
 
+**Where the specification was genuinely silent**, the resolution is recorded in
+[`docs/implementation-decisions.md`](docs/implementation-decisions.md) — eleven
+of them so far, each with the section it belongs to and the reasoning. Read it
+before changing a default; several look arbitrary and are not.
+
 ## Language split
 
 - **Code, DSL keys, error messages, preset names, README, comments: English.**
@@ -58,44 +91,83 @@ work around it.
 - Do not add a translation layer. Form labels like "Ja"/"Nein" come from the
   user's definition file, never from the tool (§ 7.8).
 
-## The architecture in one paragraph
+## The architecture as built
 
 A pocket knife: one handle, several blades. The **handle** owns page format,
 margins, pattern area, frame, header, footer, stamp, hole marks, the page loop
-and output. A **blade** (generator) only produces marks in local coordinates and
-knows nothing about margins. Three interfaces are contracts with signatures in
-§ 3.6; everything else is an implementation detail.
+and output. A **blade** (generator) only produces marks in local coordinates
+and knows nothing about margins.
+
+| Module | Holds |
+|---|---|
+| `units.py` | `Length`/`Angle`; parsing to exact int µm via `Decimal` |
+| `errors.py` | `DefinitionError` with field path and source line |
+| `marks.py` | the six primitives, `Layer`, `Point`, `Area`, `translate` |
+| `cycles.py` | `Cycle`, drift-free positions, effective period |
+| `axes.py` | `AxisPeriod` — what the handle needs from a blade for § 8.3/§ 8.5 |
+| `model.py` | pydantic sections; `Section` base with `extra="forbid"` + `deferred` |
+| `loader.py` | YAML → `Document`; formats, presets, devices, name lists |
+| `pages.py` | `Geometry`, page loop, placeholders, `preflight`, `build` |
+| `frame.py` | header/footer layout, border, background, hole marks, stamp |
+| `generators/` | registry + `lines` |
+| `writers/` | seam 3 protocols + `pdf.py`, the only reportlab module |
+
+### The three seams (§ 3.6)
+
+1. **Definition → model.** `loader.load()`. After it there are no unit strings
+   left in the core.
+2. **Generator → marks.** `generate(cfg, area, page, q) -> Iterator[Mark]`,
+   plus the queries `is_page_invariant`, `describe`, `periodic_axes`.
+3. **Marks → writer.** Bidirectional: marks in, font metrics out.
+
+**Seam 2 grew three queries and `generate` never changed.** When `snap` and
+`remainder` needed blade knowledge, the handle got a question to ask
+(`periodic_axes`) rather than the blade getting the pattern block. § 8.3 says
+the *pattern area* shrinks, so shrinking it is the handle's job. Keep new
+handle features on that side of the line: six of the eight blades would have to
+reject a pattern block they were handed.
 
 ## Non-negotiables
 
-1. `reportlab` only in `ctrlgrid/writers/pdf.py`. The module arrives with M1; the
-   test that guards it already runs.
-2. Positions as integer micrometres, never accumulated floats. Stroke widths and
-   opacity stay float.
+1. `reportlab` only in `ctrlgrid/writers/pdf.py`. `tests/test_architecture.py`
+   enforces it and predates the module.
+2. Positions as integer micrometres, never accumulated floats. Stroke widths
+   and opacity stay float. `Length` carries `um`, `mm` **and** the raw text the
+   user wrote, because § 12 requires errors in the user's own units.
 3. Generators `yield` marks, they do not build lists.
-4. Validate everything before writing page one. Abort completely or build
-   completely.
-5. Same input → same bytes. No `hash()`, no wall-clock time in the document.
+4. Validate everything before writing page one — `preflight` does this, and
+   `check` runs exactly it. Abort completely or build completely.
+5. Same input → same bytes. `invariant=1` on the canvas, `Decimal` with
+   ties-away-from-zero, outline keys from the page index, no `hash()`, no
+   wall-clock time. **Test it whenever you add anything to the writer.**
 6. Fail loudly. An error message that does not let the user act is a bug — § 12
    calls error messages "the face of the tool", and means it.
 
+## Working style that has held up
+
+- **Test first, watch it fail, then implement.** Every module here was built
+  that way, and it caught real bugs — including two of my own test bugs where
+  the loader refused a duplicate `pattern:` key I had spliced in.
+- **Comments carry the *why*, with the section number.** The code is dense with
+  them because the specification's reasoning is the expensive part.
+- **One coherent block per commit**, message explaining the decisions rather
+  than the diff. `git log` is where the open-question resolutions live.
+- Verify against a real PDF, not just unit tests — `tests/pdfread.py` reads
+  geometry back out.
+
 ## Where to start
 
-**M1** (§ 14), and it is scoped as a vertical slice through every layer rather
-than a broad foundation: parser, model, units, *one* generator (`lines`), the
-PDF writer, the page loop with header and footer, the writer query API, the
-dimensional test with CI, and a PyPI release reachable via `uvx`.
+Cover sheet (§ 8.8) is the smaller of the two remaining M2 items and would make
+`describe` earn its keep. Fonts stage 2 (§ 10.3) is the larger and adds a
+dependency.
 
-M1 has **seven explicit acceptance criteria** in § 14. Two of them are the kind
-you cannot retrofit without rebuilding — byte-identical repeat runs, and the
-import test for `reportlab`. Do those early rather than last.
-
-Do not start further blades before M1 stands. The point of a vertical slice is
-to find out whether the seams hold.
+Do not start M3 (`polar`) before M2 stands. § 14 puts `polar` second on purpose
+— it is the hard test of whether the handle survives a non-cartesian blade —
+and that test is only meaningful once the handle is complete.
 
 ## Open questions
 
-Six, all listed in § 15, none blocking M1. Two need a device or a source rather
-than a decision (reMarkable 2 figures, whether the Paper Pro counts as a colour
-device). If you are tempted to guess at a number, don't — that is exactly the
-failure mode `source`/`verified` exists to prevent.
+Six in § 15, none blocking. Two need a device or a source rather than a decision
+(reMarkable 2 figures, whether the Paper Pro counts as a colour device). If you
+are tempted to guess at a number, don't — that is exactly the failure mode
+`source`/`verified` exists to prevent.

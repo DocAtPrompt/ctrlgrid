@@ -4,17 +4,35 @@ Generate **dimensionally accurate** PDF templates from a small definition file:
 grid paper, ruled paper, dot grids, staff paper, mazes, polar targets, tilings
 and fillable forms — for paper formats **and** for e-ink tablets.
 
-> **Status: milestone M1.** One blade is sharp. `lines` works end to end —
-> definition file or preset, multi-page PDF, header and footer, exact
-> millimetres — and is covered by the dimensional test described below. The
-> other generators in the table further down, and the options marked below as
-> arriving later, are specified but not built yet; asking for one gets you a
-> message naming the milestone, never a silently different sheet.
+> **Status: milestone M1 complete, M2 well under way.** One blade is sharp:
+> `lines` works end to end and is covered by the dimensional test described
+> below. The handle around it is nearly finished — multi-page output, headers
+> and footers, name lists, snapping, remainder handling, double-sided margins,
+> border, background, hole marks and stamp.
 >
-> Working today: `ctrlgrid millimeter-a4 --pages 30 -o grid.pdf`,
-> `ctrlgrid -d my-def.yaml`, `ctrlgrid check`, `presets`, `show`, `devices`,
-> and the flags `--pages`, `--format`, `--orientation`, `-o`, `--force`,
-> `--quiet`.
+> The other generators in the table further down, and the options marked below
+> as arriving later, are specified but not built yet. Asking for one gets you a
+> message naming the milestone it arrives with — never a silently different
+> sheet.
+>
+> Working today:
+>
+> ```bash
+> ctrlgrid millimeter-a4 --pages 30 -o grid.pdf
+> ctrlgrid millimeter-a4 --names class3b.txt      # a sheet per name
+> ctrlgrid -d my-def.yaml --stamp DRAFT
+> ctrlgrid check my-def.yaml
+> ctrlgrid presets | show <name> | devices
+> ```
+>
+> Flags: `--pages`, `--names`, `--format`, `--orientation`, `--stamp`, `-o`,
+> `--force`, `--quiet`.
+>
+> Not yet: `--cover`, `--device`, `--nup`, `--seed`, `--strict`,
+> `--skip-unsupported`, `font: {file: …}`, and the interactive mode.
+>
+> **Not on PyPI yet**, so the `uvx`/`pip` lines below do not work until the
+> first release is published.
 
 ## The one promise
 
@@ -48,6 +66,9 @@ ctrlgrid -d my-def.yaml --format letter --pages 5 --cover
 # no arguments: pick a preset interactively
 ctrlgrid
 ```
+
+*Some of those need milestones that are not finished — see the status note
+above for what runs today.*
 
 ## Installation
 
@@ -142,6 +163,8 @@ you an interactive preset picker, which is as far as it goes.
 
 - [`pflichtenheft-vorlagengenerator.md`](pflichtenheft-vorlagengenerator.md) —
   the full specification, in German. Records not just what the tool does but why.
+- [`docs/implementation-decisions.md`](docs/implementation-decisions.md) — the
+  points where the specification was silent, and what was decided instead.
 - [`docs/research.md`](docs/research.md) — survey of comparable tools, July 2026.
 - [`CONTRIBUTING.md`](CONTRIBUTING.md) — how to add device profiles, presets and
   code.

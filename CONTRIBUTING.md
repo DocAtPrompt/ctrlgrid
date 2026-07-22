@@ -68,9 +68,9 @@ decisions look arbitrary and are not.
 These are architectural, not stylistic. A pull request that breaks one will be
 asked to change, however good the rest is.
 
-1. **`reportlab` appears only in `ctrlgrid/writers/pdf.py`** — the module arrives
-   with M1, the test that guards it already runs. No generator, no model, no CLI
-   code imports it. The second writer is dead before it exists otherwise.
+1. **`reportlab` appears only in `ctrlgrid/writers/pdf.py`**, and
+   `tests/test_architecture.py` enforces it. No generator, no model, no CLI code
+   imports it. The second writer is dead before it exists otherwise.
 2. **Positions are integer micrometres.** Never accumulate floats to compute a
    coordinate. The tool's one promise is dimensional accuracy.
 3. **Generators yield marks, they do not build lists.** A 200-page dot grid is
@@ -99,9 +99,15 @@ Everything else is an implementation detail and may change.
 ### Adding a generator
 
 A new blade is a registry entry in `ctrlgrid/generators/__init__.py` plus one
-module (both arrive with M1). It gets the page loop, header, footer, framing and
-output for free — and whether that stays true is the test of whether the
-architecture holds.
+module; `generators/lines.py` is the worked example. It gets the page loop,
+header, footer, framing and output for free — and whether that stays true is the
+test of whether the architecture holds.
+
+Beyond `generate`, seam 2 asks a blade three questions: `is_page_invariant`
+(§ 10.1), `describe` for the run report (§ 5.3), and `periodic_axes`, which is
+how the handle snaps and places the surplus without ever reaching into the blade
+(§ 8.3, § 8.5). A blade with no periodic families returns nothing from the last
+one, and that is what makes `snap` an error there rather than a no-op.
 
 Before proposing one, check § 2 of the specification. Some things are excluded
 on purpose: music engraving, free paths and curves, a general drawing language,
