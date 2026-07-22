@@ -64,12 +64,15 @@ class TestPageSpec:
         # the model leaves it open and the loader fills it from formats.yaml.
         assert PageSpec().margin is None
 
-    def test_a_key_from_a_later_milestone_names_the_milestone(self) -> None:
+    def test_a_device_is_carried_as_written(self) -> None:
+        # Resolved to a profile by the loader (§ 9.2); the model just holds it.
+        assert PageSpec(device="remarkable-2").device == "remarkable-2"
+
+    def test_a_device_and_a_written_format_together_are_an_error(self) -> None:
         with pytest.raises(ValidationError) as excinfo:
-            PageSpec(device="remarkable-2")
+            PageSpec(device="remarkable-2", format="a4")
         message = str(excinfo.value)
-        assert "device" in message
-        assert "M5" in message
+        assert "device" in message and "format" in message
 
     def test_an_unknown_key_is_an_error(self) -> None:
         with pytest.raises(ValidationError) as excinfo:

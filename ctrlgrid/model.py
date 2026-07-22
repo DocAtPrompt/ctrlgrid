@@ -22,19 +22,33 @@ from __future__ import annotations
 
 from typing import Annotated, Any, ClassVar, Literal
 
-from pydantic import BaseModel, BeforeValidator, ConfigDict, Field, model_validator
+from pydantic import (
+    BaseModel,
+    BeforeValidator,
+    ConfigDict,
+    Field,
+    ValidationInfo,
+    model_validator,
+)
 
 from ctrlgrid import fonts
 from ctrlgrid.errors import DefinitionError
 from ctrlgrid.units import Angle, Length, parse_angle, parse_length
 
 
-def _as_length(value: Any) -> Any:
-    """Turn definition text into a `Length`, leaving anything else to pydantic."""
+def _as_length(value: Any, info: ValidationInfo) -> Any:
+    """Turn definition text into a `Length`, leaving anything else to pydantic.
+
+    The active device's density arrives through pydantic's validation context
+    (§ 9.2): it is the only thing that lets `px` resolve, and it is None on
+    paper, where `px` stays an error (§ 8.3.1). The context is set once, by the
+    loader, around every section it validates.
+    """
     if isinstance(value, Length):
         return value
+    density = info.context.get("density") if info.context else None
     try:
-        return parse_length(value)
+        return parse_length(value, density_dpi=density)
     except DefinitionError as error:
         raise ValueError(error.message) from None
 
@@ -370,13 +384,13 @@ class PagesSpec(Section):
 
 
 class PageSpec(Section):
-    """The sheet: format, orientation and the non-printable border (§ 8.1)."""
-
-    deferred: ClassVar[dict[str, str]] = {
-        "device": "— device profiles arrive with milestone M5 (§ 9.2)",
-    }
+    """The sheet: format or device, orientation and the border (§ 8.1, § 9.2)."""
 
     format: str = "a4"
+    #: A device profile instead of a paper format (§ 9.2): its physical size
+    #: and density come from the profile, and `px` resolves against the second.
+    #: Exclusive with a written `format` — the two would be different media.
+    device: str | None = None
     orientation: Literal["portrait", "landscape"] = "portrait"
     #: § 8.1. With duplex on, `inner` and `outer` swap on even pages so the
     #: wider margin stays at the binding edge. With it off, `inner` is simply
@@ -389,6 +403,21 @@ class PageSpec(Section):
     #: Left unset on purpose: the default is a property of the paper format,
     #: not of the code (§ 8.1), so the loader fills it from formats.yaml.
     margin: Margin | None = None
+
+    @model_validator(mode="after")
+    def _a_device_or_a_format_but_not_both(self) -> PageSpec:
+        """§ 9.2: a device and a format are two answers to "what medium".
+
+        The default `format` does not count — only a written one, the same rule
+        `FontSpec` uses for `family` and `file`.
+        """
+        if self.device is not None and "format" in self.model_fields_set:
+            raise ValueError(
+                f"`device` ({self.device}) and `format` ({self.format}) are two ways of "
+                "naming the medium and point at different sizes — a paper format has no "
+                "pixels and a device has no `assumed_dpi`. Give one (§ 9.2)"
+            )
+        return self
 
     @model_validator(mode="before")
     @classmethod

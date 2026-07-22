@@ -434,6 +434,32 @@ and `generate()` calls the same `_place()`. The two cannot disagree, and a
 form that does not fit is refused before the file exists rather than half way
 through it.
 
+## 30. `px` resolves through pydantic's validation context, not a wrapper
+
+**§ 9.2, § 5.1.** `px` is unlike `sp`: `sp` is generator-local and resolved
+late, once `stave_space` is known, so it travels as a wrapper through the whole
+seam. `px` is document-global and its resolver — the device density — is known
+at load time, before any section is validated. So it needs no wrapper: the
+loader settles the medium first, puts the density in pydantic's validation
+`context`, and the same `_as_length` that handles every other unit resolves
+`px` against it. On paper the context is empty and `px` stays an error, because
+a format's `assumed_dpi` is a yardstick and not a resolution (§ 8.3.1).
+
+The medium therefore has to be known before the sections are validated, which
+is why `_resolve_device` peeks the device id from the raw value rather than
+from the model — the model is exactly what the density is needed to build.
+
+## 31. `quirks` is modelled and carried, but no quirk ships
+
+**§ 9.2.** § 9.2 provides `quirks` deliberately, with a concrete example: a
+Boox Note drops roughly every 16th pixel row in one view, and a generator
+would have to shift lines by ±1 px to survive it. But no shipped profile is a
+Boox, and inventing the dead-row pattern for a device nobody here can test is
+exactly the guessed number § 9.2 says is worse than no profile at all.
+
+So `DeviceProfile` carries `quirks` as a validated, empty tuple, and the field
+exists for the first verified contribution to fill — not for me to guess.
+
 ---
 
 ## Smaller calls, for completeness

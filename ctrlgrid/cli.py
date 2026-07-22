@@ -79,6 +79,10 @@ def generate(
         typer.Option(help="Name list, one entry per line — a sheet per entry (§ 9.4)."),
     ] = None,
     format: Annotated[str | None, typer.Option(help="Paper format, e.g. a4, letter.")] = None,
+    device: Annotated[
+        str | None,
+        typer.Option(help="Device profile instead of a format; see `ctrlgrid devices` (§ 9.2)."),
+    ] = None,
     orientation: Annotated[str | None, typer.Option(help="portrait | landscape")] = None,
     stamp: Annotated[
         str | None,
@@ -98,7 +102,9 @@ def generate(
     """Build a PDF from a preset or a definition file."""
     with _reporting():
         document = _open(
-            target, definition, _overrides(pages, format, orientation, names, stamp, cover, seed)
+            target,
+            definition,
+            _overrides(pages, format, device, orientation, names, stamp, cover, seed),
         )
         destination = _destination(out, target, definition, force)
         geometry = build(document, PdfWriter(destination))
@@ -170,15 +176,21 @@ class _reporting:
 def _overrides(
     pages: int | None,
     format: str | None,
+    device: str | None,
     orientation: str | None,
     names: Path | None = None,
     stamp: str | None = None,
     cover: bool = False,
     seed: int | None = None,
 ) -> dict:
+    if format is not None and device is not None:
+        # § 9.2: two answers to "what medium". The loader would refuse them in a
+        # definition; refuse them on the command line for the same reason.
+        raise CtrlGridError("--format and --device name the medium two ways — give one (§ 9.2)")
     return {
         "pages": pages,
         "format": format,
+        "device": device,
         "orientation": orientation,
         "names": read_names(names) if names is not None else None,
         "stamp": stamp,

@@ -19,7 +19,7 @@ needs a human (see *Not done*).
 uv sync --extra dev && uv run pytest && uv run ruff check .
 ```
 
-658 tests, all green, ruff clean. Twenty-one commits on `main`, linear history, **no
+676 tests, all green, ruff clean. Twenty-one commits on `main`, linear history, **no
 remote configured — nothing has ever been pushed.**
 
 ### Done
@@ -96,7 +96,7 @@ work around it.
 
 **Where the specification was genuinely silent**, the resolution is recorded in
 [`docs/implementation-decisions.md`](docs/implementation-decisions.md) —
-twenty-nine of them so far, each with the section it belongs to and the
+thirty-one of them so far, each with the section it belongs to and the
 reasoning. Read it before changing a default; several look arbitrary and are not.
 
 ## Language split

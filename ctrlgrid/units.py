@@ -41,11 +41,13 @@ _LENGTH_UNITS: dict[str, Decimal] = {
 
 # Units that exist in the specification but cannot be resolved here.
 # Naming them separately is the difference between an answer and a hunt for a
-# typo: `px` is not misspelled, it is unavailable (§ 5.1).
+# typo: `px` is not misspelled, it is unavailable without a device (§ 5.1).
 _DEFERRED_UNITS: dict[str, str] = {
     "px": (
-        "unit 'px' requires a device profile, which resolves pixels to a physical "
-        "size (§ 9.2) — device profiles arrive with milestone M5; use mm, cm, in or pt"
+        "unit 'px' needs a device profile to resolve pixels to a physical size — set "
+        "`page.device` (§ 9.2). It is refused on a paper format on purpose: a format's "
+        "`assumed_dpi` is a yardstick for the media check, not a real resolution, and "
+        "geometry may not rest on a guessed number (§ 8.3.1)"
     ),
     "sp": (
         "unit 'sp' (stave spaces) is local to the `staves` generator (§ 7.3) and has "
@@ -85,18 +87,31 @@ class Angle:
         return self.raw
 
 
-def parse_length(value: object, *, field: str | None = None) -> Length:
-    """Normalise a length such as `5mm`, `8.5in` or `0.15pt`.
+def parse_length(
+    value: object, *, field: str | None = None, density_dpi: int | None = None
+) -> Length:
+    """Normalise a length such as `5mm`, `8.5in`, `0.15pt` or — on a device — `45px`.
 
     A bare number is refused rather than assumed to be millimetres: § 5.1 puts
     the unit on the value, and bare numbers are cycle multiples elsewhere in
     the same file. Guessing here would make `spacing: 5` and `base_spacing: 5`
     mean two different things that look the same.
+
+    `density_dpi` is the resolution of the active device profile (§ 9.2), and it
+    is the only thing that lets `px` resolve. Absent it — on paper, or with no
+    medium — `px` stays an error, because a format's `assumed_dpi` is a
+    yardstick and not a resolution (§ 8.3.1).
     """
     text, number, unit = _split(value, field=field, expected="a length")
 
     if unit in _LENGTH_UNITS:
         exact = number * _LENGTH_UNITS[unit]
+        return Length(um=_to_micrometres(exact), mm=float(exact / 1000), raw=text)
+
+    if unit == "px" and density_dpi is not None:
+        # 1 px = 1/density inch. Kept in Decimal so the same input gives the
+        # same micrometre on every machine (§ 3.3), exactly as the other units.
+        exact = number * Decimal(25400) / Decimal(density_dpi)
         return Length(um=_to_micrometres(exact), mm=float(exact / 1000), raw=text)
 
     if not unit:

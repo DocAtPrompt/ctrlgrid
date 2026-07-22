@@ -82,6 +82,36 @@ class PaperFormat:
 
 
 @dataclass(frozen=True, slots=True)
+class DeviceProfile:
+    """A screen the tool can target (§ 9.2).
+
+    It carries pixels and physical size, and the density falls out of the two;
+    paper is simply this without pixels. § 9.2 makes `source` and `verified`
+    mandatory on shipped profiles for a reason worth repeating: device figures
+    are exactly the kind of data that spreads quietly and becomes quietly
+    wrong, and a wrong one here is worse than no profile at all.
+    """
+
+    id: str
+    name: str
+    width: Length
+    height: Length
+    density: int
+    """Whole dots per inch — the medium's resolution, and the only thing that
+    lets `px` resolve (§ 9.2) and the media check measure (§ 12.1)."""
+
+    margin: Length
+    color: str
+    quirks: tuple[str, ...]
+    """Device behaviour no px/mm model predicts (§ 9.2). Carried, not yet acted
+    on: none of the shipped profiles has one, and inventing a quirk would be
+    the guessed number § 9.2 warns against."""
+
+    source: str
+    verified: str
+
+
+@dataclass(frozen=True, slots=True)
 class Document:
     """A definition file, validated, with units normalised and the sheet resolved."""
 
@@ -121,6 +151,10 @@ class Document:
     preset it came from and a name alone would not tell the two apart. Short
     rather than full: this is an identity check for a human comparing two
     sheets, not a signature."""
+
+    device: DeviceProfile | None = None
+    """The active device profile, or None on paper (§ 9.2). Carries the density
+    the media check measures against (§ 12.1) and `snap: pixel` rounds to."""
 
 
 def load(source: Path | str, overrides: Mapping[str, Any] | None = None) -> Document:
@@ -167,14 +201,26 @@ def loads(text: str, overrides: Mapping[str, Any] | None = None, *, source: str)
             )
         data["seed"] = overrides["seed"]
 
-    page = _section(PageSpec, handle.get("page") or {}, raw, "page")
-    header = _section(Band, handle["header"], raw, "header") if handle.get("header") else None
-    footer = _section(Band, handle["footer"], raw, "footer") if handle.get("footer") else None
-    border = _section(BorderSpec, handle["border"], raw, "border") if handle.get("border") else None
-    stamp = _section(StampSpec, handle["stamp"], raw, "stamp") if handle.get("stamp") else None
-    pattern = _section(PatternSpec, handle.get("pattern") or {}, raw, "pattern")
-    pages = _section(PagesSpec, handle.get("pages") or {}, raw, "pages")
-    config = _section(blade.config_model, data, raw, None)
+    # The medium is settled before any section is validated, because it carries
+    # the density that lets `px` resolve everywhere (§ 9.2). Peeked from the raw
+    # value rather than the model, since the model itself needs the context.
+    profile = _resolve_device(handle, overrides)
+    context = {"density": profile.density} if profile else None
+
+    def section(model: type[BaseModel], key: str, default: Any = None) -> Any:
+        value = handle.get(key)
+        if value is None and default is None and key in ("header", "footer", "border", "stamp"):
+            return None
+        return _section(model, value or (default or {}), raw, key, context)
+
+    page = section(PageSpec, "page", {})
+    header = section(Band, "header")
+    footer = section(Band, "footer")
+    border = section(BorderSpec, "border")
+    stamp = section(StampSpec, "stamp")
+    pattern = section(PatternSpec, "pattern", {})
+    pages = section(PagesSpec, "pages", {})
+    config = _section(blade.config_model, data, raw, None, context)
     pages, names, notices = _resolve_names(pages, overrides)
     notices += _hole_mark_notices(page)
     _check_fonts({"header": header, "footer": footer}, raw)
@@ -194,10 +240,11 @@ def loads(text: str, overrides: Mapping[str, Any] | None = None, *, source: str)
         config=config,
         names=names,
         notices=notices,
-        sheet=resolve_sheet(page),
+        sheet=resolve_sheet(page, profile),
         axes=blade.periodic_axes(config),
         source=source,
         digest=hashlib.sha256(text.encode("utf-8")).hexdigest()[:12],
+        device=profile,
     )
 
 
@@ -306,22 +353,25 @@ def _hole_mark_notices(page: PageSpec) -> tuple[str, ...]:
     )
 
 
-def resolve_sheet(page: PageSpec) -> Sheet:
-    """Turn a page section into physical geometry (§ 8.1, § 9.1).
+def resolve_sheet(page: PageSpec, profile: DeviceProfile | None = None) -> Sheet:
+    """Turn a page section into physical geometry (§ 8.1, § 9.1, § 9.2).
 
     Sizes are stored portrait throughout — one convention for the format table
     and the device profiles alike — and `orientation` swaps them here.
     """
-    table = formats()
-    if page.format in table:
-        paper = table[page.format]
+    if profile is not None:
+        width, height = profile.width.um, profile.height.um
+        # § 9.2: e-ink has no unprintable border, so a device's default is 0.
+        default_margin = profile.margin
+    elif page.format in formats():
+        paper = formats()[page.format]
         width, height = paper.width.um, paper.height.um
         default_margin = paper.margin
     elif _FREE_SIZE.match(page.format.strip()):
         width, height = _free_size(page.format)
         default_margin = FREE_MARGIN
     else:
-        known = ", ".join(sorted(table))
+        known = ", ".join(sorted(formats()))
         raise DefinitionError(
             f"unknown page format `{page.format}` (known: {known}). A free size is "
             "written as two measures, width first: 210x99mm, 8.5x11in (§ 9.1)",
@@ -399,14 +449,64 @@ def formats() -> dict[str, PaperFormat]:
 
 @lru_cache(maxsize=1)
 def devices() -> list[dict[str, Any]]:
-    """The shipped device profiles (§ 9.2).
+    """The shipped device profiles, raw — for `ctrlgrid devices` to list (§ 9.2).
 
-    Read raw for now: M1 has no px/mm conversion, and `ctrlgrid devices` shows
-    `source` and `verified` precisely because device figures are the kind of
-    data that spreads quietly and becomes quietly wrong.
+    Kept as the source dicts so the command shows exactly what the file says,
+    `source` and `verified` included: those fields exist because device figures
+    spread quietly and become quietly wrong.
     """
     raw = _parse((DATA / "devices.yaml").read_text(encoding="utf-8"), "devices.yaml")
     return list(raw["devices"])
+
+
+@lru_cache(maxsize=1)
+def device_profiles() -> dict[str, DeviceProfile]:
+    """The device table, resolved (§ 9.2). Physical size is trusted from the
+    file, which computes it from pixels ÷ density rather than from marketing."""
+    table: dict[str, DeviceProfile] = {}
+    for entry in devices():
+        where = f"devices.{entry['id']}"
+        table[entry["id"]] = DeviceProfile(
+            id=entry["id"],
+            name=entry["name"],
+            width=parse_length(entry["physical"]["x"], field=f"{where}.physical.x"),
+            height=parse_length(entry["physical"]["y"], field=f"{where}.physical.y"),
+            density=int(str(entry["density"]).removesuffix("dpi")),
+            margin=parse_length(str(entry["margin"]), field=f"{where}.margin"),
+            color=str(entry["color"]),
+            quirks=tuple(entry.get("quirks") or ()),
+            source=str(entry["source"]),
+            verified=str(entry["verified"]),
+        )
+    return table
+
+
+def _resolve_device(
+    handle: dict[str, Any], overrides: Mapping[str, Any]
+) -> DeviceProfile | None:
+    """Which device profile is active, if any — peeked before validation (§ 9.2).
+
+    The command line wins (§ 11), so `--device` overrides the definition. The
+    id is read from the raw value rather than the model because the model needs
+    the density this returns.
+    """
+    raw_page = handle.get("page")
+    device_id = overrides.get("device")
+    if device_id is None and isinstance(raw_page, Mapping):
+        device_id = raw_page.get("device")
+    if not device_id:
+        return None
+
+    table = device_profiles()
+    if device_id not in table:
+        known = ", ".join(sorted(table))
+        raise DefinitionError(
+            f"unknown device `{device_id}` (known: {known}). A device profile carries "
+            "pixels and physical size; `ctrlgrid devices` lists them with where their "
+            "figures come from (§ 9.2)",
+            field="page.device",
+        )
+    return table[device_id]
 
 
 def read_names(path: Path | str) -> list[str]:
@@ -608,6 +708,14 @@ def _apply_overrides(handle: dict[str, Any], overrides: Mapping[str, Any]) -> No
     for key in ("format", "orientation"):
         if key in overrides:
             handle["page"] = {**(handle.get("page") or {}), key: overrides[key]}
+    if "device" in overrides:
+        # § 11: the flag names the medium, so it replaces the format outright —
+        # otherwise a definition's `format:` and the flag's device would collide
+        # on the very conflict § 9.2 forbids. `--format` and `--device` together
+        # is the user's contradiction, and typer reports it before we get here.
+        page = {key: value for key, value in (handle.get("page") or {}).items()
+                if key != "format"}
+        handle["page"] = {**page, "device": overrides["device"]}
     if "stamp" in overrides:
         # § 8.6: the flag is the intended route, so it replaces the section
         # outright rather than merging into it.
@@ -615,10 +723,14 @@ def _apply_overrides(handle: dict[str, Any], overrides: Mapping[str, Any]) -> No
 
 
 def _section(
-    model: type[BaseModel], data: Any, raw: CommentedMap, prefix: str | None
+    model: type[BaseModel],
+    data: Any,
+    raw: CommentedMap,
+    prefix: str | None,
+    context: dict[str, Any] | None = None,
 ) -> Any:
     try:
-        return model.model_validate(data)
+        return model.model_validate(data, context=context)
     except ValidationError as error:
         raise _translate(error, model, raw, prefix) from None
 
