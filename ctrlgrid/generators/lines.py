@@ -12,14 +12,16 @@ vertical one at the left — and `offset` moves the start of the cycle from ther
 
 from __future__ import annotations
 
+import math
 from collections.abc import Iterator
 from decimal import Decimal
-from typing import Annotated, Any, ClassVar, Literal
+from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, BeforeValidator, ConfigDict, Field, model_validator
 
 from ctrlgrid.axes import AxisPeriod
 from ctrlgrid.cycles import period_in_marks, period_um
+from ctrlgrid.errors import DefinitionError
 from ctrlgrid.generators.common import (
     DEFAULT_BASE_DASH,
     DEFAULT_DASH,
@@ -78,12 +80,14 @@ class Extent(Section):
 class Family(Section, Dashable):
     """A periodic family of like marks (§ 4, § 7.1)."""
 
-    deferred: ClassVar[dict[str, str]] = {
-        "law": "— logarithmic axes (§ 7.9) arrive with milestone M4",
-    }
-
     direction: DirectionField
     base_spacing: LengthField
+    #: Linear or logarithmic (§ 7.9). A log family is periodic per decade, and
+    #: `base_spacing` is then the **decade length** rather than a step.
+    law: Literal["linear", "log10"] = "linear"
+    #: How many decades a log family covers. It acts like `count` does on a
+    #: linear family: the block has a fixed length and does not repeat (§ 7.9).
+    decades: int | None = Field(default=None, ge=1)
     spacing: CycleField = ONE
     base_weight: LengthField = HAIRLINE
     weight: CycleField = ONE
@@ -113,6 +117,38 @@ class Family(Section, Dashable):
         """
         return "y" if self.direction == "horizontal" else "x"
 
+    @property
+    def is_log(self) -> bool:
+        return self.law == "log10"
+
+    @property
+    def block_um(self) -> int:
+        """The fixed length a log family occupies: decades x decade length (§ 7.9)."""
+        return self.base_spacing.um * (self.decades or 0)
+
+    @model_validator(mode="after")
+    def _a_log_family_is_described_by_decades_and_nothing_else(self) -> Family:
+        """§ 7.9, and § 5.1 on keys that cannot take effect where they stand."""
+        if self.is_log and self.decades is None:
+            raise ValueError(
+                "`law: log10` needs `decades`: a log family has a fixed total length of "
+                "decades x base_spacing and does not repeat, so there is nothing to end "
+                "it otherwise (§ 7.9)"
+            )
+        if not self.is_log and self.decades is not None:
+            raise ValueError(
+                "`decades` only means something with `law: log10` — on a linear family "
+                "the pattern area decides how many lines there are, and `count` limits "
+                "them (§ 7.1, § 7.9)"
+            )
+        if self.is_log and "spacing" in self.model_fields_set:
+            raise ValueError(
+                "`spacing` and `law: log10` are two answers to the same question — the "
+                "positions of a log family come from the logarithm, which is the point: "
+                "nobody types 0.4771 (§ 7.9)"
+            )
+        return self
+
     @model_validator(mode="after")
     def _the_dash_pattern_needs_a_style_that_uses_it(self) -> Family:
         self.check_dash(self.model_fields_set)
@@ -126,6 +162,10 @@ class Family(Section, Dashable):
         the factor between the two units — 2.8 — is exactly large enough for
         that to happen unnoticed.
         """
+        if self.is_log:
+            # The narrowest gap of a decade is log10(10/9) of it, and checking
+            # a stroke against a decade length would be meaningless.
+            return self
         widest = self.base_weight.mm * float(max(self.weight.values))
         narrowest_multiple = min((v for v in self.spacing.values if v > 0), default=Decimal(1))
         narrowest = self.base_spacing.mm * float(narrowest_multiple)
@@ -162,6 +202,25 @@ class LinesGenerator:
         for family in cfg.families:
             if family.count is not None or family.extent is not None:
                 continue
+            if family.is_log:
+                # A log family has a fixed length and does not repeat, so it
+                # cannot say how a leftover should be placed — but it *is* the
+                # thing being placed, and § 7.9 sends that to `remainder`
+                # (§ 8.5). It reports its block as one indivisible step, and
+                # refuses snapping, which § 7.9 rules out by name.
+                axes.setdefault(family.axis, []).append(
+                    AxisPeriod(
+                        step_um=family.block_um,
+                        cycle_um=family.block_um,
+                        label=f"{family.decades} decades of {family.base_spacing.raw}",
+                        governing=family.governing,
+                        fixed_block=True,
+                        _spacing=ONE,
+                        _base_um=family.block_um,
+                        _offset_um=family.offset.um,
+                    )
+                )
+                continue
             marks = period_in_marks(
                 [len(family.spacing), len(family.weight), len(family.color)]
             )
@@ -196,6 +255,16 @@ class LinesGenerator:
         """
         lines = []
         for family in cfg.families:
+            if family.is_log:
+                # § 7.9: "repeats every N lines" is meaningless for a family
+                # that does not repeat; the decade length is what matters.
+                lines.append(
+                    f"{family.direction}: log10, {family.decades} decades of "
+                    f"{family.base_spacing.raw} = "
+                    f"{family.block_um / 1000:.1f} mm, weight "
+                    f"{family.base_weight.raw} x {describe_cycle(family.weight)}"
+                )
+                continue
             marks = period_in_marks(
                 [len(family.spacing), len(family.weight), len(family.color)]
             )
@@ -223,8 +292,25 @@ class LinesGenerator:
     supports_snap = True
 
     def check(self, cfg: LinesConfig, *, area: Area, q: WriterQuery) -> None:
-        """Nothing to add: every rule this blade has is a rule about a family,
-        and pydantic has already applied it by the time an area exists."""
+        """One thing only an area can disprove: a log block that is too long.
+
+        § 7.9 makes it an error with the arithmetic, the same check § 12
+        point 10 prescribes for count-driven generators — and it belongs here
+        rather than in `generate`, which runs while pages are written.
+        """
+        for family in cfg.families:
+            if not family.is_log:
+                continue
+            available = area.height if family.axis == "y" else area.width
+            if family.block_um > available:
+                raise DefinitionError(
+                    f"{family.decades} decades of {family.base_spacing.raw} need "
+                    f"{_mm(family.block_um)} on the {family.axis} axis and the pattern "
+                    f"area is {_mm(available)}. A log family has a fixed length and is "
+                    "never compressed (§ 8.2) — use fewer decades, a shorter decade or "
+                    "a larger format (§ 7.9)",
+                    field="families",
+                )
 
     def is_page_invariant(self, cfg: LinesConfig) -> bool:
         """Always: a family depends on the pattern area, never on the page (§ 10.1)."""
@@ -241,10 +327,40 @@ class LinesGenerator:
         for family in cfg.families:
             yield from self._family(family, area)
 
+    def _log_family(
+        self, family: Family, *, span: int, horizontal: bool
+    ) -> Iterator[Segment]:
+        """The decade pattern of § 7.9, computed rather than typed.
+
+        Nine lines per decade at log10(1…9) plus the one that closes the last
+        decade. The index runs on across decade boundaries, so a nine-entry
+        weight cycle marks every decade start — which is exactly the example
+        § 7.9 gives.
+        """
+        for index, position in enumerate(_log_positions(family)):
+            start, end = (
+                (Point(0, position), Point(span, position))
+                if horizontal
+                else (Point(position, 0), Point(position, span))
+            )
+            yield Segment(
+                start=start,
+                end=end,
+                weight=family.base_weight.mm * float(family.weight.at(index)),
+                color=family.color[index % len(family.color)],
+                dash=family.dash_pattern,
+                cap=family.cap,
+                layer=Layer.PATTERN,
+            )
+
     def _family(self, family: Family, area: Area) -> Iterator[Segment]:
         horizontal = family.direction == "horizontal"
         extent = area.height if horizontal else area.width
         span = area.width if horizontal else area.height
+
+        if family.is_log:
+            yield from self._log_family(family, span=span, horizontal=horizontal)
+            return
 
         lower = family.extent.start.um if family.extent and family.extent.start else 0
         upper = family.extent.end.um if family.extent and family.extent.end else extent
@@ -283,3 +399,25 @@ class LinesGenerator:
             drawn += 1
             if family.count is not None and drawn >= family.count:
                 return
+
+
+def _log_positions(family: Family) -> list[int]:
+    """Every line of a log family, in micrometres from its own start (§ 7.9).
+
+    Rounded once, from the exact value: § 8.2 forbids accumulated drift, and
+    every position here is computed from the logarithm rather than from its
+    neighbour.
+    """
+    decade = family.base_spacing.um
+    offset = family.offset.um
+    positions = [
+        offset + round(decade * (index + math.log10(step)))
+        for index in range(family.decades or 0)
+        for step in range(1, 10)
+    ]
+    positions.append(offset + decade * (family.decades or 0))
+    return positions
+
+
+def _mm(um: int) -> str:
+    return f"{um / 1000:.1f}mm"

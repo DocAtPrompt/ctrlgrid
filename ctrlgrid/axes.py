@@ -42,8 +42,20 @@ class AxisPeriod:
     _base_um: int
     _offset_um: int
 
+    fixed_block: bool = False
+    """Whether this is one indivisible block rather than a repeating period.
+
+    A logarithmic family is one (§ 7.9): it has a fixed length of
+    `decades x base_spacing`, it does not repeat when the area is longer, and
+    snapping to a decade length would be meaningless. It reports itself here
+    all the same, because § 7.9 sends the question of *where the block sits*
+    to `remainder` (§ 8.5) — and remainder works on exactly these numbers."""
+
+
     def used(self, available_um: int) -> int:
         """How much of `available_um` the family actually reaches."""
+        if self.fixed_block:
+            return min(self.cycle_um, available_um)
         last = 0
         for _, position in self._spacing.positions(
             base_um=self._base_um, extent_um=available_um, offset_um=self._offset_um
@@ -53,6 +65,8 @@ class AxisPeriod:
 
     def used_whole_cycles(self, available_um: int) -> int:
         """The same, but stopping at the last complete cycle (§ 8.5)."""
+        if self.fixed_block:
+            return self.used(available_um)
         length = len(self._spacing)
         last = 0
         for index, position in self._spacing.positions(

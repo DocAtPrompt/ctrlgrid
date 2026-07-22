@@ -271,6 +271,15 @@ def place_pattern(
         return available, 0
 
     period = _governing(periods, axis)
+    if snap != "none" and period.fixed_block:
+        # § 7.9: a log family is not snappable, and saying so beats snapping to
+        # a decade length that means nothing as a grid step.
+        raise DefinitionError(
+            f"`snap: {snap}` is not supported on the {axis} axis: it is governed by "
+            f"{period.label}, and § 7.9 rules snapping out for `law: log10` — decade "
+            "lengths do not divide into grid steps. Remove pattern.snap",
+            field=f"pattern.snap.{axis}",
+        )
     room = _snap(available, snap, period, axis)
 
     if snap == "cycle" and mode == "whole_cycles":

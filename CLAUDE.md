@@ -34,6 +34,7 @@ remote configured — nothing has ever been pushed.**
 | **M2** dash styles | `style: dashed \| dotted`, `base_dash`, `dash` |
 | **M2** free page sizes | `format: 210x99mm`, `format: 8.5x11in` |
 | **M2** images in bands | `left: {image: …, height: …}`, PNG, never cropped |
+| **M4** `law: log10` | decade positions, fixed block, placed by `remainder` |
 | **M4** `grid` | count-driven block, square cells, § 7.10 labels, fills |
 | **M4** `dots` | two crossed cycles, `combine`, colour with a named axis |
 | **M3** — `polar` | rings, spokes, segment and ring labels, counting patterns (§ 7.10) |
@@ -41,8 +42,8 @@ remote configured — nothing has ever been pushed.**
 
 ### Not done
 
-**M4 is under way** — `dots` and `grid` are done; `staves`, `maze`, `tiling`,
-`form` and `law: log10` (§ 7.9) are not. Three things M3 built are
+**M4 is under way** — `dots`, `grid` and `law: log10` are done; `staves`,
+`maze`, `tiling` and `form` are not. Three things M3 built are
 there to be reused: `labels.py` (§ 7.10) is what `grid` and `tiling` label
 with, `generators/common.py` holds the cycle and dash fields every family
 needs, and `check()` is where a blade refuses what only the pattern area can

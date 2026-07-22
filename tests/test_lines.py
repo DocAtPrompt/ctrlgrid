@@ -249,17 +249,17 @@ class TestValidation:
             )
         assert "horizontal" in str(excinfo.value)
 
-    def test_a_key_from_a_later_milestone_names_it(self) -> None:
-        with pytest.raises(ValidationError) as excinfo:
-            LinesConfig.model_validate(
-                {
-                    "families": [
-                        {"direction": "horizontal", "base_spacing": "5mm", "law": "log10"}
-                    ]
-                }
-            )
-        message = str(excinfo.value)
-        assert "law" in message and "M4" in message
+    def test_law_log10_is_a_family_property_now(self) -> None:
+        # § 7.9 arrived with M4: it is a property of a family, not a generator.
+        config = LinesConfig.model_validate(
+            {
+                "families": [
+                    {"direction": "horizontal", "base_spacing": "25mm",
+                     "law": "log10", "decades": 2}
+                ]
+            }
+        )
+        assert config.families[0].is_log
 
     def test_governing_is_accepted_now_that_it_does_something(self) -> None:
         # It settles an axis several families share (§ 8.3, § 8.5).
