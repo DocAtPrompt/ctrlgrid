@@ -87,7 +87,7 @@ There are no double-clickable installers, and none are planned.
 | Generator | Produces |
 |---|---|
 | `lines` | squared, ruled, isometric, calligraphy, Cornell, log/semi-log — **works today** |
-| `dots` | dot grids with emphasised rows and columns |
+| `dots` | dot grids with emphasised rows and columns — **works today** |
 | `staves` | blank music staves and guitar tab |
 | `grid` | labelled cell blocks — battleship, score sheets |
 | `maze` | rectangular mazes, optionally with solutions |

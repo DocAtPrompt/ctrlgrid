@@ -1,0 +1,34 @@
+# Dot grid, 5 mm, with every fifth dot emphasised in both directions.
+#
+# The preset is the documentation for `dots` (§ 7.2, § 9.3): copy it with
+# `ctrlgrid show dots-5mm > mine.yaml` and bend it.
+#
+# Two crossed cycles, and the only question a dot grid really has is what
+# happens where they meet. `combine: max` gives the cross grid — a dot is as
+# large as the larger of its two cycle entries — and `color.axis: cross` does
+# the same for colour, which is why a colour cycle here must name its axis.
+
+version: 1
+
+defs:
+  grid:   &grid   "#aab4c0"
+  accent: &accent "#5577aa"
+
+page:
+  format: a4
+  margin: 10mm
+
+generator: dots
+
+grid:
+  x: { base_spacing: 5mm, spacing: [1] }
+  y: { base_spacing: 5mm, spacing: [1] }
+
+base_size: 0.3mm
+size_x: [1, 1, 1, 1, 1.8]
+size_y: [1, 1, 1, 1, 1.8]
+combine: max
+
+color:
+  axis: cross
+  cycle: [*grid, *grid, *grid, *grid, *accent]
