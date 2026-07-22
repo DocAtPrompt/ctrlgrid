@@ -16,7 +16,7 @@ requires-python = ">=3.11"
 authors = [{ name = "DocAtPrompt (Alexander Erben)" }]
 keywords = ["pdf", "graph-paper", "grid", "template", "eink", "remarkable"]
 classifiers = [
-    "Development Status :: 2 - Pre-Alpha",
+    "Development Status :: 3 - Alpha",
     "Environment :: Console",
     "Intended Audience :: End Users/Desktop",
     "License :: OSI Approved :: MIT License",
