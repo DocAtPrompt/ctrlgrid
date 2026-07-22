@@ -126,6 +126,17 @@ class PdfWriter:
                     "(§ 10.2 capabilities); they arrive with milestone M2"
                 )
 
+    def outline(self, title: str, *, index: int) -> None:
+        """A bookmark on the current page (§ 10.1).
+
+        The key comes from the page index, never from a counter or a random
+        value, so two runs of the same command produce the same bytes.
+        """
+        pdf = self._pdf
+        key = f"page{index}"
+        pdf.bookmarkPage(key)
+        pdf.addOutlineEntry(title, key)
+
     def end_page(self) -> None:
         self._pdf.showPage()
 

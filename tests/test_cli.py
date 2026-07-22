@@ -72,6 +72,79 @@ class TestGenerating:
         assert "5" in result.output and "mm" in result.output
 
 
+class TestNameLists:
+    """§ 9.4 and § 1.1 — 30 sheets, each with a different name."""
+
+    NAMED = """
+version: 1
+header:
+  height: 10mm
+  gap: 4mm
+  center: "{name}"
+generator: lines
+families:
+  - {direction: horizontal, base_spacing: 10mm}
+"""
+
+    def names(self, tmp_path: Path, count: int = 4) -> Path:
+        path = tmp_path / "class3b.txt"
+        path.write_text("\n".join(f"Child {n}" for n in range(count)), encoding="utf-8")
+        return path
+
+    def test_a_list_alone_gives_one_sheet_per_entry(self, tmp_path: Path) -> None:
+        definition = write(tmp_path, self.NAMED)
+        out = tmp_path / "class.pdf"
+        result = runner.invoke(
+            app, ["-d", str(definition), "--names", str(self.names(tmp_path)), "-o", str(out)]
+        )
+        assert result.exit_code == 0, result.output
+        assert pdfread.page_count(out) == 4
+
+    def test_a_page_count_takes_over(self, tmp_path: Path) -> None:
+        definition = write(tmp_path, self.NAMED)
+        out = tmp_path / "class.pdf"
+        result = runner.invoke(
+            app,
+            [
+                "-d", str(definition),
+                "--names", str(self.names(tmp_path, 27)),
+                "--pages", "3",
+                "-o", str(out),
+            ],
+        )
+        assert result.exit_code == 0, result.output
+        assert pdfread.page_count(out) == 3
+
+    def test_cutting_the_list_is_reported(self, tmp_path: Path) -> None:
+        definition = write(tmp_path, self.NAMED)
+        result = runner.invoke(
+            app,
+            [
+                "-d", str(definition),
+                "--names", str(self.names(tmp_path, 27)),
+                "--pages", "3",
+                "-o", str(tmp_path / "class.pdf"),
+            ],
+        )
+        assert "3 of 27" in result.output
+
+    def test_a_list_that_cannot_be_decoded_names_the_line(self, tmp_path: Path) -> None:
+        path = tmp_path / "cp1252.txt"
+        path.write_bytes("Anna\nJürgen\n".encode("cp1252"))
+        definition = write(tmp_path, self.NAMED)
+        result = runner.invoke(
+            app, ["-d", str(definition), "--names", str(path), "-o", str(tmp_path / "o.pdf")]
+        )
+        assert result.exit_code != 0
+        assert "line 2" in result.output
+
+    def test_a_name_placeholder_without_a_list_refuses(self, tmp_path: Path) -> None:
+        definition = write(tmp_path, self.NAMED)
+        result = runner.invoke(app, ["-d", str(definition), "-o", str(tmp_path / "o.pdf")])
+        assert result.exit_code != 0
+        assert "--names" in result.output
+
+
 class TestNotices:
     """§ 8.3 — a setting that cannot take effect is said once, not per page."""
 

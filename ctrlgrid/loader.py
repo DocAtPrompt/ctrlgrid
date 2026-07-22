@@ -16,6 +16,7 @@ Three refusals happen here before anything else looks at the data:
 
 from __future__ import annotations
 
+import codecs
 import difflib
 from collections.abc import Iterator, Mapping
 from dataclasses import dataclass
@@ -83,6 +84,14 @@ class Document:
     config: Any
     """The blade's own section, validated by its `config_model` (§ 3.6)."""
 
+    names: list[str] | None
+    """One entry per page, already resolved to the final page count (§ 9.4).
+    None when the run is not data-driven."""
+
+    notices: tuple[str, ...]
+    """Things said once per run rather than refused over — see § 9.4 on
+    reporting that a list was cut rather than cutting it quietly."""
+
     sheet: Sheet
     axes: dict[str, list[AxisPeriod]]
     """The blade's periodic axes, asked once so the handle can place the
@@ -131,6 +140,7 @@ def loads(text: str, overrides: Mapping[str, Any] | None = None, *, source: str)
     pattern = _section(PatternSpec, handle.get("pattern") or {}, raw, "pattern")
     pages = _section(PagesSpec, handle.get("pages") or {}, raw, "pages")
     config = _section(blade.config_model, data, raw, None)
+    pages, names, notices = _resolve_names(pages, overrides)
 
     return Document(
         version=SUPPORTED_VERSION,
@@ -141,10 +151,46 @@ def loads(text: str, overrides: Mapping[str, Any] | None = None, *, source: str)
         pages=pages,
         generator=generator_name,
         config=config,
+        names=names,
+        notices=notices,
         sheet=resolve_sheet(page),
         axes=blade.periodic_axes(config),
         source=source,
     )
+
+
+def _resolve_names(
+    pages: PagesSpec, overrides: Mapping[str, Any]
+) -> tuple[PagesSpec, list[str] | None, tuple[str, ...]]:
+    """Settle the two modes of § 9.4 and lay one name out per page.
+
+    | mode         | led by     | behaviour                                  |
+    |--------------|------------|--------------------------------------------|
+    | data-driven  | the list   | one sheet per entry — the default with a list |
+    | fixed count  | the count  | entries repeated cyclically, or cut         |
+
+    Which applies turns on whether a count was written down at all, so a bare
+    `ctrlgrid millimeter-a4 --names class3b.txt` gives a sheet per child rather
+    than the single page the default count would suggest.
+    """
+    source = overrides.get("names") or pages.names
+    if not source:
+        return pages, None, ()
+
+    names = list(source)
+    if not pages.count_was_given:
+        # The data leads (§ 9.4).
+        return pages.model_copy(update={"count": len(names)}), names, ()
+
+    count = pages.count
+    notices: tuple[str, ...] = ()
+    if count < len(names):
+        # The legitimate "let me look at three sheets first" case. Cutting is
+        # fine as long as the number is said out loud (§ 9.4).
+        notices = (f"using {count} of {len(names)} names",)
+    # Short lists repeat cyclically; long ones are cut by the same expression.
+    laid_out = [names[index % len(names)] for index in range(count)]
+    return pages, laid_out, notices
 
 
 def resolve_sheet(page: PageSpec) -> Sheet:
@@ -200,6 +246,42 @@ def devices() -> list[dict[str, Any]]:
     """
     raw = _parse((DATA / "devices.yaml").read_text(encoding="utf-8"), "devices.yaml")
     return list(raw["devices"])
+
+
+def read_names(path: Path | str) -> list[str]:
+    """Read a name list — one entry per line (§ 9.4).
+
+    Encoding gets its own care because it is where this feature actually
+    breaks: lists come out of spreadsheets, and those export CP1252 far more
+    often than anyone expects. "invalid start byte" is useless then, so the
+    message names the line and the byte and says what the likely cause is.
+    """
+    path = Path(path)
+    try:
+        data = path.read_bytes()
+    except OSError as error:
+        raise DefinitionError(f"cannot read the name list {path}: {error.strerror}") from None
+
+    data = data.removeprefix(codecs.BOM_UTF8)
+    try:
+        text = data.decode("utf-8")
+    except UnicodeDecodeError as error:
+        line = data.count(b"\n", 0, error.start) + 1
+        column = error.start - (data.rfind(b"\n", 0, error.start) + 1) + 1
+        raise DefinitionError(
+            f"{path} is not valid UTF-8: line {line}, byte {error.start} "
+            f"(character {column} of that line) is 0x{data[error.start]:02x}. "
+            "Lists exported from a spreadsheet are often CP1252 — "
+            "re-save the file as UTF-8 (§ 9.4)"
+        ) from None
+
+    # A trailing newline is not an empty name, and neither is a blank line
+    # someone left in the middle. A nameless sheet is not a thing anyone means.
+    names = [line.strip() for line in text.splitlines()]
+    names = [name for name in names if name]
+    if not names:
+        raise DefinitionError(f"the name list {path} holds no entries")
+    return names
 
 
 def preset_names() -> list[str]:

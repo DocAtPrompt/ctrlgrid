@@ -422,8 +422,6 @@ def resolve_placeholders(text: str, page: PageContext, *, field: str | None = No
 def preflight(
     document: Document,
     q: WriterQuery,
-    *,
-    names: list[str] | None = None,
 ) -> tuple[Geometry, list[PageContext], list[list[Text]]]:
     """Measure every page before a single one is written (§ 12 point 13).
 
@@ -442,7 +440,7 @@ def preflight(
         pattern=document.pattern,
         blade_axes=document.axes,
     )
-    contexts = list(page_contexts(count=document.pages.count, names=names))
+    contexts = list(page_contexts(count=document.pages.count, names=document.names))
 
     frames: list[list[Text]] = []
     for context in contexts:
@@ -464,7 +462,7 @@ def preflight(
     return geometry, contexts, frames
 
 
-def build(document: Document, writer: Writer, *, names: list[str] | None = None) -> Geometry:
+def build(document: Document, writer: Writer) -> Geometry:
     """The page loop (§ 3.1): measure everything, then write everything.
 
     The two halves are not an implementation detail. § 12 point 13 requires all
@@ -478,13 +476,17 @@ def build(document: Document, writer: Writer, *, names: list[str] | None = None)
     """
     from ctrlgrid import generators
 
-    geometry, contexts, frames = preflight(document, writer, names=names)
+    geometry, contexts, frames = preflight(document, writer)
     blade = generators.get(document.generator)
 
     # Pass two — write. Nothing below this line may raise on user input.
     writer.begin_document(DocumentMeta(title=f"ctrlgrid {document.source}"))
     for context, frame in zip(contexts, frames, strict=True):
         writer.begin_page(document.sheet.width, document.sheet.height)
+        if context.name is not None:
+            # § 10.1: a data-driven run gets a table of contents, so a
+            # thirty-page document can be navigated instead of scrolled.
+            writer.outline(context.name, index=context.index)
         placed = geometry.for_page(
             is_even=context.is_even, sheet=document.sheet, duplex=document.page.duplex
         )

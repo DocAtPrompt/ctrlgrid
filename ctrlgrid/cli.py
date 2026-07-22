@@ -26,7 +26,15 @@ from typer.core import TyperGroup
 
 from ctrlgrid import generators
 from ctrlgrid.errors import CtrlGridError
-from ctrlgrid.loader import Document, devices, load, load_preset, preset_names, preset_text
+from ctrlgrid.loader import (
+    Document,
+    devices,
+    load,
+    load_preset,
+    preset_names,
+    preset_text,
+    read_names,
+)
 from ctrlgrid.pages import Geometry, build, preflight
 from ctrlgrid.writers.pdf import PdfWriter
 
@@ -66,6 +74,10 @@ def generate(
         Path | None, typer.Option("-o", "--out", help="Output path; default is Downloads.")
     ] = None,
     pages: Annotated[int | None, typer.Option(help="Page count; overrides pages.count.")] = None,
+    names: Annotated[
+        Path | None,
+        typer.Option(help="Name list, one entry per line — a sheet per entry (§ 9.4)."),
+    ] = None,
     format: Annotated[str | None, typer.Option(help="Paper format, e.g. a4, letter.")] = None,
     orientation: Annotated[str | None, typer.Option(help="portrait | landscape")] = None,
     force: Annotated[bool, typer.Option("--force", help="Overwrite an existing file.")] = False,
@@ -73,7 +85,7 @@ def generate(
 ) -> None:
     """Build a PDF from a preset or a definition file."""
     with _reporting():
-        document = _open(target, definition, _overrides(pages, format, orientation))
+        document = _open(target, definition, _overrides(pages, format, orientation, names))
         destination = _destination(out, target, definition, force)
         geometry = build(document, PdfWriter(destination))
         _report(document, destination, geometry, quiet=quiet)
@@ -97,7 +109,7 @@ def check(
             f"{file}: valid — {document.pages.count} page(s), "
             f"generator `{document.generator}`"
         )
-        for notice in geometry.notices:
+        for notice in (*document.notices, *geometry.notices):
             typer.echo(f"  note: {notice}")
 
 
@@ -141,8 +153,15 @@ class _reporting:
         return False
 
 
-def _overrides(pages: int | None, format: str | None, orientation: str | None) -> dict:
-    return {"pages": pages, "format": format, "orientation": orientation}
+def _overrides(
+    pages: int | None, format: str | None, orientation: str | None, names: Path | None = None
+) -> dict:
+    return {
+        "pages": pages,
+        "format": format,
+        "orientation": orientation,
+        "names": read_names(names) if names is not None else None,
+    }
 
 
 def _open(target: str | None, definition: Path | None, overrides: dict) -> Document:
@@ -178,8 +197,9 @@ def _report(document: Document, path: Path, geometry: Geometry, *, quiet: bool) 
     blade = generators.get(document.generator)
     for line in blade.describe(document.config):
         typer.echo(f"  {line}")
-    # § 8.3: a setting that cannot take effect is said once per run.
-    for notice in geometry.notices:
+    # Said once per run, never per page: a list that was cut (§ 9.4) or a
+    # setting that cannot take effect where it stands (§ 8.3).
+    for notice in (*document.notices, *geometry.notices):
         typer.echo(f"  note: {notice}")
     # § 8.2: we cannot stop a print driver scaling, so we name the setting.
     typer.echo("  print at 'Actual size' / 100 % — not 'Fit to page', or it is not to scale")

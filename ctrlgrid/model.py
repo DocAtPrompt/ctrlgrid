@@ -247,6 +247,20 @@ class PagesSpec(Section):
     }
 
     count: int = Field(default=1, ge=1)
+    #: § 9.4 allows an inline list for the one-off case but does not encourage
+    #: it: the structure is the form, the list is a throwaway file. `--names`
+    #: is the intended route and beats this one (§ 11).
+    names: list[str] | None = None
+
+    @property
+    def count_was_given(self) -> bool:
+        """Whether a page count was actually written down.
+
+        It decides the mode of § 9.4: with a list and no count the data leads
+        and there is one sheet per entry; with a count the count leads and
+        entries repeat or are cut.
+        """
+        return "count" in self.model_fields_set
 
 
 class PageSpec(Section):
