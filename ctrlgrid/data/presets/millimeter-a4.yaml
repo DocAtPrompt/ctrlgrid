@@ -1,0 +1,42 @@
+# Millimetre paper on A4 — 1 mm grid, every fifth line emphasised.
+#
+# A preset is an ordinary definition file, never a special path through the
+# code (§ 9.3). That is also why presets are the documentation: this file is
+# meant to be copied with `ctrlgrid show millimeter-a4 > mine.yaml` and bent.
+#
+# It is the reference case of acceptance criterion 2 (§ 14): read back from the
+# finished PDF, the MediaBox is 210 x 297 mm and the lines sit 1.000 mm apart,
+# to the micrometre.
+
+version: 1
+
+defs:
+  grid:   &grid   "#7799bb"
+  accent: &accent "#4466aa"
+
+page:
+  format: a4
+  # 5 mm is the non-printable border most consumer printers have (§ 8.1).
+  # It is a property of the device, not a design choice — going below it means
+  # the printer clips the outer area.
+  margin: 5mm
+
+generator: lines
+
+families:
+  # Two identical families at right angles. The cycles are what make the fifth
+  # line heavier and bluer: five entries for weight and colour against a
+  # one-entry spacing cycle, running independently (§ 5.3).
+  - direction: horizontal
+    base_spacing: 1mm
+    spacing: [1]
+    base_weight: 0.15pt
+    weight: [1, 1, 1, 1, 2.7]
+    color: [*grid, *grid, *grid, *grid, *accent]
+
+  - direction: vertical
+    base_spacing: 1mm
+    spacing: [1]
+    base_weight: 0.15pt
+    weight: [1, 1, 1, 1, 2.7]
+    color: [*grid, *grid, *grid, *grid, *accent]

@@ -1,0 +1,55 @@
+name: Release
+
+# § 13: distribution is PyPI, and M1 acceptance criterion 1 is that
+# `uvx ctrlgrid millimeter-a4 --pages 3 -o out.pdf` works with no further
+# setup. That requires the package to be on PyPI, so the release runs on a tag
+# rather than by hand.
+#
+# Trusted publishing: no API token in the repository. Configure the publisher
+# once at https://pypi.org/manage/account/publishing/ for this repository and
+# the `pypi` environment below.
+
+on:
+  push:
+    tags: ["v*"]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+
+      # The suite gates the release. A tag that fails the dimensional test
+      # must not reach PyPI — the promise is the product.
+      - run: uv sync --extra dev
+      - run: uv run ruff check .
+      - run: uv run pytest
+
+      - name: Check the tag matches the packaged version
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          version="$(uv run python -c 'import ctrlgrid; print(ctrlgrid.__version__)')"
+          if [ "$tag" != "$version" ]; then
+            echo "tag $tag does not match ctrlgrid.__version__ $version" >&2
+            exit 1
+          fi
+
+      - run: uv build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+      - uses: pypa/gh-action-pypi-publish@release/v1

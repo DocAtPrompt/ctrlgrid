@@ -4,9 +4,17 @@ Generate **dimensionally accurate** PDF templates from a small definition file:
 grid paper, ruled paper, dot grids, staff paper, mazes, polar targets, tilings
 and fillable forms — for paper formats **and** for e-ink tablets.
 
-> **Status: specification stage.** The design is complete and documented; the
-> implementation has not started. Nothing below works yet. Watch the repository
-> or read [the specification](pflichtenheft-vorlagengenerator.md) (German).
+> **Status: milestone M1.** One blade is sharp. `lines` works end to end —
+> definition file or preset, multi-page PDF, header and footer, exact
+> millimetres — and is covered by the dimensional test described below. The
+> other generators in the table further down, and the options marked below as
+> arriving later, are specified but not built yet; asking for one gets you a
+> message naming the milestone, never a silently different sheet.
+>
+> Working today: `ctrlgrid millimeter-a4 --pages 30 -o grid.pdf`,
+> `ctrlgrid -d my-def.yaml`, `ctrlgrid check`, `presets`, `show`, `devices`,
+> and the flags `--pages`, `--format`, `--orientation`, `-o`, `--force`,
+> `--quiet`.
 
 ## The one promise
 

@@ -1,0 +1,141 @@
+"""Header and footer layout (§ 8.4, § 8.9) — measured, never estimated.
+
+Acceptance criterion 5 of § 14: the pre-flight query API is really used. These
+tests use the actual PDF writer as the query side, because a stub would prove
+nothing about the metrics the output is built from.
+"""
+
+from __future__ import annotations
+
+import pytest
+
+from ctrlgrid.errors import DefinitionError
+from ctrlgrid.frame import layout_band
+from ctrlgrid.marks import Layer, Text
+from ctrlgrid.model import Band
+from ctrlgrid.pages import Box, PageContext
+from ctrlgrid.writers.pdf import PdfWriter
+
+Q = PdfWriter("unused.pdf")
+BAND = Box(left=5000, bottom=280000, right=205000, top=292000)
+PAGE = PageContext(index=0, number=7, count=30, name="Anna Berger", is_even=False,
+                   seed_material=b"")
+
+
+def place(band: Band, box: Box = BAND) -> dict[str, Text]:
+    marks = layout_band(band, box, q=Q, page=PAGE, section="header")
+    return {mark.align: mark for mark in marks}
+
+
+class TestPlacement:
+    def test_the_left_field_starts_at_the_left_edge(self) -> None:
+        assert place(Band(height="12mm", left="Anna"))["left"].pos.x == BAND.left
+
+    def test_the_right_field_ends_at_the_right_edge(self) -> None:
+        assert place(Band(height="12mm", right="7 / 30"))["right"].pos.x == BAND.right
+
+    def test_the_centre_field_sits_in_the_middle_of_the_content_width(self) -> None:
+        assert place(Band(height="12mm", center="Class 3B"))["center"].pos.x == 105000
+
+    def test_text_is_placed_within_the_band(self) -> None:
+        mark = place(Band(height="12mm", center="Class 3B"))["center"]
+        assert BAND.bottom < mark.pos.y < BAND.top
+
+    def test_header_and_footer_marks_belong_to_the_frame(self) -> None:
+        assert place(Band(height="12mm", center="x"))["center"].layer is Layer.FRAME
+
+    def test_empty_fields_produce_no_marks(self) -> None:
+        assert layout_band(Band(height="12mm"), BAND, q=Q, page=PAGE, section="header") == []
+
+    def test_placeholders_are_resolved(self) -> None:
+        assert place(Band(height="12mm", center="{page} / {page_count}"))["center"].content == (
+            "7 / 30"
+        )
+
+
+class TestOverflow:
+    """§ 8.9 — a truncated name is silent data loss, so the default is an error."""
+
+    def test_a_field_that_does_not_fit_names_field_text_and_the_missing_space(self) -> None:
+        narrow = Box(left=0, bottom=0, right=20000, top=12000)
+        with pytest.raises(DefinitionError) as excinfo:
+            layout_band(
+                Band(height="12mm", left="Maximilian Sonnenschein-Hofstätter"),
+                narrow,
+                q=Q,
+                page=PAGE,
+                section="header",
+            )
+        message = str(excinfo.value)
+        assert "header.left" in message
+        assert "Maximilian Sonnenschein-Hofstätter" in message
+        assert "mm" in message
+
+    def test_cut_truncates_and_marks_it(self) -> None:
+        # The ellipsis is mandatory: without it a cut string looks complete.
+        narrow = Box(left=0, bottom=0, right=20000, top=12000)
+        marks = layout_band(
+            Band(height="12mm", cut=True, left="Maximilian Sonnenschein-Hofstätter"),
+            narrow,
+            q=Q,
+            page=PAGE,
+            section="header",
+        )
+        content = marks[0].content
+        assert content.endswith("…")
+        assert content.startswith("Max")
+        assert Q.text_width(content, family="sans", size=marks[0].size) <= 20000
+
+    def test_the_centre_field_bounds_its_neighbours(self) -> None:
+        # § 8.9 rules 2 and 3: left runs up to the centre block, not to the
+        # middle of the page.
+        wide_centre = Band(height="12mm", center="A very wide centre field indeed", left="Anna")
+        marks = place(wide_centre)
+        assert marks["left"].pos.x == BAND.left
+
+    def test_without_a_centre_field_left_and_right_split_at_the_middle(self) -> None:
+        # § 8.9 rule 5 — the commonest case of all: name left, page right.
+        narrow = Box(left=0, bottom=0, right=40000, top=12000)
+        with pytest.raises(DefinitionError) as excinfo:
+            layout_band(
+                Band(height="12mm", left="A rather long name here", right="7 / 30"),
+                narrow,
+                q=Q,
+                page=PAGE,
+                section="footer",
+            )
+        assert "footer.left" in str(excinfo.value)
+
+
+class TestBandHeight:
+    def test_a_band_too_short_for_its_font_is_an_error(self) -> None:
+        # § 8.4: the height stays the one from the definition, but it has to be
+        # enough — otherwise the text runs into the pattern area unnoticed.
+        flat = Box(left=0, bottom=0, right=200000, top=1000)
+        with pytest.raises(DefinitionError) as excinfo:
+            layout_band(
+                Band(height="1mm", center="Class 3B", font={"size": "9pt"}),
+                flat,
+                q=Q,
+                page=PAGE,
+                section="header",
+            )
+        message = str(excinfo.value)
+        assert "header.height" in message and "9pt" in message
+
+
+class TestGlyphCoverage:
+    def test_a_glyph_outside_latin_1_names_the_way_out(self) -> None:
+        # § 10.3: the answer to a Polish name is a font file, and the message
+        # has to say so rather than just naming the character.
+        with pytest.raises(DefinitionError) as excinfo:
+            layout_band(
+                Band(height="12mm", center="Michał"),
+                BAND,
+                q=Q,
+                page=PAGE,
+                section="header",
+            )
+        message = str(excinfo.value)
+        assert "ł" in message
+        assert "font" in message.lower()
