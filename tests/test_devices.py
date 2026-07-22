@@ -152,7 +152,12 @@ class TestOnTheSheet:
         path = tmp_path / "device.pdf"
         build(
             loads(
-                "version: 1\npage:\n  device: remarkable-paper-pro\n" + BASE,
+                "version: 1\npage:\n  device: remarkable-paper-pro\n"
+                "generator: lines\nfamilies:\n"
+                # A device-appropriate weight: the 0.15pt paper default is
+                # 0.48px here and rounds away — which is § 12.1 working, not a
+                # bug, but not what this test is about.
+                "  - {direction: horizontal, base_spacing: 5mm, base_weight: 0.6pt}\n",
                 source="test",
             ),
             PdfWriter(path),

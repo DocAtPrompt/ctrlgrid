@@ -17,7 +17,7 @@ import datetime
 import hashlib
 import re
 from collections.abc import Iterator
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import TYPE_CHECKING
 
 from ctrlgrid.axes import AxisPeriod
@@ -489,6 +489,14 @@ def preflight(
     # (§ 12 point 13). `polar` needs it for the two questions only the area can
     # answer: does the circle fit, and do the segment labels fit (§ 7.6).
     blade.check(document.config, area=geometry.area, q=q)
+
+    # § 12.1: the definition against the medium's resolution, once the medium
+    # is fixed. A round-to-zero stroke raises here; the rest become notices,
+    # and `--strict` (carried on the document) turns them into errors.
+    from ctrlgrid.media import media_findings
+
+    findings = media_findings(document, q, strict=document.strict)
+    geometry = replace(geometry, notices=geometry.notices + tuple(findings))
 
     contexts = list(
         page_contexts(

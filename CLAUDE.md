@@ -19,7 +19,7 @@ needs a human (see *Not done*).
 uv sync --extra dev && uv run pytest && uv run ruff check .
 ```
 
-676 tests, all green, ruff clean. Twenty-one commits on `main`, linear history, **no
+689 tests, all green, ruff clean. Twenty-one commits on `main`, linear history, **no
 remote configured — nothing has ever been pushed.**
 
 ### Done
@@ -96,7 +96,7 @@ work around it.
 
 **Where the specification was genuinely silent**, the resolution is recorded in
 [`docs/implementation-decisions.md`](docs/implementation-decisions.md) —
-thirty-one of them so far, each with the section it belongs to and the
+thirty-three of them so far, each with the section it belongs to and the
 reasoning. Read it before changing a default; several look arbitrary and are not.
 
 ## Language split
@@ -126,6 +126,7 @@ and knows nothing about margins.
 | `frame.py` | header/footer layout, border, background, hole marks, stamp |
 | `labels.py` | counting patterns `n`/`a`/`A`, explicit lists (§ 7.10) |
 | `images.py` | PNG sources: signature check, pixel size, aspect (§ 5.2, § 13) |
+| `media.py` | the media check: resolution and colour findings (§ 12.1) |
 | `fonts.py` | font files: `fsType` licence check, version, coverage (§ 10.3) |
 | `cover.py` | the cover sheet: calibration figures and settings summary (§ 8.8) |
 | `generators/` | registry, `common.py` (cycle + dash fields), and the eight blades |

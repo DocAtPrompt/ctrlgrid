@@ -92,6 +92,10 @@ def generate(
         int | None,
         typer.Option(help="Seed for procedural blades, e.g. `maze` (§ 7.5)."),
     ] = None,
+    strict: Annotated[
+        bool,
+        typer.Option("--strict", help="Turn media warnings into errors (§ 12.1)."),
+    ] = False,
     cover: Annotated[
         bool,
         typer.Option("--cover", help="Extra first sheet: calibration and settings (§ 8.8)."),
@@ -104,7 +108,7 @@ def generate(
         document = _open(
             target,
             definition,
-            _overrides(pages, format, device, orientation, names, stamp, cover, seed),
+            _overrides(pages, format, device, orientation, names, stamp, cover, seed, strict),
         )
         destination = _destination(out, target, definition, force)
         geometry = build(document, PdfWriter(destination))
@@ -114,14 +118,19 @@ def generate(
 @app.command()
 def check(
     file: Annotated[Path, typer.Argument(help="Definition file to validate.")],
+    strict: Annotated[
+        bool,
+        typer.Option("--strict", help="Turn media warnings into errors (§ 12.1)."),
+    ] = False,
 ) -> None:
     """Validate a definition and write nothing (§ 11).
 
     Runs the same pre-flight as a real run: units, keys, geometry, and every
-    page measured for text that does not fit (§ 12).
+    page measured for text that does not fit (§ 12). With `--strict`, a media
+    warning (§ 12.1) fails the check — what a CI run needs to guard a preset set.
     """
     with _reporting():
-        document = load(file)
+        document = load(file, {"strict": True} if strict else None)
         # The writer is used for its metrics only; it touches no file until
         # `begin_document`, and check never gets that far (§ 10.2).
         geometry, _, _, _ = preflight(document, PdfWriter(file))
@@ -182,6 +191,7 @@ def _overrides(
     stamp: str | None = None,
     cover: bool = False,
     seed: int | None = None,
+    strict: bool = False,
 ) -> dict:
     if format is not None and device is not None:
         # § 9.2: two answers to "what medium". The loader would refuse them in a
@@ -201,6 +211,8 @@ def _overrides(
         # § 7.5: a blade key rather than a handle one, and the only one the
         # command line reaches into — a run's seed is a property of the run.
         "seed": seed,
+        # § 12.1: only ever switches strictness on, like --cover.
+        "strict": True if strict else None,
     }
 
 

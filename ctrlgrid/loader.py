@@ -156,6 +156,10 @@ class Document:
     """The active device profile, or None on paper (§ 9.2). Carries the density
     the media check measures against (§ 12.1) and `snap: pixel` rounds to."""
 
+    strict: bool = False
+    """§ 12.1: `--strict` turns every media warning into an error, so a CI run
+    or `ctrlgrid check` can guard a preset set."""
+
 
 def load(source: Path | str, overrides: Mapping[str, Any] | None = None) -> Document:
     """Definition file to model (§ 3.6, seam 1).
@@ -245,6 +249,7 @@ def loads(text: str, overrides: Mapping[str, Any] | None = None, *, source: str)
         source=source,
         digest=hashlib.sha256(text.encode("utf-8")).hexdigest()[:12],
         device=profile,
+        strict=bool(overrides.get("strict")),
     )
 
 

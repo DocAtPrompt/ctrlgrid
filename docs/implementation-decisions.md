@@ -460,6 +460,32 @@ exactly the guessed number § 9.2 says is worse than no profile at all.
 So `DeviceProfile` carries `quirks` as a validated, empty tuple, and the field
 exists for the first verified contribution to fill — not for me to guess.
 
+## 32. The grey-collision check is a threshold, not equality
+
+**§ 12.1.** § 12.1's colour finding is "two colours that yield the *same* grey
+value", and its worked example is `#7799bb` and `#4466aa` — the millimetre
+preset's own grid and accent. But those are 48 luminance levels apart (Rec.
+709), not the same: read strictly, the finding would never fire on the case the
+spec chose to illustrate it.
+
+So the check flags two colours whose greys are **within** a threshold, set at 48
+so the documented pair fires. The wording is honest about it — "48 grey levels
+apart, they read as one tone" — rather than claiming they are identical. The
+consequence for a definition is a clear guideline: on a grayscale screen an
+accent needs more than ~1/5 of the range between it and the base to survive.
+
+## 33. Two media findings are device-only, and the reason is resolution
+
+**§ 12.1.** § 12.1 lists its findings without splitting them by medium, but two
+of them only make sense on a low-resolution screen. The **1–2px stepped** line
+is about weak e-ink antialiasing — a 600dpi printer renders 1.9px cleanly. The
+**uneven-cells** finding (45.08px drawn as 45/46) is visible on a 229dpi screen
+and imperceptible at 600dpi, where the ±1px swing is 1/600 inch.
+
+Both are therefore gated on a device being active. The **sub-1px** and
+**under-3px-merge** findings stay general: a stroke that rounds away and a
+spacing that flows into a grey area are as real on paper as on a pad.
+
 ---
 
 ## Smaller calls, for completeness
