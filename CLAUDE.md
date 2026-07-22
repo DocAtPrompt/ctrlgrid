@@ -11,13 +11,13 @@ no "fit to page", no stretching a grid so it comes out even.
 
 ## Current state — read this first
 
-**M1 is complete and released as 0.1.0. M2 is all but done.**
+**M1 is complete and released as 0.1.0. M2 is done but for three small keys.**
 
 ```bash
 uv sync --extra dev && uv run pytest && uv run ruff check .
 ```
 
-360 tests, all green, ruff clean. Seven commits on `main`, linear history, **no
+383 tests, all green, ruff clean. Eight commits on `main`, linear history, **no
 remote configured — nothing has ever been pushed.**
 
 ### Done
@@ -29,23 +29,19 @@ remote configured — nothing has ever been pushed.**
 | **M2** name lists | `--names`, both modes, `{name}`, PDF outline |
 | **M2** frame furniture | `border`, `background`, `hole_marks`, `stamp` |
 | **M2** cover sheet | `--cover` / `pages.cover`, calibration figures and settings summary |
+| **M2** fonts stage 2 | `font: {file: …}`, embedded and subset, with the `fsType` check |
 | pulled forward into M1 | format table, presets, `check`, overwrite protection, placeholders — the M1 acceptance criteria needed them |
 
 ### Not done
 
 **M2 remainder — this is where to continue:**
 
-1. **Fonts stage 2** (§ 10.3) — `font: {file: …}`. The big one: `fontTools` as
-   a new dependency, embedding with subsetting, and an `fsType` check that
-   refuses rather than quietly substituting when a licence forbids embedding.
-   It is what `frame._check_glyphs` promises, and § 10.2's Latin-1 wall makes
-   it urgent at the first Polish name in a list.
-2. **Dashed and dotted styles** (§ 7.1) — `dash`/`base_dash` on a family. The
+1. **Dashed and dotted styles** (§ 7.1) — `dash`/`base_dash` on a family. The
    `Segment` mark already carries `dash`; the blade and the writer do not.
-3. **Images in header and footer** (§ 5.2) — the `{ image: … }` field form.
+2. **Images in header and footer** (§ 5.2) — the `{ image: … }` field form.
    `Image` is in the vocabulary, `PdfWriter` refuses it, `model._plain_text`
    refuses the key. A logo is never cropped: it fits or it is an error (§ 8.9).
-4. **Free page sizes** (§ 9.1) — `format: 210x99mm`, refused in
+3. **Free page sizes** (§ 9.1) — `format: 210x99mm`, refused in
    `loader.resolve_sheet` today.
 
 **Later milestones**, untouched: M3 `polar`, M4 the remaining blades and
@@ -85,7 +81,7 @@ work around it.
 
 **Where the specification was genuinely silent**, the resolution is recorded in
 [`docs/implementation-decisions.md`](docs/implementation-decisions.md) —
-fourteen of them so far, each with the section it belongs to and the reasoning.
+sixteen of them so far, each with the section it belongs to and the reasoning.
 Read it before changing a default; several look arbitrary and are not.
 
 ## Language split
@@ -113,6 +109,7 @@ and knows nothing about margins.
 | `loader.py` | YAML → `Document`; formats, presets, devices, name lists |
 | `pages.py` | `Geometry`, page loop, placeholders, `preflight`, `build` |
 | `frame.py` | header/footer layout, border, background, hole marks, stamp |
+| `fonts.py` | font files: `fsType` licence check, version, coverage (§ 10.3) |
 | `cover.py` | the cover sheet: calibration figures and settings summary (§ 8.8) |
 | `generators/` | registry + `lines` |
 | `writers/` | seam 3 protocols + `pdf.py`, the only reportlab module |
@@ -162,9 +159,8 @@ reject a pattern block they were handed.
 
 ## Where to start
 
-Fonts stage 2 (§ 10.3) is the one remaining M2 item with any weight — it adds a
-dependency and an embedding licence check. The other three are small and each
-sits behind a deferred message that names it.
+The three M2 leftovers are small and each sits behind a deferred message that
+names it; dashed styles (§ 7.1) are the one users will ask for first.
 
 Do not start M3 (`polar`) before M2 stands. § 14 puts `polar` second on purpose
 — it is the hard test of whether the handle survives a non-cartesian blade —

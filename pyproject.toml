@@ -27,10 +27,17 @@ classifiers = [
     "Topic :: Utilities",
 ]
 
-# Kept deliberately small. Pillow (PNG writer, M7) and fontTools (embedded
-# fonts, M2) join when the milestones that need them arrive — see § 13 of the
-# specification.
+# Kept deliberately small. Pillow (PNG writer, M7) joins when the milestone
+# that needs it arrives — see § 13 of the specification.
+#
+# `fontTools` is here for one job that reportlab cannot do (§ 10.3): reading
+# the `fsType` field of the OS/2 table before embedding. A tool that embeds
+# without asking produces PDFs which violate the font licence, and the answer
+# to a font that forbids it is an abort naming the font — never a quiet
+# substitution. It supplies the version string and the character coverage the
+# cover sheet and `missing_glyphs` need besides.
 dependencies = [
+    "fonttools>=4.40",
     "pydantic>=2.0",
     "reportlab>=4.0",
     "ruamel.yaml>=0.18",

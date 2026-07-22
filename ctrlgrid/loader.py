@@ -30,7 +30,7 @@ from ruamel.yaml import YAML, YAMLError
 from ruamel.yaml.comments import CommentedMap, CommentedSeq
 from ruamel.yaml.nodes import MappingNode, SequenceNode
 
-from ctrlgrid import generators
+from ctrlgrid import fonts, generators
 from ctrlgrid.axes import AxisPeriod
 from ctrlgrid.errors import DefinitionError
 from ctrlgrid.model import (
@@ -164,6 +164,7 @@ def loads(text: str, overrides: Mapping[str, Any] | None = None, *, source: str)
     config = _section(blade.config_model, data, raw, None)
     pages, names, notices = _resolve_names(pages, overrides)
     notices += _hole_mark_notices(page)
+    _check_fonts({"header": header, "footer": footer}, raw)
 
     return Document(
         version=SUPPORTED_VERSION,
@@ -217,6 +218,24 @@ def _resolve_names(
     # Short lists repeat cyclically; long ones are cut by the same expression.
     laid_out = [names[index % len(names)] for index in range(count)]
     return pages, laid_out, notices
+
+
+def _check_fonts(bands: dict[str, Band | None], raw: CommentedMap) -> None:
+    """Open every named font file here, where the line number is still known.
+
+    § 10.3 refuses a font whose licence forbids embedding, and § 12 wants that
+    refusal to point at the line that named it — which the writer, three seams
+    away, could no longer do. Doing it here also means `check` catches it and
+    the pre-flight rule of § 12 point 13 holds without any further work: the
+    file is opened before any page exists.
+    """
+    for section, band in bands.items():
+        if band is None or band.font.file is None:
+            continue
+        try:
+            fonts.load_font(band.font.file, field=f"{section}.font.file")
+        except DefinitionError as error:
+            raise error.at(line=_line(raw, (section, "font", "file"))) from None
 
 
 def _hole_mark_notices(page: PageSpec) -> tuple[str, ...]:

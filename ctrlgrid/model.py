@@ -24,6 +24,7 @@ from typing import Annotated, Any, ClassVar, Literal
 
 from pydantic import BaseModel, BeforeValidator, ConfigDict, Field, model_validator
 
+from ctrlgrid import fonts
 from ctrlgrid.errors import DefinitionError
 from ctrlgrid.units import Angle, Length, parse_angle, parse_length
 
@@ -146,15 +147,38 @@ class FontSpec(Section):
     a tool whose promise is dimensional accuracy the geometry is what counts.
     """
 
-    deferred: ClassVar[dict[str, str]] = {
-        "file": (
-            "— naming a font file (stage 2 of § 10.3, with embedding and an fsType check) "
-            "arrives with milestone M2; this milestone offers family: serif | sans | mono"
-        ),
-    }
-
     family: Literal["serif", "sans", "mono"] = "sans"
     size: LengthField = Length(um=3175, mm=3.175, raw="9pt")
+    #: Stage 2 of § 10.3: a path to a font file, embedded and subset. A path
+    #: and not a name — name lookup finds different fonts on different
+    #: machines, which is the unreliability the tool exists to avoid.
+    file: str | None = None
+
+    @model_validator(mode="after")
+    def _one_way_of_naming_the_font(self) -> FontSpec:
+        """§ 10.3: `family` and `file` are the two stages, not two settings.
+
+        Both at once would be two answers to one question, pointing at
+        different fonts — and § 5.1 refuses to guess which one was meant. The
+        default `family` does not count as an answer, only a written one does.
+        """
+        if self.file is not None and "family" in self.model_fields_set:
+            raise ValueError(
+                f"a font is named either by `family` ({self.family}) or by `file` "
+                f"({self.file}), not both — they are the two stages of § 10.3 and "
+                "would point at different fonts"
+            )
+        return self
+
+    @property
+    def token(self) -> str:
+        """How the writer is told which font this is (§ 3.6, seam 3).
+
+        The mark vocabulary does not grow for stage 2 (§ 6): `family` on a
+        `Text` mark was always a string the writer resolves, and a file font is
+        one more spelling of it.
+        """
+        return fonts.token_for(self.file) if self.file else self.family
 
 
 class Band(Section):

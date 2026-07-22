@@ -82,11 +82,12 @@ class TestFontSpec:
         for family in ("serif", "sans", "mono"):
             assert FontSpec(family=family).family == family
 
-    def test_a_font_file_names_the_milestone(self) -> None:
-        # Stage 2 of § 10.3 arrives with M2; stage 1 is the 14 standard fonts.
-        with pytest.raises(ValidationError) as excinfo:
-            FontSpec(file="~/Library/Fonts/EBGaramond-Regular.ttf")
-        assert "M2" in str(excinfo.value)
+    def test_a_font_file_is_carried_as_written(self) -> None:
+        # Stage 2 of § 10.3. The file is not opened here — validation stays
+        # free of disk access, and the loader checks the licence where the
+        # line number is still known.
+        path = "~/Library/Fonts/EBGaramond-Regular.ttf"
+        assert FontSpec(file=path).file == path
 
     def test_the_size_is_normalised(self) -> None:
         assert FontSpec(size="9pt").size.um == 3175

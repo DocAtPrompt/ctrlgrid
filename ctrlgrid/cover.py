@@ -27,7 +27,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from ctrlgrid import __version__, generators
+from ctrlgrid import __version__, fonts, generators
 from ctrlgrid.errors import DefinitionError
 from ctrlgrid.marks import Layer, Mark, Point, Polygon, Segment, Text, Um
 from ctrlgrid.writers import WriterQuery
@@ -150,13 +150,32 @@ def summary(document: Document) -> list[str]:
     blade = generators.get(document.generator)
     for description in blade.describe(document.config):
         lines.append(_entry("family", description))
+    # § 10.3 asks for file name and font version by name: an embedded font is
+    # part of what the sheet is, and two releases of one font are two sheets.
+    for section, band in (("header", document.header), ("footer", document.footer)):
+        if band is not None and band.font.file is not None:
+            font = fonts.load_font(band.font.file)
+            lines.append(
+                _entry(f"{section} font", f"{font.path.name}  {font.name}  {font.version}")
+            )
     lines.append(_entry("definition", f"{document.source}  sha256 {document.digest}"))
     lines.append(_entry("tool", f"ctrlgrid {__version__}"))
-    return lines
+    return _aligned(lines)
 
 
-def _entry(label: str, value: str) -> str:
-    return f"{label:<11}{value}"
+def _entry(label: str, value: str) -> tuple[str, str]:
+    return label, value
+
+
+def _aligned(entries: list[tuple[str, str]]) -> list[str]:
+    """One column for the labels, wide enough for the longest of them.
+
+    Computed rather than fixed: `header font` is longer than every label the
+    first draft had, and a hard-coded column ran it into its value —
+    `header fontVera.ttf`.
+    """
+    width = max(len(label) for label, _ in entries) + 2
+    return [f"{label:<{width}}{value}" for label, value in entries]
 
 
 # ------------------------------------------------------------------ the figures

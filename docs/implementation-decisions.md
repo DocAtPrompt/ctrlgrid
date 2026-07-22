@@ -182,6 +182,41 @@ byte-identical promise survives it: no clock, no randomness, and the version
 string only changes when the version does. That is also why § 8.8 excludes the
 page from golden comparisons (§ 13.2).
 
+## 15. A font file travels through the seam as a token, not a new mark field
+
+**§ 10.3, § 6, § 3.6.** Stage 2 has to tell the writer *which file* to set text
+in, and the obvious move — a second field on the `Text` mark — is the one § 6
+forbids: the mark vocabulary is contract, and it does not grow because a
+feature arrived.
+
+It does not need to. `family` was always a string the writer resolves; stage
+1's `serif | sans | mono` are three spellings of it and `file:/absolute/path`
+is a fourth. `FontSpec.token` produces it, `writers/pdf.py` resolves it, and
+every other writer inherits the same convention for free. The resolved path
+goes in, not the raw text: `~` is expanded once, at the seam, so two
+definitions naming the same file in different ways embed one font and not two.
+
+## 16. The licence check runs in the loader, the embedding in the writer
+
+**§ 10.3, § 12, § 3.3.** § 10.3 requires refusing a font whose `fsType` forbids
+embedding, and § 12 requires the refusal to point at the line that named it —
+which the writer, three seams away from the YAML, cannot do.
+
+So `loader` opens every named font file while it still has the document tree,
+and attaches field and line; `fonts.py` parses and judges; `writers/pdf.py`
+only embeds. This also satisfies § 12 point 13 without further work: the file
+is opened before any page exists, so `check` reports a bad font and a run
+aborts completely rather than half way through.
+
+`fontTools` is confined to `fonts.py` by `tests/test_architecture.py`, on the
+same reasoning as reportlab: a second writer should inherit the licence check
+rather than reimplement it. Reportlab could not do the job anyway — it parses
+`OS/2` for metrics and never reads `fsType`.
+
+A font with no `OS/2` table at all is treated as installable. Refusing every
+font from before the table existed would be absurd, and it is what every other
+PDF producer does.
+
 ---
 
 ## Smaller calls, for completeness

@@ -19,13 +19,15 @@ Three duties beyond drawing:
 
 from __future__ import annotations
 
+import hashlib
 from pathlib import Path
 
 from reportlab.lib.colors import HexColor
 from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.pdfgen import canvas
 
-from ctrlgrid import __version__
+from ctrlgrid import __version__, fonts
 from ctrlgrid.errors import CtrlGridError
 from ctrlgrid.marks import Arc, Dot, Image, Mark, Point, Polygon, Segment, Text, Um
 from ctrlgrid.writers import DocumentMeta
@@ -76,6 +78,14 @@ class PdfWriter:
         )
 
     def missing_glyphs(self, content: str, *, family: str) -> list[str]:
+        """What this font cannot set (§ 10.2).
+
+        For an embedded font the answer comes out of its own `cmap`, not out of
+        an encoding table: stage 2 exists precisely so that `ł` stops being a
+        missing glyph, and only the file can say whether it is.
+        """
+        if fonts.is_file_token(family):
+            return fonts.load_token(family).missing(content)
         missing: list[str] = []
         for character in content:
             try:
@@ -231,7 +241,35 @@ class PdfWriter:
 
 
 def _font(family: str) -> str:
-    return _FONTS[family]
+    """Resolve a font token to a name reportlab knows (§ 10.3).
+
+    Stage 1 is a lookup. Stage 2 registers the file with reportlab the first
+    time it is asked for, under the font's **own** PostScript name: a key
+    derived from the path would put this machine's directory layout into the
+    PDF and break § 10.1 across machines. Two different files claiming the same
+    name are told apart by a short digest of the path — rare, and better than
+    one silently standing in for the other.
+    """
+    if not fonts.is_file_token(family):
+        return _FONTS[family]
+
+    font = fonts.load_token(family)
+    key = _registered.get(font.path)
+    if key is None:
+        key = font.name
+        if key in _registered.values() or key in _FONTS.values():
+            key = f"{font.name}-{hashlib.sha256(str(font.path).encode()).hexdigest()[:8]}"
+        # reportlab subsets embedded TrueType fonts by itself, which is what
+        # § 10.3 asks for: only the glyphs actually used travel with the file.
+        pdfmetrics.registerFont(TTFont(key, str(font.path)))
+        _registered[font.path] = key
+    return key
+
+
+#: Resolved path to the name it was registered under. Module level because
+#: reportlab's font registry is module level too — registering the same file
+#: twice under two names would embed it twice.
+_registered: dict[Path, str] = {}
 
 
 def _to_pt(um: Um) -> float:

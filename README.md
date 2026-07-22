@@ -8,7 +8,8 @@ and fillable forms — for paper formats **and** for e-ink tablets.
 > `lines` works end to end and is covered by the dimensional test described
 > below. The handle around it is nearly finished — multi-page output, headers
 > and footers, name lists, snapping, remainder handling, double-sided margins,
-> border, background, hole marks, stamp and the calibration cover sheet.
+> border, background, hole marks, stamp, the calibration cover sheet and
+> embedded font files.
 >
 > The other generators in the table further down, and the options marked below
 > as arriving later, are specified but not built yet. Asking for one gets you a
@@ -30,7 +31,7 @@ and fillable forms — for paper formats **and** for e-ink tablets.
 > `--cover`, `-o`, `--force`, `--quiet`.
 >
 > Not yet: `--device`, `--nup`, `--seed`, `--strict`,
-> `--skip-unsupported`, `font: {file: …}`, and the interactive mode.
+> `--skip-unsupported`, and the interactive mode.
 >
 > **Not on PyPI yet**, so the `uvx`/`pip` lines below do not work until the
 > first release is published.
@@ -143,8 +144,21 @@ narrow for the 100 mm rule the run is refused rather than shrunk.
 
 **2. Character coverage is Latin-1 by default.** Without a font file of your own,
 `ä ö ü ß é à ñ ç` work but `ł ğ ő` do not — you will hit this on the first Polish
-or Turkish name in a list. The fix is to point at a font:
-`font: { file: "/path/to/font.ttf", size: 11pt }`.
+or Turkish name in a list. The fix is to point at a font *file* — a path, never
+a font name, because name lookup finds different fonts on different machines:
+
+```yaml
+header:
+  height: 12mm
+  left: "{name}"
+  font: { file: "~/Library/Fonts/EBGaramond-Regular.ttf", size: 11pt }
+```
+
+The font is embedded and subset, so the PDF is the same everywhere. Its
+embedding licence is **checked, not assumed**: a font whose `fsType` forbids
+embedding aborts the run and is named — never quietly swapped for another one,
+which would change every measurement on the sheet. A character the file itself
+lacks is still an error, now naming the file.
 
 **3. Margins below about 5 mm get clipped** by most printers. The default comes
 from the paper format and reflects the typical non-printable border; e-ink

@@ -17,6 +17,7 @@ looks complete is worse than one that does not fit.
 
 from __future__ import annotations
 
+from ctrlgrid import fonts
 from ctrlgrid.errors import DefinitionError
 from ctrlgrid.marks import Arc, Layer, Point, Polygon, Text, Um
 from ctrlgrid.model import Band, BorderSpec, PageSpec, StampSpec
@@ -196,7 +197,9 @@ def layout_band(
         return []
 
     size = band.font.size.um
-    family = band.font.family
+    # A font token, not a family name: stage 1's three logical families and a
+    # file font of stage 2 are two spellings of the same string (§ 10.3).
+    family = band.font.token
     baseline = _baseline(box, band, q=q, section=section, size=size, family=family)
 
     for align, text in resolved.items():
@@ -284,14 +287,29 @@ def _baseline(
 
 
 def _check_glyphs(text: str, *, family: str, q: WriterQuery, field: str) -> None:
+    """§ 10.2: a name with `ł`, `ğ` or `ő` is not an edge case.
+
+    The message has to name the way out and not just the glyph — whoever reads
+    in a class list meets this at the first Polish name, and "missing glyph"
+    alone leaves them nowhere to go (§ 10.3).
+    """
     missing = q.missing_glyphs(text, family=family)
-    if missing:
+    if not missing:
+        return
+    if fonts.is_file_token(family):
         raise DefinitionError(
-            f"{', '.join(missing)} — not covered by the standard PDF fonts, which reach "
-            "Latin-1 and no further. The way out is naming your own font file "
-            "(`font: {file: ...}`, § 10.3), which arrives with milestone M2",
+            f"{', '.join(missing)} — not covered by the font file "
+            f"{fonts.load_token(family).path}. Pick a font that has these characters; "
+            "substituting another one quietly would change every measurement on the "
+            "sheet (§ 10.3)",
             field=field,
         )
+    raise DefinitionError(
+        f"{', '.join(missing)} — not covered by the standard PDF fonts, which reach "
+        "Latin-1 and no further. The way out is naming your own font file: "
+        "`font: {file: /path/to/font.ttf}` (stage 2 of § 10.3)",
+        field=field,
+    )
 
 
 def _fit(

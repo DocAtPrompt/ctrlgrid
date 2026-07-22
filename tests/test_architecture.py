@@ -19,6 +19,10 @@ PACKAGE = Path(__file__).resolve().parent.parent / "ctrlgrid"
 CONFINED = {
     "reportlab": "writers/pdf.py",
     "PIL": "writers/png.py",
+    # Not a writer library, but the same rule for the same reason (§ 10.3):
+    # font files are read in one place, so a second writer inherits the
+    # licence check instead of reimplementing it.
+    "fontTools": "fonts.py",
 }
 
 
