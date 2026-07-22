@@ -8,7 +8,7 @@ and fillable forms — for paper formats **and** for e-ink tablets.
 > `lines` works end to end and is covered by the dimensional test described
 > below. The handle around it is nearly finished — multi-page output, headers
 > and footers, name lists, snapping, remainder handling, double-sided margins,
-> border, background, hole marks and stamp.
+> border, background, hole marks, stamp and the calibration cover sheet.
 >
 > The other generators in the table further down, and the options marked below
 > as arriving later, are specified but not built yet. Asking for one gets you a
@@ -21,14 +21,15 @@ and fillable forms — for paper formats **and** for e-ink tablets.
 > ctrlgrid millimeter-a4 --pages 30 -o grid.pdf
 > ctrlgrid millimeter-a4 --names class3b.txt      # a sheet per name
 > ctrlgrid -d my-def.yaml --stamp DRAFT
+> ctrlgrid millimeter-a4 --cover              # + a calibration first sheet
 > ctrlgrid check my-def.yaml
 > ctrlgrid presets | show <name> | devices
 > ```
 >
-> Flags: `--pages`, `--names`, `--format`, `--orientation`, `--stamp`, `-o`,
-> `--force`, `--quiet`.
+> Flags: `--pages`, `--names`, `--format`, `--orientation`, `--stamp`,
+> `--cover`, `-o`, `--force`, `--quiet`.
 >
-> Not yet: `--cover`, `--device`, `--nup`, `--seed`, `--strict`,
+> Not yet: `--device`, `--nup`, `--seed`, `--strict`,
 > `--skip-unsupported`, `font: {file: …}`, and the interactive mode.
 >
 > **Not on PyPI yet**, so the `uvx`/`pip` lines below do not work until the
@@ -132,8 +133,13 @@ you meet it without warning.
 
 **1. Print at 100 %, not "fit to page".** Most PDF viewers default to fitting the
 page and silently scale to about 96 %. Choose "Actual size" / "100 %". Run with
-`--cover` to get a first sheet with a 50 mm calibration square: measure it with a
-ruler and you will know immediately whether your printer scaled.
+`--cover` to get a first sheet with a 50 mm calibration square and a 100 mm rule:
+measure them with a ruler and you will know immediately whether your printer
+scaled. That sheet also records the settings that produced the document — format,
+margins, base values, cycles, effective period, tool version and a checksum of
+the definition — so a print that came out right stays reproducible. It is not
+counted in the page numbering, and it is never scaled to fit: on a format too
+narrow for the 100 mm rule the run is refused rather than shrunk.
 
 **2. Character coverage is Latin-1 by default.** Without a font file of your own,
 `ä ö ü ß é à ñ ç` work but `ł ğ ő` do not — you will hit this on the first Polish

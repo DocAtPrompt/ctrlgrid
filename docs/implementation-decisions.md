@@ -144,6 +144,44 @@ actually set (`model_fields_set`), which makes the bare
 sheet is not something anyone means, so blank lines go — including ones left in
 the middle.
 
+## 12. A cover sheet that does not fit is refused, never scaled
+
+**§ 8.8, § 8.2.** § 8.8 fixes the calibration figures at 50 mm and 100 mm and
+says nothing about formats too small to hold them. A6 between its margins
+leaves 95 mm, so the question is unavoidable.
+
+Shrinking the figures is the one answer that is out of the question: a square
+labelled "50 mm" that measures 38 mm would produce exactly the wrong verdict
+in the one measurement the page exists for. The run is therefore refused, with
+both numbers in the message, and the refusal happens in `preflight` so that
+`check` reports it and nothing is written (§ 12 point 13).
+
+The *summary* is treated differently, because it is written by the tool rather
+than by the user: it shrinks to fit the width and, at the smallest readable
+size, truncates with the ellipsis § 8.9 makes mandatory. § 8.9's refusal is
+right for a user's own text — nobody can act on "the tool's own summary line is
+2 mm too wide".
+
+## 13. `--cover` only ever switches the cover on
+
+**§ 8.8, § 11.** The flag is a wish for one run. There is no `--no-cover`: the
+absent flag means "the definition decides", and a third state would need a
+spelling for "off, whatever the definition says" that nobody would remember.
+The same holds for `--stamp`, which also has no eraser.
+
+## 14. The cover carries the definition's name *and* a checksum
+
+**§ 8.8.** The specification asks for "name or checksum". It gets both, in one
+line: a preset copied with `ctrlgrid show … > mine.yaml` and then bent keeps a
+name that says nothing about what changed. Twelve hex digits of SHA-256 over
+the definition text — enough for a human comparing two sheets, and explicitly
+not a signature.
+
+The cover is otherwise stable input to stable output, so § 10.1's
+byte-identical promise survives it: no clock, no randomness, and the version
+string only changes when the version does. That is also why § 8.8 excludes the
+page from golden comparisons (§ 13.2).
+
 ---
 
 ## Smaller calls, for completeness

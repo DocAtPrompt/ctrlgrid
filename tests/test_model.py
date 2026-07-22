@@ -148,7 +148,6 @@ class TestPagesSpec:
         with pytest.raises(ValidationError):
             PagesSpec(count=0)
 
-    def test_cover_names_the_milestone(self) -> None:
-        with pytest.raises(ValidationError) as excinfo:
-            PagesSpec(cover=True)
-        assert "M2" in str(excinfo.value)
+    def test_the_cover_is_off_by_default(self) -> None:
+        # § 8.8: only `--cover` or `pages.cover: true` switches it on.
+        assert PagesSpec().cover is False

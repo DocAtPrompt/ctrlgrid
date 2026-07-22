@@ -164,6 +164,43 @@ class TestSeamTwo:
         )
         assert inspect.isgenerator(LinesGenerator().generate(config, area=AREA, page=PAGE, q=None))
 
+    def test_describe_reports_the_base_values_and_the_cycles(self) -> None:
+        # § 8.8: the cover sheet has to make a sheet reproducible years later,
+        # and only the blade knows its own base values and cycles (§ 3.6).
+        config = LinesConfig.model_validate(
+            {
+                "families": [
+                    {
+                        "direction": "horizontal",
+                        "base_spacing": "5mm",
+                        "spacing": [1],
+                        "base_weight": "0.15pt",
+                        "weight": [1, 1, 2],
+                    }
+                ]
+            }
+        )
+        line = LinesGenerator().describe(config)[0]
+        assert "5mm" in line and "0.15pt" in line and "[1, 1, 2]" in line
+
+    def test_describe_reports_the_effective_period_both_ways(self) -> None:
+        # § 5.3: in marks and in millimetres — the two are easy to confuse and
+        # snapping (§ 8.3) works on the second.
+        config = LinesConfig.model_validate(
+            {
+                "families": [
+                    {
+                        "direction": "horizontal",
+                        "base_spacing": "5mm",
+                        "spacing": [1],
+                        "weight": [1, 1, 2],
+                    }
+                ]
+            }
+        )
+        line = LinesGenerator().describe(config)[0]
+        assert "3 lines" in line and "15.0 mm" in line
+
     def test_lines_are_the_same_on_every_page(self) -> None:
         config = LinesConfig.model_validate(
             {"families": [{"direction": "horizontal", "base_spacing": "10mm", "spacing": [1]}]}

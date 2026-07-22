@@ -84,13 +84,17 @@ def generate(
         str | None,
         typer.Option(help='Full-page diagonal overprint, e.g. --stamp "DRAFT" (§ 8.6).'),
     ] = None,
+    cover: Annotated[
+        bool,
+        typer.Option("--cover", help="Extra first sheet: calibration and settings (§ 8.8)."),
+    ] = False,
     force: Annotated[bool, typer.Option("--force", help="Overwrite an existing file.")] = False,
     quiet: Annotated[bool, typer.Option("--quiet", help="Report only the output path.")] = False,
 ) -> None:
     """Build a PDF from a preset or a definition file."""
     with _reporting():
         document = _open(
-            target, definition, _overrides(pages, format, orientation, names, stamp)
+            target, definition, _overrides(pages, format, orientation, names, stamp, cover)
         )
         destination = _destination(out, target, definition, force)
         geometry = build(document, PdfWriter(destination))
@@ -110,7 +114,7 @@ def check(
         document = load(file)
         # The writer is used for its metrics only; it touches no file until
         # `begin_document`, and check never gets that far (§ 10.2).
-        geometry, _, _ = preflight(document, PdfWriter(file))
+        geometry, _, _, _ = preflight(document, PdfWriter(file))
         typer.echo(
             f"{file}: valid — {document.pages.count} page(s), "
             f"generator `{document.generator}`"
@@ -165,6 +169,7 @@ def _overrides(
     orientation: str | None,
     names: Path | None = None,
     stamp: str | None = None,
+    cover: bool = False,
 ) -> dict:
     return {
         "pages": pages,
@@ -172,6 +177,10 @@ def _overrides(
         "orientation": orientation,
         "names": read_names(names) if names is not None else None,
         "stamp": stamp,
+        # § 8.8: a flag that only ever switches the cover on. `False` is not
+        # "no cover", it is "the definition decides", which is why it is
+        # dropped here rather than sent as an override.
+        "cover": True if cover else None,
     }
 
 

@@ -71,6 +71,28 @@ class TestGenerating:
         result = runner.invoke(app, ["millimeter-a4", "-o", str(tmp_path / "o.pdf")])
         assert "5" in result.output and "mm" in result.output
 
+    def test_cover_adds_one_page_that_the_numbering_ignores(self, tmp_path: Path) -> None:
+        # § 8.8: `--pages 3 --cover` is three numbered sheets *plus* a cover.
+        out = tmp_path / "out.pdf"
+        result = runner.invoke(
+            app, ["millimeter-a4", "--pages", "3", "--cover", "-o", str(out)]
+        )
+        assert result.exit_code == 0, result.output
+        assert pdfread.page_count(out) == 4
+        assert "50 mm" in pdfread.text_on(out, 0)
+
+    def test_the_flag_beats_the_definition(self, tmp_path: Path) -> None:
+        # § 11: the command line wins, always and without exception.
+        definition = write(
+            tmp_path,
+            "version: 1\ngenerator: lines\npages:\n  cover: false\n"
+            "families:\n  - {direction: horizontal, base_spacing: 5mm}\n",
+        )
+        out = tmp_path / "own.pdf"
+        result = runner.invoke(app, ["-d", str(definition), "--cover", "-o", str(out)])
+        assert result.exit_code == 0, result.output
+        assert pdfread.page_count(out) == 2
+
 
 class TestNameLists:
     """§ 9.4 and § 1.1 — 30 sheets, each with a different name."""

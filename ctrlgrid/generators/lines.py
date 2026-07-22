@@ -178,6 +178,12 @@ class Family(Section):
         return self
 
 
+def _cycle(cycle: Cycle) -> str:
+    """A cycle the way it was written: `[1, 1, 2.7]`, without Decimal noise."""
+    return "[" + ", ".join(f"{value:f}".rstrip("0").rstrip(".") or "0"
+                           for value in cycle.values) + "]"
+
+
 class LinesConfig(BaseModel):
     """The definition section belonging to this blade (§ 3.6, seam 2)."""
 
@@ -221,12 +227,18 @@ class LinesGenerator:
         return axes
 
     def describe(self, cfg: LinesConfig) -> list[str]:
-        """The effective period, in both sizes § 5.3 insists on keeping apart.
+        """Base values, cycles, and the effective period in both sizes.
 
         Only the blade knows its own cycles, so only the blade can report this
-        — and § 5.3 requires it to be reported, because the period in marks and
-        the period in millimetres are easy to confuse and snapping (§ 8.3) uses
-        the second one.
+        — and it has to be reported twice over: § 5.3 requires the period in
+        marks *and* in millimetres, because the two are easy to confuse and
+        snapping (§ 8.3) works on the second; § 8.8 requires the base values
+        and the cycles besides, so that a sheet which came out right stays
+        reproducible years later without the definition in hand.
+
+        The base value is quoted **as the user wrote it** (`0.15pt`, not
+        `0.05mm`): § 12 asks for the user's own units, and a summary that
+        silently converts is a summary nobody recognises their own file in.
         """
         lines = []
         for family in cfg.families:
@@ -234,8 +246,18 @@ class LinesGenerator:
                 [len(family.spacing), len(family.weight), len(family.color)]
             )
             length = period_um(family.spacing, base_um=family.base_spacing.um, marks=marks)
+            parts = [
+                f"spacing {family.base_spacing.raw} x {_cycle(family.spacing)}",
+                f"weight {family.base_weight.raw} x {_cycle(family.weight)}",
+            ]
+            if len(family.color) > 1:
+                parts.append(f"{len(family.color)} colours")
+            if family.offset.um:
+                parts.append(f"offset {family.offset.raw}")
+            if family.count is not None:
+                parts.append(f"count {family.count}")
             lines.append(
-                f"{family.direction}: pattern repeats every {marks} "
+                f"{family.direction}: {', '.join(parts)} — repeats every {marks} "
                 f"line{'s' if marks != 1 else ''} = {length / 1000:.1f} mm"
             )
         return lines

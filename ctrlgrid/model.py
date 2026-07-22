@@ -306,11 +306,11 @@ class PatternSpec(Section):
 
 
 class PagesSpec(Section):
-    deferred: ClassVar[dict[str, str]] = {
-        "cover": "arrives with milestone M2 (§ 8.8)",
-    }
-
     count: int = Field(default=1, ge=1)
+    #: § 8.8. Off by default, and never counted: `--pages 30 --cover` gives 30
+    #: numbered sheets *plus* a cover, and `{page} / {page_count}` goes on
+    #: meaning 1…30. `--cover` is the intended route, as with the stamp (§ 8.6).
+    cover: bool = False
     #: § 9.4 allows an inline list for the one-off case but does not encourage
     #: it: the structure is the form, the list is a throwaway file. `--names`
     #: is the intended route and beats this one (§ 11).

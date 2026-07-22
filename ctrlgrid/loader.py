@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import codecs
 import difflib
+import hashlib
 from collections.abc import Iterator, Mapping
 from dataclasses import dataclass
 from functools import lru_cache
@@ -110,6 +111,15 @@ class Document:
     source: str
     """Where this came from — a preset name or a file path, for messages."""
 
+    digest: str
+    """A short SHA-256 over the definition text, for the cover sheet (§ 8.8).
+
+    § 8.8 asks for the name *or* the checksum of the definition underneath; it
+    gets both, because a preset copied and bent carries the same name as the
+    preset it came from and a name alone would not tell the two apart. Short
+    rather than full: this is an identity check for a human comparing two
+    sheets, not a signature."""
+
 
 def load(source: Path | str, overrides: Mapping[str, Any] | None = None) -> Document:
     """Definition file to model (§ 3.6, seam 1).
@@ -171,6 +181,7 @@ def loads(text: str, overrides: Mapping[str, Any] | None = None, *, source: str)
         sheet=resolve_sheet(page),
         axes=blade.periodic_axes(config),
         source=source,
+        digest=hashlib.sha256(text.encode("utf-8")).hexdigest()[:12],
     )
 
 
@@ -473,6 +484,11 @@ def _apply_overrides(handle: dict[str, Any], overrides: Mapping[str, Any]) -> No
     """The command line beats the definition, always and without exception (§ 11)."""
     if "pages" in overrides:
         handle["pages"] = {**(handle.get("pages") or {}), "count": overrides["pages"]}
+    if overrides.get("cover"):
+        # § 8.8: `--cover` switches it on. Only on — the flag is a wish for
+        # this one run, and there is no flag that unwishes what the definition
+        # asked for, because `--no-cover` would be a fifth spelling of nothing.
+        handle["pages"] = {**(handle.get("pages") or {}), "cover": True}
     for key in ("format", "orientation"):
         if key in overrides:
             handle["page"] = {**(handle.get("page") or {}), key: overrides[key]}

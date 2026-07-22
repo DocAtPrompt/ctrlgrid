@@ -11,13 +11,13 @@ no "fit to page", no stretching a grid so it comes out even.
 
 ## Current state — read this first
 
-**M1 is complete and released as 0.1.0. M2 is three quarters done.**
+**M1 is complete and released as 0.1.0. M2 is all but done.**
 
 ```bash
 uv sync --extra dev && uv run pytest && uv run ruff check .
 ```
 
-330 tests, all green, ruff clean. Six commits on `main`, linear history, **no
+360 tests, all green, ruff clean. Seven commits on `main`, linear history, **no
 remote configured — nothing has ever been pushed.**
 
 ### Done
@@ -28,21 +28,25 @@ remote configured — nothing has ever been pushed.**
 | **M2** geometry | `count`, `extent`, `remainder`, `snap`, `duplex` |
 | **M2** name lists | `--names`, both modes, `{name}`, PDF outline |
 | **M2** frame furniture | `border`, `background`, `hole_marks`, `stamp` |
+| **M2** cover sheet | `--cover` / `pages.cover`, calibration figures and settings summary |
 | pulled forward into M1 | format table, presets, `check`, overwrite protection, placeholders — the M1 acceptance criteria needed them |
 
 ### Not done
 
 **M2 remainder — this is where to continue:**
 
-1. **Cover sheet** (§ 8.8) — 50 mm calibration square, 100 mm rule, settings
-   summary. Three rules make it unlike any other page: it is not counted in the
-   numbering, it carries no header/footer/border/hole marks, and it must be
-   **excluded from golden-file tests** because it contains the tool version.
-   The summary needs far more from `LinesGenerator.describe` than the one
-   period line it returns today.
-2. **Fonts stage 2** (§ 10.3) — `font: {file: …}`. Brings `fontTools` as a new
-   dependency, embedding with subsetting, and an `fsType` check that refuses
-   rather than quietly substituting when a licence forbids embedding.
+1. **Fonts stage 2** (§ 10.3) — `font: {file: …}`. The big one: `fontTools` as
+   a new dependency, embedding with subsetting, and an `fsType` check that
+   refuses rather than quietly substituting when a licence forbids embedding.
+   It is what `frame._check_glyphs` promises, and § 10.2's Latin-1 wall makes
+   it urgent at the first Polish name in a list.
+2. **Dashed and dotted styles** (§ 7.1) — `dash`/`base_dash` on a family. The
+   `Segment` mark already carries `dash`; the blade and the writer do not.
+3. **Images in header and footer** (§ 5.2) — the `{ image: … }` field form.
+   `Image` is in the vocabulary, `PdfWriter` refuses it, `model._plain_text`
+   refuses the key. A logo is never cropped: it fits or it is an error (§ 8.9).
+4. **Free page sizes** (§ 9.1) — `format: 210x99mm`, refused in
+   `loader.resolve_sheet` today.
 
 **Later milestones**, untouched: M3 `polar`, M4 the remaining blades and
 `law: log10`, M5 device profiles, M6 N-up, M7 PNG, M8 `perspective`/`mandala`.
@@ -80,9 +84,9 @@ If you think a decision is wrong, say so and name the section. Do not silently
 work around it.
 
 **Where the specification was genuinely silent**, the resolution is recorded in
-[`docs/implementation-decisions.md`](docs/implementation-decisions.md) — eleven
-of them so far, each with the section it belongs to and the reasoning. Read it
-before changing a default; several look arbitrary and are not.
+[`docs/implementation-decisions.md`](docs/implementation-decisions.md) —
+fourteen of them so far, each with the section it belongs to and the reasoning.
+Read it before changing a default; several look arbitrary and are not.
 
 ## Language split
 
@@ -109,6 +113,7 @@ and knows nothing about margins.
 | `loader.py` | YAML → `Document`; formats, presets, devices, name lists |
 | `pages.py` | `Geometry`, page loop, placeholders, `preflight`, `build` |
 | `frame.py` | header/footer layout, border, background, hole marks, stamp |
+| `cover.py` | the cover sheet: calibration figures and settings summary (§ 8.8) |
 | `generators/` | registry + `lines` |
 | `writers/` | seam 3 protocols + `pdf.py`, the only reportlab module |
 
@@ -157,9 +162,9 @@ reject a pattern block they were handed.
 
 ## Where to start
 
-Cover sheet (§ 8.8) is the smaller of the two remaining M2 items and would make
-`describe` earn its keep. Fonts stage 2 (§ 10.3) is the larger and adds a
-dependency.
+Fonts stage 2 (§ 10.3) is the one remaining M2 item with any weight — it adds a
+dependency and an embedding licence check. The other three are small and each
+sits behind a deferred message that names it.
 
 Do not start M3 (`polar`) before M2 stands. § 14 puts `polar` second on purpose
 — it is the hard test of whether the handle survives a non-cartesian blade —

@@ -22,7 +22,7 @@ from typing import TYPE_CHECKING
 
 from ctrlgrid.axes import AxisPeriod
 from ctrlgrid.errors import DefinitionError
-from ctrlgrid.marks import Area, Point, Text, Um, translate
+from ctrlgrid.marks import Area, Mark, Point, Text, Um, translate
 from ctrlgrid.model import Band, Margin, PatternSpec
 from ctrlgrid.writers import DocumentMeta, Writer, WriterQuery
 
@@ -422,7 +422,7 @@ def resolve_placeholders(text: str, page: PageContext, *, field: str | None = No
 def preflight(
     document: Document,
     q: WriterQuery,
-) -> tuple[Geometry, list[PageContext], list[list[Text]]]:
+) -> tuple[Geometry, list[PageContext], list[list[Text]], list[Mark]]:
     """Measure every page before a single one is written (§ 12 point 13).
 
     With thirty names it is the seventeenth that does not fit. Checked during
@@ -431,6 +431,7 @@ def preflight(
 
     This is also what `ctrlgrid check` runs: the same work, minus the writing.
     """
+    from ctrlgrid.cover import cover_marks
     from ctrlgrid.frame import layout_band
 
     geometry = Geometry.of(
@@ -459,7 +460,12 @@ def preflight(
                 document.footer, placed.footer, q=q, page=context, section="footer"
             )
         frames.append(marks)
-    return geometry, contexts, frames
+
+    # Measured here too, and for the same reason: a format too narrow for the
+    # 100 mm rule (§ 8.8) has to be refused before page one, not discovered
+    # once the file is half written.
+    cover = cover_marks(document, q=q) if document.pages.cover else []
+    return geometry, contexts, frames, cover
 
 
 def build(document: Document, writer: Writer) -> Geometry:
@@ -477,11 +483,22 @@ def build(document: Document, writer: Writer) -> Geometry:
     from ctrlgrid import generators
     from ctrlgrid.frame import background_mark, border_mark, hole_marks, stamp_mark
 
-    geometry, contexts, frames = preflight(document, writer)
+    geometry, contexts, frames, cover = preflight(document, writer)
     blade = generators.get(document.generator)
 
     # Pass two — write. Nothing below this line may raise on user input.
     writer.begin_document(DocumentMeta(title=f"ctrlgrid {document.source}"))
+
+    # § 8.8: an additional first page, outside the numbering and outside the
+    # page loop entirely — it gets no background, no pattern, no frame, no
+    # stamp, and no `PageContext`, because there is nothing about it that a
+    # blade or a placeholder could mean.
+    if cover:
+        writer.begin_page(document.sheet.width, document.sheet.height)
+        for mark in cover:
+            writer.draw(mark)
+        writer.end_page()
+
     for context, frame in zip(contexts, frames, strict=True):
         writer.begin_page(document.sheet.width, document.sheet.height)
         if context.name is not None:
