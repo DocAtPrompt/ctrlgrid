@@ -92,7 +92,7 @@ There are no double-clickable installers, and none are planned.
 | `grid` | labelled cell blocks — battleship, score sheets — **works today** |
 | `maze` | rectangular mazes, optionally with solutions |
 | `polar` | targets, score discs, polar paper — **works today** |
-| `tiling` | hexagons, triangles, rhombi — including colouring patterns |
+| `tiling` | hexagons, triangles, rhombi — including colouring patterns — **works today** |
 | `form` | fillable forms: phone logs, checklists, handover sheets |
 
 The interesting part is the **cycle model**: spacing, stroke weight, size, dash

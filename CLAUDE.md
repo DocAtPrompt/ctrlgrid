@@ -34,6 +34,7 @@ remote configured — nothing has ever been pushed.**
 | **M2** dash styles | `style: dashed \| dotted`, `base_dash`, `dash` |
 | **M2** free page sizes | `format: 210x99mm`, `format: 8.5x11in` |
 | **M2** images in bands | `left: {image: …, height: …}`, PNG, never cropped |
+| **M4** `tiling` | hex/tri/square/rhombus/octagon, edge net drawn once |
 | **M4** `staves` | grouped systems, `sp` unit, `stave_space`/`stave_height` |
 | **M4** `law: log10` | decade positions, fixed block, placed by `remainder` |
 | **M4** `grid` | count-driven block, square cells, § 7.10 labels, fills |
@@ -43,8 +44,12 @@ remote configured — nothing has ever been pushed.**
 
 ### Not done
 
-**M4 is under way** — `dots`, `grid`, `law: log10` and `staves` are done;
-`maze`, `tiling` and `form` are not. **`staves` refuses every named clef**, and
+**M4 is under way** — `dots`, `grid`, `law: log10`, `staves` and `tiling` are
+done; **`maze` (§ 7.5) and `form` (§ 7.8) are what is left.** Both are large:
+`maze` brings three algorithms, `min_path_factor`, and four `solution` modes
+that reach into the page loop (§ 7.5 doubles the page count for
+`separate_page`); `form` brings a one-level row/column layout whose *titles*
+are measured, so it is the first blade whose layout depends on text metrics. **`staves` refuses every named clef**, and
 the reason is a genuine conflict rather than missing work: § 7.3 wants clefs as
 stored vector paths, § 6 fixes the vocabulary at six primitives with no curve
 path among them (decision 24). It needs a decision, and it belongs in § 15. Three things M3 built are

@@ -23,6 +23,7 @@ from ctrlgrid.generators.grid import GridGenerator
 from ctrlgrid.generators.lines import LinesGenerator
 from ctrlgrid.generators.polar import PolarGenerator
 from ctrlgrid.generators.staves import StavesGenerator
+from ctrlgrid.generators.tiling import TilingGenerator
 from ctrlgrid.marks import Area, Mark
 from ctrlgrid.pages import PageContext
 from ctrlgrid.writers import WriterQuery
@@ -94,6 +95,7 @@ REGISTRY: dict[str, Generator] = {
         LinesGenerator(),
         PolarGenerator(),
         StavesGenerator(),
+        TilingGenerator(),
     )
 }
 
