@@ -1,0 +1,68 @@
+# A phone log on A5 — the form generator as § 7.8 describes it.
+#
+# A preset is an ordinary definition file (§ 9.3), so this one is also the
+# documentation for `form`: copy it with
+# `ctrlgrid show phone-log-a5 > mine.yaml` and bend it.
+#
+# Read it aloud and it is the form: "three fields across the top, then company,
+# subject and an urgent tick, then two short fields beside a note area". That
+# is what "rows first, then columns" is for.
+#
+# The labels are German because they belong to the language of *this* form.
+# The tool never supplies a word of its own (§ 3.4, § 7.8) — a built-in
+# "Yes/No" would be wrong in a German phone log, and a translation table would
+# be the beginning of a localisation this tool does not do.
+
+version: 1
+
+page:
+  format: a5
+  margin: 12mm
+
+header:
+  height: 10mm
+  gap: 4mm
+  center: "Telefonprotokoll"
+  right: "{page} / {page_count}"
+
+generator: form
+
+gap: 2mm
+weight: 0.3pt
+title:
+  font: { family: sans, size: 7pt }
+  position: above
+
+rows:
+  # Percentages are shares of the height that is left after every gap — so
+  # several of them can never add up to more than the sheet.
+  - height: 18%
+    columns:
+      # No width anywhere: the commonest case is three equal fields, so it is
+      # what saying nothing gives you.
+      - { title: "Datum" }
+      - { title: "Uhrzeit" }
+      - { title: "Anrufer" }
+
+  - height: 22%
+    columns:
+      - { title: "Firma" }
+      - { title: "Betreff", width: 50% }
+      - { title: "Dringend", kind: choice, options: ["Ja", "Nein"] }
+
+  - height: rest
+    columns:
+      # One level of nesting: a column may hold rows, which is how two short
+      # fields stand beside a tall one (§ 7.8). Deeper is deliberately not
+      # possible.
+      - width: 35%
+        rows:
+          - { columns: [{ title: "Erreichbar ab" }] }
+          - { columns: [{ title: "Erreichbar bis" }] }
+          - { columns: [{ title: "Rückruf erbeten", kind: check }] }
+
+      # The one absolute measure in the whole generator: 8 mm means 8 mm, and
+      # how many lines fit follows from that. This is what keeps the same
+      # definition usable on A4 and A5 — the fields change size, the writing
+      # lines do not.
+      - { title: "Notiz", line_spacing: 8mm }

@@ -11,14 +11,15 @@ no "fit to page", no stretching a grid so it comes out even.
 
 ## Current state — read this first
 
-**M1, M2 and M3 are complete.** 0.1.0 is the version in the code; nothing since
-M1 has been released, because releasing needs a human (see *Not done*).
+**M1 to M4 are complete** — the handle and all eight blades of § 7. 0.1.0 is
+the version in the code; nothing since M1 has been released, because releasing
+needs a human (see *Not done*).
 
 ```bash
 uv sync --extra dev && uv run pytest && uv run ruff check .
 ```
 
-481 tests, all green, ruff clean. Twelve commits on `main`, linear history, **no
+658 tests, all green, ruff clean. Twenty-one commits on `main`, linear history, **no
 remote configured — nothing has ever been pushed.**
 
 ### Done
@@ -34,6 +35,7 @@ remote configured — nothing has ever been pushed.**
 | **M2** dash styles | `style: dashed \| dotted`, `base_dash`, `dash` |
 | **M2** free page sizes | `format: 210x99mm`, `format: 8.5x11in` |
 | **M2** images in bands | `left: {image: …, height: …}`, PNG, never cropped |
+| **M4** `form` | rows then columns, one nesting level, absolute ruling |
 | **M4** `maze` | three algorithms, `min_path_factor`, four solution modes |
 | **M4** `tiling` | hex/tri/square/rhombus/octagon, edge net drawn once |
 | **M4** `staves` | grouped systems, `sp` unit, `stave_space`/`stave_height` |
@@ -45,9 +47,13 @@ remote configured — nothing has ever been pushed.**
 
 ### Not done
 
-**M4 is nearly done** — only **`form` (§ 7.8)** is left: a one-level
-row/column layout whose *titles* are measured, which makes it the first blade
-whose **layout** depends on text metrics rather than only its checks. **`staves` refuses every named clef**, and
+**M5 is where to continue** — device profiles (§ 9.2): px/mm conversion, the
+`px` unit that `units.py` refuses today by naming M5, `snap: pixel` (§ 8.3.1),
+`quirks`, and relative measures. Two of § 15's open questions are device
+figures nobody has verified, and § 9.2 is explicit that a wrong number there
+is worse than no profile at all.
+
+**Later milestones**, untouched: M6 N-up, M7 PNG, M8 `perspective`/`mandala`. **`staves` refuses every named clef**, and
 the reason is a genuine conflict rather than missing work: § 7.3 wants clefs as
 stored vector paths, § 6 fixes the vocabulary at six primitives with no curve
 path among them (decision 24). It needs a decision, and it belongs in § 15. Three things M3 built are
@@ -55,9 +61,6 @@ there to be reused: `labels.py` (§ 7.10) is what `grid` and `tiling` label
 with, `generators/common.py` holds the cycle and dash fields every family
 needs, and `check()` is where a blade refuses what only the pattern area can
 disprove.
-
-**Later milestones**, untouched: M5 device profiles, M6 N-up, M7 PNG,
-M8 `perspective`/`mandala`.
 
 **Two things only a human can do**, both needed before `uvx ctrlgrid` works:
 configure a git remote and push; set up trusted publishing on PyPI plus a
@@ -93,7 +96,7 @@ work around it.
 
 **Where the specification was genuinely silent**, the resolution is recorded in
 [`docs/implementation-decisions.md`](docs/implementation-decisions.md) —
-twenty-seven of them so far, each with the section it belongs to and the
+twenty-nine of them so far, each with the section it belongs to and the
 reasoning. Read it before changing a default; several look arbitrary and are not.
 
 ## Language split
@@ -125,7 +128,7 @@ and knows nothing about margins.
 | `images.py` | PNG sources: signature check, pixel size, aspect (§ 5.2, § 13) |
 | `fonts.py` | font files: `fsType` licence check, version, coverage (§ 10.3) |
 | `cover.py` | the cover sheet: calibration figures and settings summary (§ 8.8) |
-| `generators/` | registry, `common.py` (cycle + dash fields), `lines`, `polar` |
+| `generators/` | registry, `common.py` (cycle + dash fields), and the eight blades |
 | `writers/` | seam 3 protocols + `pdf.py`, the only reportlab module |
 
 ### The three seams (§ 3.6)

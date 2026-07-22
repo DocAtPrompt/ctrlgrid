@@ -408,6 +408,32 @@ the physical turning edge — and a blade never learns where the sheet is
 where coordinate systems cross, and it deliberately does not reflect *text*:
 mirrored writing on the back is the one thing nobody wants.
 
+## 28. `rest` and a measure left out are the same rule
+
+**§ 7.8.** The table lists them separately: `rest` is "the remaining space",
+an omitted measure is "an even split of the rest among all without one". Those
+are the same sentence twice, so they are one implementation: every entry that
+is `rest` or absent takes an equal share of what the fixed and percentage
+entries leave.
+
+Keeping both spellings is still right. The omitted one is the commonest case
+by far — three equal fields are written by saying nothing — and `rest` is the
+written form for when one field among several sized ones should take what is
+left, where silence would read like an oversight.
+
+## 29. `form` measures in the pre-flight with the same code it draws with
+
+**§ 7.8, § 12 point 13.** `form` is the first blade whose *layout* depends on
+text metrics: a title decides how much room is left below it for the writing
+area. That makes the pre-flight more than a check — it has to lay the whole
+form out.
+
+So `check()` runs `_place()` in full and measures every title, every option
+row and every fixed line count against the cells that will actually be drawn,
+and `generate()` calls the same `_place()`. The two cannot disagree, and a
+form that does not fit is refused before the file exists rather than half way
+through it.
+
 ---
 
 ## Smaller calls, for completeness
