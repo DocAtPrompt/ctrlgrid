@@ -31,12 +31,13 @@ from ruamel.yaml import YAML, YAMLError
 from ruamel.yaml.comments import CommentedMap, CommentedSeq
 from ruamel.yaml.nodes import MappingNode, SequenceNode
 
-from ctrlgrid import fonts, generators
+from ctrlgrid import fonts, generators, images
 from ctrlgrid.axes import AxisPeriod
 from ctrlgrid.errors import DefinitionError
 from ctrlgrid.model import (
     Band,
     BorderSpec,
+    ImageSpec,
     Margin,
     PageSpec,
     PagesSpec,
@@ -166,6 +167,8 @@ def loads(text: str, overrides: Mapping[str, Any] | None = None, *, source: str)
     pages, names, notices = _resolve_names(pages, overrides)
     notices += _hole_mark_notices(page)
     _check_fonts({"header": header, "footer": footer}, raw)
+    header = _resolve_images(header, raw, source, section="header")
+    footer = _resolve_images(footer, raw, source, section="footer")
 
     return Document(
         version=SUPPORTED_VERSION,
@@ -237,6 +240,40 @@ def _check_fonts(bands: dict[str, Band | None], raw: CommentedMap) -> None:
             fonts.load_font(band.font.file, field=f"{section}.font.file")
         except DefinitionError as error:
             raise error.at(line=_line(raw, (section, "font", "file"))) from None
+
+
+def _resolve_images(
+    band: Band | None, raw: CommentedMap, source: str, *, section: str
+) -> Band | None:
+    """Anchor every image path to the definition file, and open it here (§ 5.2).
+
+    **Relative to the definition, not to the working directory.** A definition
+    and its logo travel together; where the shell happens to stand when the
+    command runs is not a property of the sheet. A definition that came in as
+    text — a preset — has no directory of its own, so those fall back to the
+    working directory.
+
+    Opening the file here rather than at drawing time buys the same two things
+    the font check buys: the message can name the line (§ 12), and § 12
+    point 13 holds without further work.
+    """
+    if band is None:
+        return band
+
+    base = Path(source).parent if Path(source).is_file() else Path.cwd()
+    updates: dict[str, Any] = {}
+    for align in ("left", "center", "right"):
+        spec = getattr(band, align)
+        if not isinstance(spec, ImageSpec):
+            continue
+        path = Path(spec.image).expanduser()
+        resolved = path if path.is_absolute() else base / path
+        try:
+            image = images.load_image(str(resolved), field=f"{section}.{align}")
+        except DefinitionError as error:
+            raise error.at(line=_line(raw, (section, align))) from None
+        updates[align] = spec.model_copy(update={"image": str(image.path)})
+    return band.model_copy(update=updates) if updates else band
 
 
 def _hole_mark_notices(page: PageSpec) -> tuple[str, ...]:

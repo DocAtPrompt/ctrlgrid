@@ -106,10 +106,17 @@ class TestBand:
         band = Band(height="12mm")
         assert (band.left, band.center, band.right) == (None, None, None)
 
-    def test_an_image_field_names_the_milestone(self) -> None:
+    def test_an_image_field_is_a_block_of_its_own(self) -> None:
+        # § 5.2: a band field holds free text or `{ image: …, height: … }`.
+        band = Band(height="12mm", left={"image": "logo.png", "height": "8mm"})
+        assert band.left.image == "logo.png"
+        assert band.left.height.um == 8_000
+
+    def test_an_image_without_a_height_is_an_error(self) -> None:
+        # The width follows from the file, the height never does (§ 8.4).
         with pytest.raises(ValidationError) as excinfo:
-            Band(height="12mm", left={"image": "logo.png", "height": "8mm"})
-        assert "M2" in str(excinfo.value)
+            Band(height="12mm", left={"image": "logo.png"})
+        assert "height" in str(excinfo.value)
 
     def test_a_missing_height_is_an_error(self) -> None:
         # § 8.4: the height comes from the definition, never from the content.

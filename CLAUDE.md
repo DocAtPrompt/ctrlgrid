@@ -11,13 +11,14 @@ no "fit to page", no stretching a grid so it comes out even.
 
 ## Current state — read this first
 
-**M1 is complete and released as 0.1.0. M2 is done but for three small keys.**
+**M1 and M2 are complete.** 0.1.0 is the version in the code; nothing since M1
+has been released, because releasing needs a human (see *Not done*).
 
 ```bash
 uv sync --extra dev && uv run pytest && uv run ruff check .
 ```
 
-409 tests, all green, ruff clean. Ten commits on `main`, linear history, **no
+427 tests, all green, ruff clean. Eleven commits on `main`, linear history, **no
 remote configured — nothing has ever been pushed.**
 
 ### Done
@@ -32,20 +33,17 @@ remote configured — nothing has ever been pushed.**
 | **M2** fonts stage 2 | `font: {file: …}`, embedded and subset, with the `fsType` check |
 | **M2** dash styles | `style: dashed \| dotted`, `base_dash`, `dash` |
 | **M2** free page sizes | `format: 210x99mm`, `format: 8.5x11in` |
+| **M2** images in bands | `left: {image: …, height: …}`, PNG, never cropped |
 | pulled forward into M1 | format table, presets, `check`, overwrite protection, placeholders — the M1 acceptance criteria needed them |
 
 ### Not done
 
-**M2 remainder — this is where to continue:**
+**M3 is where to continue** — the `polar` blade (§ 7.6). § 14 puts it second
+on purpose: it is the hard test of whether the handle survives a non-cartesian
+blade, and every M2 feature it would have to live with now exists.
 
-1. **Images in header and footer** (§ 5.2) — the `{ image: … }` field form,
-   and the last M2 key. `Image` is in the vocabulary, `PdfWriter` refuses it,
-   `model._plain_text` refuses the key. A logo is never cropped: it fits or it
-   is an error (§ 8.9). PNG only in v1, with a clear message for `.svg`
-   (§ 13).
-
-**Later milestones**, untouched: M3 `polar`, M4 the remaining blades and
-`law: log10`, M5 device profiles, M6 N-up, M7 PNG, M8 `perspective`/`mandala`.
+**Later milestones**, untouched: M4 the remaining blades and `law: log10`,
+M5 device profiles, M6 N-up, M7 PNG, M8 `perspective`/`mandala`.
 
 **Two things only a human can do**, both needed before `uvx ctrlgrid` works:
 configure a git remote and push; set up trusted publishing on PyPI plus a
@@ -81,7 +79,7 @@ work around it.
 
 **Where the specification was genuinely silent**, the resolution is recorded in
 [`docs/implementation-decisions.md`](docs/implementation-decisions.md) —
-eighteen of them so far, each with the section it belongs to and the reasoning.
+twenty of them so far, each with the section it belongs to and the reasoning.
 Read it before changing a default; several look arbitrary and are not.
 
 ## Language split
@@ -109,6 +107,7 @@ and knows nothing about margins.
 | `loader.py` | YAML → `Document`; formats, presets, devices, name lists |
 | `pages.py` | `Geometry`, page loop, placeholders, `preflight`, `build` |
 | `frame.py` | header/footer layout, border, background, hole marks, stamp |
+| `images.py` | PNG sources: signature check, pixel size, aspect (§ 5.2, § 13) |
 | `fonts.py` | font files: `fsType` licence check, version, coverage (§ 10.3) |
 | `cover.py` | the cover sheet: calibration figures and settings summary (§ 8.8) |
 | `generators/` | registry + `lines` |
@@ -159,12 +158,11 @@ reject a pattern block they were handed.
 
 ## Where to start
 
-Images in bands (§ 5.2) are all that is left of M2, and they sit behind a
-deferred message that names them.
-
-Do not start M3 (`polar`) before M2 stands. § 14 puts `polar` second on purpose
-— it is the hard test of whether the handle survives a non-cartesian blade —
-and that test is only meaningful once the handle is complete.
+M2 stands, so `polar` (§ 7.6) is next and the test § 14 designed it to be is
+now meaningful: the handle is complete, and a non-cartesian blade has to fit
+the same three seams. Expect the pressure at `periodic_axes` — § 8.3 makes
+`snap` an error for `polar`, so the interesting question is what the blade
+answers rather than what it is handed.
 
 ## Open questions
 

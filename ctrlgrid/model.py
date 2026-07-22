@@ -54,19 +54,8 @@ def _non_negative(value: Length) -> Length:
     return value
 
 
-def _plain_text(value: Any) -> Any:
-    """Refuse the `{ image: … }` form of a header field until it is supported."""
-    if isinstance(value, dict):
-        raise ValueError(
-            "images in headers and footers arrive with milestone M2 (§ 5.2); "
-            "this milestone takes plain text"
-        )
-    return value
-
-
 LengthField = Annotated[Length, BeforeValidator(_as_length)]
 AngleField = Annotated[Angle, BeforeValidator(_as_angle)]
-TextField = Annotated[str | None, BeforeValidator(_plain_text)]
 
 
 class Section(BaseModel):
@@ -181,6 +170,35 @@ class FontSpec(Section):
         return fonts.token_for(self.file) if self.file else self.family
 
 
+class ImageSpec(Section):
+    """A header or footer field that holds a picture instead of text (§ 5.2).
+
+    Only the height is given. The width follows from the file's own
+    proportions, because a logo stretched to a width somebody typed is not the
+    logo any more — and § 8.9 withholds `cut` from images for the same reason:
+    it fits or it is an error.
+    """
+
+    image: str
+    height: LengthField
+
+    @model_validator(mode="after")
+    def _a_height_of_nothing_is_not_a_height(self) -> ImageSpec:
+        if self.height.um <= 0:
+            raise ValueError(f"image height must be positive, got {self.height.raw}")
+        return self
+
+
+def _text_or_image(value: Any) -> Any:
+    """A band field is free text or a `{ image: …, height: … }` block (§ 5.2)."""
+    if isinstance(value, dict):
+        return ImageSpec.model_validate(value)
+    return value
+
+
+FieldContent = Annotated[str | ImageSpec | None, BeforeValidator(_text_or_image)]
+
+
 class Band(Section):
     """A header or footer: three fields on a fixed height (§ 8.4, § 8.9).
 
@@ -194,9 +212,9 @@ class Band(Section):
     gap: LengthField = Length(um=0, mm=0.0, raw="0mm")
     cut: bool = False
     font: FontSpec = FontSpec()
-    left: TextField = None
-    center: TextField = None
-    right: TextField = None
+    left: FieldContent = None
+    center: FieldContent = None
+    right: FieldContent = None
 
     @model_validator(mode="after")
     def _heights_are_non_negative(self) -> Band:

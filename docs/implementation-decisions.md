@@ -255,6 +255,39 @@ sides (`210mmx99mm`), because that is what people type. Everything else goes
 through the ordinary unit parser, so `px` still refuses by naming device
 profiles (§ 9.2) rather than by looking like a typo.
 
+## 19. Image paths are relative to the definition file
+
+**§ 5.2.** The example is `image: "logo.png"`, and nothing says what that is
+relative to. The working directory is the wrong answer: a definition and its
+logo travel together, and where the shell happens to stand when the command
+runs is not a property of the sheet. So paths resolve against the directory of
+the definition file, and a definition that arrived as text — a preset — falls
+back to the working directory, because it has no directory of its own.
+
+The file is opened in the loader, like a font (decision 16), so the message can
+name the line and § 12 point 13 holds without further work.
+
+**PNG is decided by the signature, not the extension** (§ 13). A `.png` that is
+really a GIF is named as such, and a `.svg` gets a message about SVG rather
+than about a broken file — § 13 rules SVG out for a reason, and "unknown file
+type" would hide it.
+
+## 20. An image field is measured like text and refused like nothing else
+
+**§ 8.9, § 8.4.** § 8.9 lays out the three fields and their widths for text,
+then adds one sentence about images: the same, only without truncation. So an
+image takes part in the width split of § 8.9 with the width its own
+proportions give it at the height that was asked for, and `cut: true` does not
+reach it — a logo fits or the run is refused.
+
+The height is checked against the band the same way a font size is (§ 8.4,
+§ 12 point 13) and never derived from the picture, or page 1 with a tall logo
+would have a different pattern area than page 7.
+
+`layout_band` therefore returns `Mark` rather than `Text`. Nothing else in the
+seam moved: `Image` has been in the vocabulary since M1 (§ 6), which is what
+made this a change to two modules instead of five.
+
 ---
 
 ## Smaller calls, for completeness

@@ -17,10 +17,13 @@ looks complete is worse than one that does not fit.
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from ctrlgrid import fonts
 from ctrlgrid.errors import DefinitionError
-from ctrlgrid.marks import Arc, Layer, Point, Polygon, Text, Um
-from ctrlgrid.model import Band, BorderSpec, PageSpec, StampSpec
+from ctrlgrid.images import load_image
+from ctrlgrid.marks import Arc, Image, Layer, Mark, Point, Polygon, Text, Um
+from ctrlgrid.model import Band, BorderSpec, ImageSpec, PageSpec, StampSpec
 from ctrlgrid.pages import Box, Geometry, PageContext, Sheet, resolve_placeholders
 from ctrlgrid.writers import WriterQuery
 
@@ -180,18 +183,27 @@ def layout_band(
     q: WriterQuery,
     page: PageContext,
     section: str,
-) -> list[Text]:
+) -> list[Mark]:
     """Lay a header or footer out inside its box, measuring every field.
+
+    Fields hold free text or an image (§ 5.2), and the two are measured the
+    same way and refused on the same rule — with one difference § 8.9 is
+    explicit about: text may be truncated when `cut: true` says so, an image
+    never. A logo fits or it is an error.
 
     `section` is "header" or "footer" and appears in error messages, because
     "text does not fit" without a field name is not something a user can act on
     (§ 12).
     """
     fields = {"left": band.left, "center": band.center, "right": band.right}
-    resolved = {
-        align: resolve_placeholders(text, page, field=f"{section}.{align}")
-        for align, text in fields.items()
-        if text
+    resolved: dict[str, str | ImageSpec] = {
+        align: (
+            content
+            if isinstance(content, ImageSpec)
+            else resolve_placeholders(content, page, field=f"{section}.{align}")
+        )
+        for align, content in fields.items()
+        if content
     }
     if not resolved:
         return []
@@ -200,23 +212,45 @@ def layout_band(
     # A font token, not a family name: stage 1's three logical families and a
     # file font of stage 2 are two spellings of the same string (§ 10.3).
     family = band.font.token
-    baseline = _baseline(box, band, q=q, section=section, size=size, family=family)
+    pictures = {
+        align: _measure_image(content, box, section=section, align=align)
+        for align, content in resolved.items()
+        if isinstance(content, ImageSpec)
+    }
+    texts = {align: value for align, value in resolved.items() if isinstance(value, str)}
 
-    for align, text in resolved.items():
+    baseline = (
+        _baseline(box, band, q=q, section=section, size=size, family=family)
+        if texts
+        else box.bottom
+    )
+    for align, text in texts.items():
         _check_glyphs(text, family=family, q=q, field=f"{section}.{align}")
 
-    widths = {align: q.text_width(text, family=family, size=size) for align, text in
-              resolved.items()}
+    widths = {align: q.text_width(text, family=family, size=size)
+              for align, text in texts.items()}
+    widths |= {align: picture[0] for align, picture in pictures.items()}
     available = _available(box, centre_width=widths.get("center", 0))
 
-    marks: list[Text] = []
+    marks: list[Mark] = []
     # The centre field is laid out first: § 8.9 rule 1 gives it the content
     # width, and if it alone is too wide it is the one that gets cut.
     for align in ("center", "left", "right"):
         if align not in resolved:
             continue
+        if align in pictures:
+            marks.append(
+                _image_mark(
+                    pictures[align],
+                    box=box,
+                    align=align,
+                    available=available[align],
+                    field=f"{section}.{align}",
+                )
+            )
+            continue
         content = _fit(
-            resolved[align],
+            texts[align],
             width=widths[align],
             available=available[align],
             band=band,
@@ -236,6 +270,55 @@ def layout_band(
             )
         )
     return marks
+
+
+def _measure_image(
+    spec: ImageSpec, box: Box, *, section: str, align: str
+) -> tuple[Um, Um, str]:
+    """Width, height and resolved path — the height checked against the band.
+
+    § 8.4 fixes band heights in the definition and § 12 point 13 checks them
+    against every image before page one. Deriving the height from the picture
+    instead would make page 1 with a tall logo a different sheet from page 7.
+    """
+    image = load_image(spec.image, field=f"{section}.{align}")
+    height = spec.height.um
+    if height > box.height:
+        raise DefinitionError(
+            f"{Path(spec.image).name} is {spec.height.raw} tall but {section}.height is "
+            f"{_mm(box.height)}. Raise {section}.height or reduce the image height — "
+            "the band height comes from the definition and is never derived from "
+            "its content (§ 8.4)",
+            field=f"{section}.{align}.height",
+        )
+    return round(height * image.aspect), height, str(image.path)
+
+
+def _image_mark(
+    picture: tuple[Um, Um, str], *, box: Box, align: str, available: Um, field: str
+) -> Image:
+    """Place a measured image in its field, or refuse — never crop (§ 8.9)."""
+    width, height, source = picture
+    if width > available:
+        raise DefinitionError(
+            f"{Path(source).name} is {_mm(width)} wide at a height of {_mm(height)}, and "
+            f"only {_mm(available)} is available. An image is never cropped and never "
+            "squeezed: reduce its height, shorten the neighbouring field, or use a "
+            "narrower picture (§ 8.9)",
+            field=field,
+        )
+    left = {
+        "left": box.left,
+        "center": (box.left + box.right) // 2 - width // 2,
+        "right": box.right - width,
+    }[align]
+    return Image(
+        pos=Point(left, box.bottom + (box.height - height) // 2),
+        width=width,
+        height=height,
+        source=source,
+        layer=Layer.FRAME,
+    )
 
 
 def _available(box: Box, *, centre_width: Um) -> dict[str, Um]:

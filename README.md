@@ -4,12 +4,12 @@ Generate **dimensionally accurate** PDF templates from a small definition file:
 grid paper, ruled paper, dot grids, staff paper, mazes, polar targets, tilings
 and fillable forms — for paper formats **and** for e-ink tablets.
 
-> **Status: milestone M1 complete, M2 well under way.** One blade is sharp:
+> **Status: milestones M1 and M2 complete.** One blade is sharp:
 > `lines` works end to end and is covered by the dimensional test described
-> below. The handle around it is nearly finished — multi-page output, headers
+> below. The handle around it is finished — multi-page output, headers
 > and footers, name lists, snapping, remainder handling, double-sided margins,
-> border, background, hole marks, stamp, the calibration cover sheet and
-> embedded font files.
+> border, background, hole marks, stamp, the calibration cover sheet, embedded
+> font files, dashed and dotted styles, free page sizes and logos in bands.
 >
 > The other generators in the table further down, and the options marked below
 > as arriving later, are specified but not built yet. Asking for one gets you a
@@ -108,6 +108,11 @@ ctrlgrid presets              # list them
 ctrlgrid show millimeter-a4   # print one, ready to copy
 ctrlgrid check my-def.yaml    # validate without generating
 ```
+
+A header or footer field holds free text or a picture —
+`left: { image: "logo.png", height: 8mm }`, PNG, with the path relative to the
+definition file. Only the height is given; the width follows from the file, so
+a logo is never squeezed, and never cropped: it fits or you are told.
 
 Paper size is either a name from the built-in table or two measures of your
 own, width first — `format: 210x99mm`, `format: 8.5x11in`. A free size is used

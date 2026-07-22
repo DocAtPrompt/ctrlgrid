@@ -64,7 +64,7 @@ class PdfWriter:
         The vocabulary is complete from M1; a writer grows into it, and the
         pre-flight check refuses anything missing instead of dropping it.
         """
-        return {"vector", "color", "text", "opacity", "arc", "polygon"}
+        return {"vector", "color", "text", "opacity", "arc", "polygon", "image_png"}
 
     def text_width(self, content: str, *, family: str, size: Um) -> Um:
         return _to_um(pdfmetrics.stringWidth(content, _font(family), _to_pt(size)))
@@ -131,10 +131,7 @@ class PdfWriter:
             case Text():
                 self._text(mark)
             case Image():
-                raise CtrlGridError(
-                    "images are in the mark vocabulary but not in this writer yet "
-                    "(§ 10.2 capabilities); they arrive with milestone M2"
-                )
+                self._image(mark)
 
     def outline(self, title: str, *, index: int) -> None:
         """A bookmark on the current page (§ 10.1).
@@ -219,6 +216,29 @@ class PdfWriter:
         if mark.closed:
             path.close()
         pdf.drawPath(path, stroke=1, fill=1 if mark.fill_color is not None else 0)
+        pdf.restoreState()
+
+    def _image(self, mark: Image) -> None:
+        """Place a PNG at exactly the box the layout measured (§ 5.2).
+
+        `mask='auto'` so a logo with a transparent background stays one, and
+        the box is never adjusted: the width came from the file's own
+        proportions in `frame.py`, so drawing it as given is what keeps the
+        picture unsquashed.
+        """
+        pdf = self._pdf
+        pdf.saveState()
+        if mark.opacity < 1.0:
+            pdf.setFillAlpha(mark.opacity)
+        x, y = _pt(mark.pos)
+        pdf.drawImage(
+            mark.source,
+            x,
+            y,
+            width=_to_pt(mark.width),
+            height=_to_pt(mark.height),
+            mask="auto",
+        )
         pdf.restoreState()
 
     def _text(self, mark: Text) -> None:
