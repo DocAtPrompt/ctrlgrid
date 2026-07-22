@@ -335,6 +335,33 @@ bisector of the segment that contains straight up, because straight up is
 where a spoke runs on every family that divides 90°, and a number printed over
 a line is unreadable.
 
+## 24. Clefs are refused, and the refusal names a conflict rather than a milestone
+
+**§ 7.3 against § 6.** § 7.3 wants clef glyphs "as stored vector paths", which
+would make the PDF font-free. § 6 fixes the mark vocabulary at six primitives
+and calls it contract rather than a build stage — and none of the six is a
+curve path. `Arc` and `Polygon` cannot draw a treble clef; they can draw
+something that looks nearly like one, which is exactly the "almost right"
+sheet § 5.1 calls the worst failure there is.
+
+So `clef: none` works and every named clef refuses, with a message that names
+both sections. This is not deferred work waiting in a queue — it is an open
+question about the specification, and the honest options are: give the
+vocabulary a seventh primitive (a path), draw clefs from an embedded music
+font now that fonts stage 2 exists (§ 10.3), or drop them. That belongs in
+§ 15, and it needs a decision rather than an implementation.
+
+## 25. Staves fill from the top, and the leftover stays at the bottom
+
+**§ 7.3.** Nothing says where a short block of systems sits in a taller
+pattern area. Music is read from the top down and a page of manuscript
+normally keeps its spare room at the foot, so the first system starts at the
+top edge of the pattern area.
+
+Not `remainder` (§ 8.5): that places the leftover of a *periodic* family, and
+a stack of systems is a group with a gap rule of its own — the same reason
+§ 8.3 refuses snapping here.
+
 ---
 
 ## Smaller calls, for completeness
