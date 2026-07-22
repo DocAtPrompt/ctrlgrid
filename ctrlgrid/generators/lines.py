@@ -13,64 +13,28 @@ vertical one at the left — and `offset` moves the start of the cycle from ther
 from __future__ import annotations
 
 from collections.abc import Iterator
-from decimal import Decimal, InvalidOperation
+from decimal import Decimal
 from typing import Annotated, Any, ClassVar, Literal
 
 from pydantic import BaseModel, BeforeValidator, ConfigDict, Field, model_validator
 
 from ctrlgrid.axes import AxisPeriod
-from ctrlgrid.cycles import Cycle, period_in_marks, period_um
+from ctrlgrid.cycles import period_in_marks, period_um
+from ctrlgrid.generators.common import (
+    DEFAULT_BASE_DASH,
+    DEFAULT_DASH,
+    HAIRLINE,
+    ONE,
+    ColorField,
+    CycleField,
+    Dashable,
+    describe_cycle,
+)
 from ctrlgrid.marks import Area, Layer, Mark, Point, Segment
 from ctrlgrid.model import LengthField, Section
 from ctrlgrid.pages import PageContext
 from ctrlgrid.units import Length
 from ctrlgrid.writers import WriterQuery
-
-_HEX = "0123456789abcdefABCDEF"
-
-
-def _as_cycle(value: Any) -> Any:
-    """Turn a list of bare numbers into a `Cycle`.
-
-    § 5.1: number cycles hold bare numbers only; absolute values belong in the
-    matching `base_*`. A length here would make `spacing: [5]` and
-    `base_spacing: 5mm` two different things that look alike.
-    """
-    if isinstance(value, Cycle):
-        return value
-    if not isinstance(value, list):
-        raise ValueError(
-            f"a cycle is a list of bare numbers, for example [1, 1, 2] — got {value!r} (§ 5.3)"
-        )
-    entries = []
-    for entry in value:
-        if isinstance(entry, str):
-            raise ValueError(
-                f"cycle entries are bare multiples of the base, not lengths — got {entry!r}; "
-                "absolute values belong in the matching base_* key (§ 5.1)"
-            )
-        try:
-            entries.append(Decimal(str(entry)))
-        except (InvalidOperation, TypeError):
-            raise ValueError(f"cycle entries must be numbers, got {entry!r}") from None
-    return Cycle.of(entries)
-
-
-def _as_colors(value: Any) -> Any:
-    """A colour field is either one `#rrggbb` or a cycle of them (§ 5.3)."""
-    values = value if isinstance(value, list) else [value]
-    for entry in values:
-        if not (
-            isinstance(entry, str)
-            and len(entry) == 7
-            and entry.startswith("#")
-            and all(character in _HEX for character in entry[1:])
-        ):
-            raise ValueError(
-                f"colour must be #rrggbb, six digits, RGB — got {entry!r}. "
-                "No names, no eight-digit alpha, no CMYK; opacity is its own field (§ 5.3)"
-            )
-    return tuple(values)
 
 
 def _as_direction(value: Any) -> Any:
@@ -82,8 +46,6 @@ def _as_direction(value: Any) -> Any:
     return value
 
 
-CycleField = Annotated[Cycle, BeforeValidator(_as_cycle)]
-ColorField = Annotated[tuple[str, ...], BeforeValidator(_as_colors)]
 DirectionField = Annotated[Literal["horizontal", "vertical"], BeforeValidator(_as_direction)]
 
 
@@ -113,7 +75,7 @@ class Extent(Section):
         return self
 
 
-class Family(Section):
+class Family(Section, Dashable):
     """A periodic family of like marks (§ 4, § 7.1)."""
 
     deferred: ClassVar[dict[str, str]] = {
@@ -122,11 +84,11 @@ class Family(Section):
 
     direction: DirectionField
     base_spacing: LengthField
-    spacing: CycleField = Cycle.of([Decimal(1)])
-    base_weight: LengthField = Length(um=53, mm=0.052916666666666667, raw="0.15pt")
-    weight: CycleField = Cycle.of([Decimal(1)])
+    spacing: CycleField = ONE
+    base_weight: LengthField = HAIRLINE
+    weight: CycleField = ONE
     style: Literal["solid", "dashed", "dotted"] = "solid"
-    base_dash: LengthField = Length(um=1000, mm=1.0, raw="1mm")
+    base_dash: LengthField = DEFAULT_BASE_DASH
     #: Absent means the style decides (see `DEFAULT_DASH`). Unlike every other
     #: cycle this one is **not** position-wise: § 5.3 calls it a dash pattern,
     #: and a pattern describes one mark rather than a run of them.
@@ -151,45 +113,9 @@ class Family(Section):
         """
         return "y" if self.direction == "horizontal" else "x"
 
-    @property
-    def dash_pattern(self) -> tuple[float, ...]:
-        """The stroke's dash array in millimetres, or empty for a solid line.
-
-        Every entry is a multiple of `base_dash`, exactly as § 5.3 defines a
-        cycle — the difference is only where it is applied.
-        """
-        if self.style == "solid":
-            return ()
-        cycle = self.dash or DEFAULT_DASH[self.style]
-        return tuple(self.base_dash.mm * float(value) for value in cycle.values)
-
-    @property
-    def cap(self) -> str:
-        """§ 10.1: a dot is a zero-length stroke with a round cap.
-
-        The same trick the `dots` blade uses, which is why `cap` is in the mark
-        vocabulary at all — `dotted` is a dash pattern whose on-lengths are 0.
-        """
-        return "round" if self.style == "dotted" else "butt"
-
     @model_validator(mode="after")
-    def _a_dash_pattern_needs_a_style_that_uses_it(self) -> Family:
-        """§ 5.1: a key that cannot take effect where it stands is an error.
-
-        Quietly ignoring `dash:` next to `style: solid` would leave a sheet
-        that is *almost* what was asked for — the worst failure class there is.
-        """
-        named = {key for key in ("dash", "base_dash") if key in self.model_fields_set}
-        if self.style == "solid" and named:
-            raise ValueError(
-                f"{', '.join(sorted(named))} given, but style is `solid` — a solid line "
-                "has no dash pattern. Set style: dashed or dotted (§ 7.1)"
-            )
-        if self.style != "solid" and not any(self.dash_pattern):
-            raise ValueError(
-                f"the dash pattern of this {self.style} family is all zeros, which draws "
-                "nothing at all. At least one entry must be positive (§ 5.3)"
-            )
+    def _the_dash_pattern_needs_a_style_that_uses_it(self) -> Family:
+        self.check_dash(self.model_fields_set)
         return self
 
     @model_validator(mode="after")
@@ -210,21 +136,6 @@ class Family(Section):
                 "A common cause is writing mm where pt was meant (§ 12)"
             )
         return self
-
-
-#: What a style dashes with when no cycle is written down (§ 7.1).
-#: `dotted` is `[0, 2]` because a zero-length on-segment with a round cap is a
-#: dot; `dashed` is the 3:2 that reads as a dash at every sensible line weight.
-DEFAULT_DASH = {
-    "dashed": Cycle.of([Decimal(3), Decimal(2)]),
-    "dotted": Cycle.of([Decimal(0), Decimal(2)]),
-}
-
-
-def _cycle(cycle: Cycle) -> str:
-    """A cycle the way it was written: `[1, 1, 2.7]`, without Decimal noise."""
-    return "[" + ", ".join(f"{value:f}".rstrip("0").rstrip(".") or "0"
-                           for value in cycle.values) + "]"
 
 
 class LinesConfig(BaseModel):
@@ -290,12 +201,12 @@ class LinesGenerator:
             )
             length = period_um(family.spacing, base_um=family.base_spacing.um, marks=marks)
             parts = [
-                f"spacing {family.base_spacing.raw} x {_cycle(family.spacing)}",
-                f"weight {family.base_weight.raw} x {_cycle(family.weight)}",
+                f"spacing {family.base_spacing.raw} x {describe_cycle(family.spacing)}",
+                f"weight {family.base_weight.raw} x {describe_cycle(family.weight)}",
             ]
             if family.style != "solid":
                 pattern = family.dash or DEFAULT_DASH[family.style]
-                parts.append(f"{family.style} {family.base_dash.raw} x {_cycle(pattern)}")
+                parts.append(f"{family.style} {family.base_dash.raw} x {describe_cycle(pattern)}")
             if len(family.color) > 1:
                 parts.append(f"{len(family.color)} colours")
             if family.offset.um:
@@ -307,6 +218,13 @@ class LinesGenerator:
                 f"line{'s' if marks != 1 else ''} = {length / 1000:.1f} mm"
             )
         return lines
+
+    #: § 8.3: cartesian families have periods, so snapping means something.
+    supports_snap = True
+
+    def check(self, cfg: LinesConfig, *, area: Area, q: WriterQuery) -> None:
+        """Nothing to add: every rule this blade has is a rule about a family,
+        and pydantic has already applied it by the time an area exists."""
 
     def is_page_invariant(self, cfg: LinesConfig) -> bool:
         """Always: a family depends on the pattern area, never on the page (§ 10.1)."""

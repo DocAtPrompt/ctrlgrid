@@ -288,6 +288,53 @@ would have a different pattern area than page 7.
 seam moved: `Image` has been in the vocabulary since M1 (§ 6), which is what
 made this a change to two modules instead of five.
 
+## 21. Seam 2 grew a fourth query rather than letting `generate` raise
+
+**§ 3.6, § 7.6, § 12 point 13.** § 7.6 requires segment labels to be measured
+*before* rendering, and only the blade can measure them — but only the handle
+knows the pattern area, which is what they have to fit into. The obvious move
+is to let `generate` raise when it meets a label that does not fit. That
+breaks the rule the whole pre-flight exists for: `generate` runs while pages
+are being written, so the file would already be half there.
+
+So the blade got `check(cfg, area, q)`, called once by `preflight` against the
+area it will be handed. `generate` is unchanged, as it was through `snap`,
+`remainder` and `describe` — four queries now, and the one method that
+produces marks has never moved.
+
+This bit for real during M3: the ring-label count mismatch was raised from
+`generate` and only surfaced when a real sheet was built, not by any test.
+Both the check and a test that nothing is written now sit in the pre-flight.
+
+## 22. `supports_snap` is a statement, not an absence
+
+**§ 8.3, § 7.6.** § 8.3 lists the blades for which snapping is an **error** —
+`polar` among them. That could have been inferred from `periodic_axes`
+returning nothing, and it would have been wrong: "no periodic family along x"
+and "snapping does not apply to this pattern" are different sentences, and only
+the second may be answered with a refusal that names the generator.
+
+So the blade declares `supports_snap`, and the handle refuses before it
+computes any geometry — no half-fitting answer is produced on the way.
+
+## 23. In polar coordinates the cycles count *drawn* rings
+
+**§ 5.3, § 7.6.** Mark 0 of a family sits on the origin (§ 3.5), and in polar
+coordinates the origin is the centre point: a circle of radius 0 is not a mark.
+The question the specification does not answer is what happens to the weight
+and colour cycles then.
+
+They count drawn rings. `weight: [1, 1, 1, 2]` makes every fourth *visible*
+ring heavy, which is what it says; counting the invisible circle at the centre
+would put every cycle one step out of phase with what is on the paper.
+
+Two smaller placements go with it, both from what a real sheet looked like:
+a **segment** label belongs to the wedge between two spokes, not to a spoke —
+§ 7.6's twelve 30° spokes carry 1 … 12 — and **ring** labels run up the
+bisector of the segment that contains straight up, because straight up is
+where a spoke runs on every family that divides 90°, and a number printed over
+a line is unreadable.
+
 ---
 
 ## Smaller calls, for completeness
@@ -305,6 +352,10 @@ made this a change to two modules instead of five.
   clipped by the non-printable border on nearly every printer (§ 8.6).
 - **Outline keys come from the page index**, never a counter or random value, or
   the table of contents alone would break § 10.1's byte-identical guarantee.
+- **Angles run in micro-degrees** inside `polar`, for the reason § 3.3 gives
+  for micrometres: a full turn is then the exact integer 360 000 000, so twelve
+  30° spokes close the circle instead of ending at 359.999999°. It also lets
+  the angular family go through the very same `Cycle.positions` as a spacing.
 - **`typer` 0.27 vendors click** as `typer._click`. Declaring `click` as a
   direct dependency would install a second copy whose exception classes typer
   never raises, so `cli.py` avoids needing it at all — the preset-as-command

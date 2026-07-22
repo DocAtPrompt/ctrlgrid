@@ -431,8 +431,12 @@ def preflight(
 
     This is also what `ctrlgrid check` runs: the same work, minus the writing.
     """
+    from ctrlgrid import generators
     from ctrlgrid.cover import cover_marks
     from ctrlgrid.frame import layout_band
+
+    blade = generators.get(document.generator)
+    _refuse_snap_where_it_has_no_meaning(document, blade)
 
     geometry = Geometry.of(
         document.sheet,
@@ -441,6 +445,11 @@ def preflight(
         pattern=document.pattern,
         blade_axes=document.axes,
     )
+    # The blade's own pre-flight, once, against the area it will be handed
+    # (§ 12 point 13). `polar` needs it for the two questions only the area can
+    # answer: does the circle fit, and do the segment labels fit (§ 7.6).
+    blade.check(document.config, area=geometry.area, q=q)
+
     contexts = list(page_contexts(count=document.pages.count, names=document.names))
 
     frames: list[list[Text]] = []
@@ -466,6 +475,30 @@ def preflight(
     # once the file is half written.
     cover = cover_marks(document, q=q) if document.pages.cover else []
     return geometry, contexts, frames, cover
+
+
+def _refuse_snap_where_it_has_no_meaning(document: Document, blade: object) -> None:
+    """§ 8.3: for some blades snapping is an error, never a guess.
+
+    § 8.3 names them — `polar`, `staves`, `grid`, `maze`, `tiling`, `form` —
+    and the reason is not that they have nothing to snap to but that snapping
+    is not a thing their pattern does. That is a statement about the blade, so
+    the blade makes it (`supports_snap`) and the handle acts on it here, before
+    any geometry is computed and therefore before any half-fitting answer can
+    be produced.
+    """
+    if getattr(blade, "supports_snap", True):
+        return
+    for axis in ("x", "y"):
+        mode = getattr(document.pattern.snap, axis)
+        if mode and mode != "none":
+            raise DefinitionError(
+                f"generator `{document.generator}` does not support snapping, and "
+                f"pattern.snap asks for `{mode}`. Its pattern has a centre rather than "
+                "an axis to snap to, so § 8.3 makes this an error instead of a guess — "
+                "remove pattern.snap",
+                field="pattern.snap",
+            )
 
 
 def build(document: Document, writer: Writer) -> Geometry:

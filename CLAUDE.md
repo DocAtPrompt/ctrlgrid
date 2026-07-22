@@ -11,14 +11,14 @@ no "fit to page", no stretching a grid so it comes out even.
 
 ## Current state — read this first
 
-**M1 and M2 are complete.** 0.1.0 is the version in the code; nothing since M1
-has been released, because releasing needs a human (see *Not done*).
+**M1, M2 and M3 are complete.** 0.1.0 is the version in the code; nothing since
+M1 has been released, because releasing needs a human (see *Not done*).
 
 ```bash
 uv sync --extra dev && uv run pytest && uv run ruff check .
 ```
 
-427 tests, all green, ruff clean. Eleven commits on `main`, linear history, **no
+481 tests, all green, ruff clean. Twelve commits on `main`, linear history, **no
 remote configured — nothing has ever been pushed.**
 
 ### Done
@@ -34,16 +34,20 @@ remote configured — nothing has ever been pushed.**
 | **M2** dash styles | `style: dashed \| dotted`, `base_dash`, `dash` |
 | **M2** free page sizes | `format: 210x99mm`, `format: 8.5x11in` |
 | **M2** images in bands | `left: {image: …, height: …}`, PNG, never cropped |
+| **M3** — `polar` | rings, spokes, segment and ring labels, counting patterns (§ 7.10) |
 | pulled forward into M1 | format table, presets, `check`, overwrite protection, placeholders — the M1 acceptance criteria needed them |
 
 ### Not done
 
-**M3 is where to continue** — the `polar` blade (§ 7.6). § 14 puts it second
-on purpose: it is the hard test of whether the handle survives a non-cartesian
-blade, and every M2 feature it would have to live with now exists.
+**M4 is where to continue** — the remaining blades: `dots`, `staves`, `grid`,
+`maze`, `tiling`, `form`, and `law: log10` (§ 7.9). Three things M3 built are
+there to be reused: `labels.py` (§ 7.10) is what `grid` and `tiling` label
+with, `generators/common.py` holds the cycle and dash fields every family
+needs, and `check()` is where a blade refuses what only the pattern area can
+disprove.
 
-**Later milestones**, untouched: M4 the remaining blades and `law: log10`,
-M5 device profiles, M6 N-up, M7 PNG, M8 `perspective`/`mandala`.
+**Later milestones**, untouched: M5 device profiles, M6 N-up, M7 PNG,
+M8 `perspective`/`mandala`.
 
 **Two things only a human can do**, both needed before `uvx ctrlgrid` works:
 configure a git remote and push; set up trusted publishing on PyPI plus a
@@ -79,8 +83,8 @@ work around it.
 
 **Where the specification was genuinely silent**, the resolution is recorded in
 [`docs/implementation-decisions.md`](docs/implementation-decisions.md) —
-twenty of them so far, each with the section it belongs to and the reasoning.
-Read it before changing a default; several look arbitrary and are not.
+twenty-three of them so far, each with the section it belongs to and the
+reasoning. Read it before changing a default; several look arbitrary and are not.
 
 ## Language split
 
@@ -107,10 +111,11 @@ and knows nothing about margins.
 | `loader.py` | YAML → `Document`; formats, presets, devices, name lists |
 | `pages.py` | `Geometry`, page loop, placeholders, `preflight`, `build` |
 | `frame.py` | header/footer layout, border, background, hole marks, stamp |
+| `labels.py` | counting patterns `n`/`a`/`A`, explicit lists (§ 7.10) |
 | `images.py` | PNG sources: signature check, pixel size, aspect (§ 5.2, § 13) |
 | `fonts.py` | font files: `fsType` licence check, version, coverage (§ 10.3) |
 | `cover.py` | the cover sheet: calibration figures and settings summary (§ 8.8) |
-| `generators/` | registry + `lines` |
+| `generators/` | registry, `common.py` (cycle + dash fields), `lines`, `polar` |
 | `writers/` | seam 3 protocols + `pdf.py`, the only reportlab module |
 
 ### The three seams (§ 3.6)
@@ -118,15 +123,20 @@ and knows nothing about margins.
 1. **Definition → model.** `loader.load()`. After it there are no unit strings
    left in the core.
 2. **Generator → marks.** `generate(cfg, area, page, q) -> Iterator[Mark]`,
-   plus the queries `is_page_invariant`, `describe`, `periodic_axes`.
+   plus the queries `is_page_invariant`, `describe`, `periodic_axes`, `check`,
+   and the declaration `supports_snap`.
 3. **Marks → writer.** Bidirectional: marks in, font metrics out.
 
-**Seam 2 grew three queries and `generate` never changed.** When `snap` and
-`remainder` needed blade knowledge, the handle got a question to ask
+**Seam 2 has grown four queries and `generate` has never changed.** When `snap`
+and `remainder` needed blade knowledge, the handle got a question to ask
 (`periodic_axes`) rather than the blade getting the pattern block. § 8.3 says
 the *pattern area* shrinks, so shrinking it is the handle's job. Keep new
 handle features on that side of the line: six of the eight blades would have to
 reject a pattern block they were handed.
+
+`check(cfg, area, q)` came from M3 and is the other half of that rule: a blade
+may refuse things only the pattern area can disprove, but it refuses them in
+the pre-flight, never while pages are being written (§ 12 point 13).
 
 ## Non-negotiables
 
@@ -158,11 +168,13 @@ reject a pattern block they were handed.
 
 ## Where to start
 
-M2 stands, so `polar` (§ 7.6) is next and the test § 14 designed it to be is
-now meaningful: the handle is complete, and a non-cartesian blade has to fit
-the same three seams. Expect the pressure at `periodic_axes` — § 8.3 makes
-`snap` an error for `polar`, so the interesting question is what the blade
-answers rather than what it is handed.
+`polar` passed the test § 14 designed it to be: the handle needed no change
+for a non-cartesian blade beyond one new query (`check`) and one declaration
+(`supports_snap`), and `generate` did not move. The pressure came where it was
+expected — not in the geometry but in *when* a refusal happens.
+
+So M4 is the next step, and the cheapest of the remaining blades is `dots`:
+it is two cycles crossed, and § 10.1 already prescribes how a dot is drawn.
 
 ## Open questions
 

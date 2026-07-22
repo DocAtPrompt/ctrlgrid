@@ -1,0 +1,42 @@
+# Polar paper on A4 — rings every 10 mm, a spoke every 15°.
+#
+# A preset is an ordinary definition file, never a special path through the
+# code (§ 9.3), so this one is also the documentation for `polar` (§ 7.6):
+# copy it with `ctrlgrid show polar-a4 > mine.yaml` and bend it.
+#
+# The cycle model is the same one the `lines` families use, only in polar
+# coordinates — base value times dimensionless multiples, cyclically. Here
+# every fourth ring and every sixth spoke is emphasised, which is written the
+# same way "every fifth line heavier" is written on squared paper.
+
+version: 1
+
+defs:
+  grid:   &grid   "#8899aa"
+  accent: &accent "#334466"
+
+page:
+  format: a4
+  margin: 10mm
+
+generator: polar
+
+# Centre and outer radius are left out on purpose: the centre is the middle of
+# the pattern area and the radius half its shorter side (§ 7.6). Both can be
+# written down, but then they no longer follow the page when the format
+# changes — and `--format a5` should keep working.
+
+rings:
+  base_radius: 10mm
+  base_weight: 0.15pt
+  weight: [1, 1, 1, 2]
+  color: [*grid, *grid, *grid, *accent]
+
+spokes:
+  base_angle: 15deg
+  base_weight: 0.15pt
+  weight: [1, 1, 1, 1, 1, 2]
+  color: [*grid, *grid, *grid, *grid, *grid, *accent]
+  # The innermost 10 mm stay clear, or twenty-four spokes would meet in one
+  # black dot at the centre.
+  radial_extent: { start: 10mm }

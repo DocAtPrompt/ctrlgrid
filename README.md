@@ -4,9 +4,10 @@ Generate **dimensionally accurate** PDF templates from a small definition file:
 grid paper, ruled paper, dot grids, staff paper, mazes, polar targets, tilings
 and fillable forms — for paper formats **and** for e-ink tablets.
 
-> **Status: milestones M1 and M2 complete.** One blade is sharp:
-> `lines` works end to end and is covered by the dimensional test described
-> below. The handle around it is finished — multi-page output, headers
+> **Status: milestones M1, M2 and M3 complete.** Two blades are sharp:
+> `lines` and `polar`, the second one there to prove the handle survives a
+> pattern that has a centre instead of an axis. `lines` is covered by the
+> dimensional test described below. The handle around them is finished — multi-page output, headers
 > and footers, name lists, snapping, remainder handling, double-sided margins,
 > border, background, hole marks, stamp, the calibration cover sheet, embedded
 > font files, dashed and dotted styles, free page sizes and logos in bands.
@@ -85,12 +86,12 @@ There are no double-clickable installers, and none are planned.
 
 | Generator | Produces |
 |---|---|
-| `lines` | squared, ruled, isometric, calligraphy, Cornell, log/semi-log |
+| `lines` | squared, ruled, isometric, calligraphy, Cornell, log/semi-log — **works today** |
 | `dots` | dot grids with emphasised rows and columns |
 | `staves` | blank music staves and guitar tab |
 | `grid` | labelled cell blocks — battleship, score sheets |
 | `maze` | rectangular mazes, optionally with solutions |
-| `polar` | targets, score discs, polar paper |
+| `polar` | targets, score discs, polar paper — **works today** |
 | `tiling` | hexagons, triangles, rhombi — including colouring patterns |
 | `form` | fillable forms: phone logs, checklists, handover sheets |
 
