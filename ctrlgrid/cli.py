@@ -35,7 +35,7 @@ from ctrlgrid.loader import (
     preset_text,
     read_names,
 )
-from ctrlgrid.pages import Geometry, build, preflight
+from ctrlgrid.pages import Geometry, build, preflight, sheet_plan
 from ctrlgrid.writers.pdf import PdfWriter
 
 
@@ -84,6 +84,10 @@ def generate(
         str | None,
         typer.Option(help='Full-page diagonal overprint, e.g. --stamp "DRAFT" (§ 8.6).'),
     ] = None,
+    seed: Annotated[
+        int | None,
+        typer.Option(help="Seed for procedural blades, e.g. `maze` (§ 7.5)."),
+    ] = None,
     cover: Annotated[
         bool,
         typer.Option("--cover", help="Extra first sheet: calibration and settings (§ 8.8)."),
@@ -94,7 +98,7 @@ def generate(
     """Build a PDF from a preset or a definition file."""
     with _reporting():
         document = _open(
-            target, definition, _overrides(pages, format, orientation, names, stamp, cover)
+            target, definition, _overrides(pages, format, orientation, names, stamp, cover, seed)
         )
         destination = _destination(out, target, definition, force)
         geometry = build(document, PdfWriter(destination))
@@ -170,6 +174,7 @@ def _overrides(
     names: Path | None = None,
     stamp: str | None = None,
     cover: bool = False,
+    seed: int | None = None,
 ) -> dict:
     return {
         "pages": pages,
@@ -181,6 +186,9 @@ def _overrides(
         # "no cover", it is "the definition decides", which is why it is
         # dropped here rather than sent as an override.
         "cover": True if cover else None,
+        # § 7.5: a blade key rather than a handle one, and the only one the
+        # command line reaches into — a run's seed is a property of the run.
+        "seed": seed,
     }
 
 
@@ -212,7 +220,8 @@ def _report(document: Document, path: Path, geometry: Geometry, *, quiet: bool) 
         typer.echo(str(path))
         return
     typer.echo(str(path))
-    typer.echo(f"  {document.pages.count} page(s), {document.sheet.width / 1000:.0f} x "
+    sheets = document.pages.count * sheet_plan(document).per_item
+    typer.echo(f"  {sheets} page(s), {document.sheet.width / 1000:.0f} x "
                f"{document.sheet.height / 1000:.0f} mm")
     blade = generators.get(document.generator)
     for line in blade.describe(document.config):

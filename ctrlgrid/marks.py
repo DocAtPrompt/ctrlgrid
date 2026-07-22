@@ -151,3 +151,38 @@ def translate(mark: Mark, *, dx: Um, dy: Um) -> Mark:
 
 def _move(point: Point, dx: Um, dy: Um) -> Point:
     return Point(point.x + dx, point.y + dy)
+
+
+def mirror_x(mark: Mark, *, about: Um) -> Mark:
+    """Reflect a mark in the vertical line at `about / 2` (§ 7.5).
+
+    The second crossing of § 6, and it exists for one reason: a maze solution
+    printed on the back of its puzzle only lines up when it is mirrored,
+    because the back of a sheet appears mirrored when held to the light.
+
+    Text is *not* reflected — mirrored writing on the back would be the one
+    thing nobody wants — only its anchor moves, and its alignment flips with
+    it so a right-aligned label stays inside the same box.
+    """
+    def flip(point: Point) -> Point:
+        return Point(about - point.x, point.y)
+
+    match mark:
+        case Segment():
+            return replace(mark, start=flip(mark.start), end=flip(mark.end))
+        case Arc():
+            return replace(
+                mark,
+                center=flip(mark.center),
+                start_angle=180.0 - mark.start_angle - mark.sweep,
+            )
+        case Polygon():
+            return replace(mark, points=tuple(flip(point) for point in mark.points))
+        case Dot():
+            return replace(mark, pos=flip(mark.pos))
+        case Image():
+            return replace(mark, pos=Point(about - mark.pos.x - mark.width, mark.pos.y))
+        case Text():
+            flipped = {"left": "right", "right": "left", "center": "center"}[mark.align]
+            return replace(mark, pos=flip(mark.pos), align=flipped)
+    raise TypeError(f"not a mark: {mark!r}")  # pragma: no cover

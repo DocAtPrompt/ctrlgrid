@@ -22,7 +22,7 @@ from typing import TYPE_CHECKING
 
 from ctrlgrid.axes import AxisPeriod
 from ctrlgrid.errors import DefinitionError
-from ctrlgrid.marks import Area, Mark, Point, Text, Um, translate
+from ctrlgrid.marks import Area, Mark, Point, Text, Um, mirror_x, translate
 from ctrlgrid.model import Band, Margin, PatternSpec
 from ctrlgrid.writers import DocumentMeta, Writer, WriterQuery
 
@@ -51,6 +51,29 @@ class PageContext:
 
     seed_material: bytes
     """Stable bytes from seed and index, for procedural blades (§ 3.3)."""
+
+
+@dataclass(frozen=True, slots=True)
+class SheetPlan:
+    """How many sheets one *item* of a run needs, and which of them mirror.
+
+    Almost always one sheet per item — that is the default and no blade has to
+    say anything. `maze` is the exception § 7.5 writes out: with
+    `solution: separate_page` every puzzle needs a second sheet, so `--pages 10`
+    means ten puzzles on twenty sheets, `{page_count}` is twenty, and a name
+    list gives each entry both of its sheets.
+
+    The blade only *states* this. Doubling the loop, numbering the sheets and
+    mirroring one of them stay with the handle, because all three are
+    properties of the page rather than of the pattern (§ 3).
+    """
+
+    per_item: int = 1
+    mirrored: frozenset[int] = frozenset()
+    """Sub-indices (0-based within an item) drawn mirrored about the **sheet's**
+    vertical centre — § 7.5's `back_mirrored`, so the solution shows through
+    when the sheet is held against the light. The sheet's centre and not the
+    pattern area's: the reference is the physical turning edge."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -364,14 +387,20 @@ def page_contexts(
     count: int,
     names: list[str] | None = None,
     seed: int = 0,
+    per_item: int = 1,
 ) -> Iterator[PageContext]:
-    """The page loop (§ 3.1): one context per sheet."""
+    """The page loop (§ 3.1): one context per sheet.
+
+    `per_item` is how many sheets one entry of the run occupies (§ 7.5). It
+    only affects the *name*: both sheets of a maze carry the same `{name}`,
+    while the numbering counts sheets, as § 7.5 states outright.
+    """
     for index in range(count):
         yield PageContext(
             index=index,
             number=index + 1,
             count=count,
-            name=names[index % len(names)] if names else None,
+            name=names[(index // per_item) % len(names)] if names else None,
             is_even=(index + 1) % 2 == 0,
             seed_material=seed_material(seed, index),
         )
@@ -446,6 +475,8 @@ def preflight(
 
     blade = generators.get(document.generator)
     _refuse_snap_where_it_has_no_meaning(document, blade)
+    plan = sheet_plan(document)
+    _refuse_mirroring_that_cannot_line_up(document, plan)
 
     geometry = Geometry.of(
         document.sheet,
@@ -459,7 +490,13 @@ def preflight(
     # answer: does the circle fit, and do the segment labels fit (§ 7.6).
     blade.check(document.config, area=geometry.area, q=q)
 
-    contexts = list(page_contexts(count=document.pages.count, names=document.names))
+    contexts = list(
+        page_contexts(
+            count=document.pages.count * plan.per_item,
+            names=document.names,
+            per_item=plan.per_item,
+        )
+    )
 
     frames: list[list[Text]] = []
     for context in contexts:
@@ -484,6 +521,37 @@ def preflight(
     # once the file is half written.
     cover = cover_marks(document, q=q) if document.pages.cover else []
     return geometry, contexts, frames, cover
+
+
+def sheet_plan(document: Document) -> SheetPlan:
+    """What the blade says about sheets per item (§ 7.5). Usually nothing."""
+    from ctrlgrid import generators
+
+    blade = generators.get(document.generator)
+    getter = getattr(blade, "sheets", None)
+    return getter(document.config) if getter else SheetPlan()
+
+
+def _refuse_mirroring_that_cannot_line_up(document: Document, plan: SheetPlan) -> None:
+    """§ 7.5: `back_mirrored` and a shifting gutter cannot both be had.
+
+    Under duplex the margins swap on even pages (§ 8.1), so the pattern area
+    sits somewhere else on the back — and the solution would miss the maze by
+    exactly that difference. Either the sides are symmetric or duplex is off.
+    """
+    margin = document.sheet.margin
+    if not plan.mirrored or not document.page.duplex:
+        return
+    if margin.inner.um == margin.outer.um:
+        return
+    raise DefinitionError(
+        f"`back_mirrored` needs the pattern area to sit in the same place on both "
+        f"sides, but duplex is on and margin.inner ({margin.inner.raw}) differs from "
+        f"margin.outer ({margin.outer.raw}) — the solution would land "
+        f"{abs(margin.inner.um - margin.outer.um) / 1000:.1f}mm off the maze. Set "
+        "duplex: false or make the two margins equal (§ 7.5, § 8.1)",
+        field="page.duplex",
+    )
 
 
 def _refuse_snap_where_it_has_no_meaning(document: Document, blade: object) -> None:
@@ -527,6 +595,7 @@ def build(document: Document, writer: Writer) -> Geometry:
 
     geometry, contexts, frames, cover = preflight(document, writer)
     blade = generators.get(document.generator)
+    plan = sheet_plan(document)
 
     # Pass two — write. Nothing below this line may raise on user input.
     writer.begin_document(DocumentMeta(title=f"ctrlgrid {document.source}"))
@@ -559,8 +628,16 @@ def build(document: Document, writer: Writer) -> Geometry:
 
         # The blade is handed the same area every time and never learns which
         # side of the sheet it is on — only the shift differs (§ 3.3, § 6).
+        # § 7.5's `back_mirrored` is the one exception, and it is the handle
+        # that mirrors: about the **sheet's** centre, because the reference is
+        # the physical turning edge, and only the pattern, so that header and
+        # footer stay readable on the back.
+        mirrored = (context.index % plan.per_item) in plan.mirrored
         for mark in blade.generate(document.config, area=placed.area, page=context, q=writer):
-            writer.draw(translate(mark, dx=placed.origin.x, dy=placed.origin.y))
+            placed_mark = translate(mark, dx=placed.origin.x, dy=placed.origin.y)
+            if mirrored:
+                placed_mark = mirror_x(placed_mark, about=document.sheet.width)
+            writer.draw(placed_mark)
 
         border = border_mark(document.border, placed)
         if border is not None:

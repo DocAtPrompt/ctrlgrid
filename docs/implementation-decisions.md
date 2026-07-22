@@ -362,6 +362,52 @@ Not `remainder` (§ 8.5): that places the leftover of a *periodic* family, and
 a stack of systems is a group with a gap rule of its own — the same reason
 § 8.3 refuses snapping here.
 
+## 26. `min_path_factor` is off by default, because the reachable value is the algorithm's
+
+**§ 7.5.** The YAML sketch shows `min_path_factor: 0.5`, and § 7.5 argues well
+for the feature: a naive generator regularly produces mazes whose solution is
+laughably short behind a complicated-looking picture. What it does not say is
+what the default should be — and 0.5 turns out to be unreachable for two of
+the three algorithms it also prescribes.
+
+Measured over thirty carvings each, as a share of the cells:
+
+| algorithm | 10x10 | 20x20 |
+|---|---|---|
+| `backtracker` | 0.44 | 0.36 |
+| `kruskal` | 0.23 | 0.14 |
+| `prim` | 0.19 | 0.10 |
+
+A single built-in number would therefore be toothless for a backtracker and
+unreachable for prim, and it falls further as the grid grows. So the demand is
+the user's to make: the default is 0, the presets set a real one, and the
+refusal quotes this table so the number can be chosen rather than guessed.
+
+The retry bound is 200. § 7.5 asks for regeneration on a shortfall; it does
+not ask for a hang, and a factor nobody can reach has to end in an error that
+says how far it got.
+
+## 27. Sheets-per-item is a plan the blade states and the handle carries out
+
+**§ 7.5, § 3.** `solution: separate_page` doubles the sheets, makes odd ones
+puzzles and even ones solutions, doubles `{page_count}`, and gives each entry
+of a name list two sheets that share a name. All four are properties of the
+*page loop*, which is the handle's (§ 3) — but only the blade knows that they
+apply.
+
+So the blade returns a `SheetPlan` (`per_item`, and which sub-sheets are
+mirrored) and the handle does the rest: it multiplies the count, keeps the
+numbering running across every sheet, indexes names by item rather than by
+sheet, and mirrors the pattern layer where the plan says so. Default is one
+sheet per item, so no other blade has to say anything at all.
+
+Mirroring lives with the handle for a second reason: § 7.5 mirrors about the
+**sheet's** vertical centre, not the pattern area's, because the reference is
+the physical turning edge — and a blade never learns where the sheet is
+(§ 3.3). `mirror_x` sits beside `translate` in `marks.py`, the one other place
+where coordinate systems cross, and it deliberately does not reflect *text*:
+mirrored writing on the back is the one thing nobody wants.
+
 ---
 
 ## Smaller calls, for completeness

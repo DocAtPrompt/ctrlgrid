@@ -29,9 +29,9 @@ and fillable forms — for paper formats **and** for e-ink tablets.
 > ```
 >
 > Flags: `--pages`, `--names`, `--format`, `--orientation`, `--stamp`,
-> `--cover`, `-o`, `--force`, `--quiet`.
+> `--cover`, `--seed`, `-o`, `--force`, `--quiet`.
 >
-> Not yet: `--device`, `--nup`, `--seed`, `--strict`,
+> Not yet: `--device`, `--nup`, `--strict`,
 > `--skip-unsupported`, and the interactive mode.
 >
 > **Not on PyPI yet**, so the `uvx`/`pip` lines below do not work until the
@@ -90,7 +90,7 @@ There are no double-clickable installers, and none are planned.
 | `dots` | dot grids with emphasised rows and columns — **works today** |
 | `staves` | blank music staves and guitar tab — **works today**, without clef glyphs |
 | `grid` | labelled cell blocks — battleship, score sheets — **works today** |
-| `maze` | rectangular mazes, optionally with solutions |
+| `maze` | rectangular mazes, optionally with solutions — **works today** |
 | `polar` | targets, score discs, polar paper — **works today** |
 | `tiling` | hexagons, triangles, rhombi — including colouring patterns — **works today** |
 | `form` | fillable forms: phone logs, checklists, handover sheets |

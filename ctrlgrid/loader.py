@@ -155,6 +155,17 @@ def loads(text: str, overrides: Mapping[str, Any] | None = None, *, source: str)
     handle = {key: data.pop(key) for key in list(data) if key in HANDLE_KEYS}
     _check_unknown_keys(data, blade.config_model, raw)
     _apply_overrides(handle, overrides)
+    # § 11: the command line beats the definition without exception, and
+    # `--seed` names a key that belongs to a blade rather than to the handle
+    # (§ 7.5). It reaches the blade that has one, and is refused by the ones
+    # that do not — silently ignoring it would be the worst of both.
+    if "seed" in overrides:
+        if "seed" not in blade.config_model.model_fields:
+            raise DefinitionError(
+                f"--seed has no meaning for generator `{generator_name}`: it seeds a "
+                "procedural pattern, and this one is not procedural (§ 7.5)"
+            )
+        data["seed"] = overrides["seed"]
 
     page = _section(PageSpec, handle.get("page") or {}, raw, "page")
     header = _section(Band, handle["header"], raw, "header") if handle.get("header") else None

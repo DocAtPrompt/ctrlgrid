@@ -34,6 +34,7 @@ remote configured — nothing has ever been pushed.**
 | **M2** dash styles | `style: dashed \| dotted`, `base_dash`, `dash` |
 | **M2** free page sizes | `format: 210x99mm`, `format: 8.5x11in` |
 | **M2** images in bands | `left: {image: …, height: …}`, PNG, never cropped |
+| **M4** `maze` | three algorithms, `min_path_factor`, four solution modes |
 | **M4** `tiling` | hex/tri/square/rhombus/octagon, edge net drawn once |
 | **M4** `staves` | grouped systems, `sp` unit, `stave_space`/`stave_height` |
 | **M4** `law: log10` | decade positions, fixed block, placed by `remainder` |
@@ -44,12 +45,9 @@ remote configured — nothing has ever been pushed.**
 
 ### Not done
 
-**M4 is under way** — `dots`, `grid`, `law: log10`, `staves` and `tiling` are
-done; **`maze` (§ 7.5) and `form` (§ 7.8) are what is left.** Both are large:
-`maze` brings three algorithms, `min_path_factor`, and four `solution` modes
-that reach into the page loop (§ 7.5 doubles the page count for
-`separate_page`); `form` brings a one-level row/column layout whose *titles*
-are measured, so it is the first blade whose layout depends on text metrics. **`staves` refuses every named clef**, and
+**M4 is nearly done** — only **`form` (§ 7.8)** is left: a one-level
+row/column layout whose *titles* are measured, which makes it the first blade
+whose **layout** depends on text metrics rather than only its checks. **`staves` refuses every named clef**, and
 the reason is a genuine conflict rather than missing work: § 7.3 wants clefs as
 stored vector paths, § 6 fixes the vocabulary at six primitives with no curve
 path among them (decision 24). It needs a decision, and it belongs in § 15. Three things M3 built are
@@ -95,7 +93,7 @@ work around it.
 
 **Where the specification was genuinely silent**, the resolution is recorded in
 [`docs/implementation-decisions.md`](docs/implementation-decisions.md) —
-twenty-three of them so far, each with the section it belongs to and the
+twenty-seven of them so far, each with the section it belongs to and the
 reasoning. Read it before changing a default; several look arbitrary and are not.
 
 ## Language split
@@ -138,6 +136,10 @@ and knows nothing about margins.
    plus the queries `is_page_invariant`, `describe`, `periodic_axes`, `check`,
    and the declaration `supports_snap`.
 3. **Marks → writer.** Bidirectional: marks in, font metrics out.
+
+`sheets()` came from M3's successor, `maze` (§ 7.5): a blade may say that one
+*item* needs more than one sheet, and the handle does the doubling, the
+numbering and the mirroring. Everything about pages stays on the handle side.
 
 **Seam 2 has grown four queries and `generate` has never changed.** When `snap`
 and `remainder` needed blade knowledge, the handle got a question to ask
