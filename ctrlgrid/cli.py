@@ -27,7 +27,7 @@ from typer.core import TyperGroup
 from ctrlgrid import generators
 from ctrlgrid.errors import CtrlGridError
 from ctrlgrid.loader import Document, devices, load, load_preset, preset_names, preset_text
-from ctrlgrid.pages import build, preflight
+from ctrlgrid.pages import Geometry, build, preflight
 from ctrlgrid.writers.pdf import PdfWriter
 
 
@@ -75,8 +75,8 @@ def generate(
     with _reporting():
         document = _open(target, definition, _overrides(pages, format, orientation))
         destination = _destination(out, target, definition, force)
-        count = build(document, PdfWriter(destination))
-        _report(document, destination, count, quiet=quiet)
+        geometry = build(document, PdfWriter(destination))
+        _report(document, destination, geometry, quiet=quiet)
 
 
 @app.command()
@@ -92,11 +92,13 @@ def check(
         document = load(file)
         # The writer is used for its metrics only; it touches no file until
         # `begin_document`, and check never gets that far (§ 10.2).
-        preflight(document, PdfWriter(file))
+        geometry, _, _ = preflight(document, PdfWriter(file))
         typer.echo(
             f"{file}: valid — {document.pages.count} page(s), "
             f"generator `{document.generator}`"
         )
+        for notice in geometry.notices:
+            typer.echo(f"  note: {notice}")
 
 
 @app.command()
@@ -166,16 +168,19 @@ def _destination(
     return out
 
 
-def _report(document: Document, path: Path, count: int, *, quiet: bool) -> None:
+def _report(document: Document, path: Path, geometry: Geometry, *, quiet: bool) -> None:
     if quiet:
         typer.echo(str(path))
         return
     typer.echo(str(path))
-    typer.echo(f"  {count} page(s), {document.sheet.width / 1000:.0f} x "
+    typer.echo(f"  {document.pages.count} page(s), {document.sheet.width / 1000:.0f} x "
                f"{document.sheet.height / 1000:.0f} mm")
     blade = generators.get(document.generator)
     for line in blade.describe(document.config):
         typer.echo(f"  {line}")
+    # § 8.3: a setting that cannot take effect is said once per run.
+    for notice in geometry.notices:
+        typer.echo(f"  note: {notice}")
     # § 8.2: we cannot stop a print driver scaling, so we name the setting.
     typer.echo("  print at 'Actual size' / 100 % — not 'Fit to page', or it is not to scale")
 

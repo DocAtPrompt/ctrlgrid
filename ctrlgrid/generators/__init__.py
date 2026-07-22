@@ -16,6 +16,7 @@ from typing import Protocol
 
 from pydantic import BaseModel
 
+from ctrlgrid.axes import AxisPeriod
 from ctrlgrid.errors import DefinitionError
 from ctrlgrid.generators.lines import LinesGenerator
 from ctrlgrid.marks import Area, Mark
@@ -31,6 +32,15 @@ class Generator(Protocol):
 
     def is_page_invariant(self, cfg: BaseModel) -> bool:
         """True if the writer may store the pattern once and reference it (§ 10.1)."""
+        ...
+
+    def periodic_axes(self, cfg: BaseModel) -> dict[str, list[AxisPeriod]]:
+        """The periodic families this blade has, keyed by axis (`x`, `y`).
+
+        The handle needs them for snapping (§ 8.3) and remainder handling
+        (§ 8.5). An empty result means the blade has no period to work with,
+        and both settings are then an error rather than quietly ineffective.
+        """
         ...
 
     def describe(self, cfg: BaseModel) -> list[str]:
@@ -71,4 +81,4 @@ def get(name: str) -> Generator:
         ) from None
 
 
-__all__ = ["REGISTRY", "Generator", "get"]
+__all__ = ["REGISTRY", "AxisPeriod", "Generator", "get"]

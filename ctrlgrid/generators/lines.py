@@ -18,6 +18,7 @@ from typing import Annotated, Any, ClassVar, Literal
 
 from pydantic import BaseModel, BeforeValidator, ConfigDict, Field, model_validator
 
+from ctrlgrid.axes import AxisPeriod
 from ctrlgrid.cycles import Cycle, period_in_marks, period_um
 from ctrlgrid.marks import Area, Layer, Mark, Point, Segment
 from ctrlgrid.model import LengthField, Section
@@ -86,14 +87,37 @@ ColorField = Annotated[tuple[str, ...], BeforeValidator(_as_colors)]
 DirectionField = Annotated[Literal["horizontal", "vertical"], BeforeValidator(_as_direction)]
 
 
+class Extent(Section):
+    """Where a family is allowed to sit (§ 7.1).
+
+    Measured **perpendicular to the line direction** — the same axis as
+    `offset` and `base_spacing`, as § 7.1 states for slanted families and § 7.6
+    repeats when it introduces `radial_extent` for the case that runs the other
+    way. So an extent decides *which lines exist*, never how long they are:
+    § 2 rules out placing a stroke of chosen length at a chosen coordinate, and
+    that stays true.
+
+    Either end may be left out, in which case the pattern area bounds it.
+    """
+
+    start: LengthField | None = None
+    end: LengthField | None = None
+
+    @model_validator(mode="after")
+    def _ends_are_in_order(self) -> Extent:
+        if self.start is not None and self.end is not None and self.start.um > self.end.um:
+            raise ValueError(
+                f"extent starts at {self.start.raw} and ends at {self.end.raw} — "
+                "the end must not come before the start"
+            )
+        return self
+
+
 class Family(Section):
     """A periodic family of like marks (§ 4, § 7.1)."""
 
     deferred: ClassVar[dict[str, str]] = {
         "law": "— logarithmic axes (§ 7.9) arrive with milestone M4",
-        "count": "— limited families (§ 7.1) arrive with milestone M2",
-        "extent": "— limited families (§ 7.1) arrive with milestone M2",
-        "governing": "— it only matters for snapping, which arrives with milestone M2 (§ 8.3)",
         "base_dash": "— dashed and dotted styles arrive with milestone M2 (§ 7.1)",
         "dash": "— dashed and dotted styles arrive with milestone M2 (§ 7.1)",
     }
@@ -106,6 +130,23 @@ class Family(Section):
     style: Literal["solid"] = "solid"
     color: ColorField = ("#000000",)
     offset: LengthField = Length(um=0, mm=0.0, raw="0mm")
+    extent: Extent | None = None
+    #: Absent means unlimited. Deliberately no magic string `unlimited`
+    #: (§ 7.1): a field that is either a word or a number forces a union in
+    #: the model and gives poor error messages.
+    count: int | None = Field(default=None, ge=1)
+    #: Which family decides for its axis when snapping or placing the leftover
+    #: (§ 8.3). Only needed when several families share an axis and disagree.
+    governing: bool = False
+
+    @property
+    def axis(self) -> str:
+        """The axis the family advances along — not the one its lines run along.
+
+        A horizontal family stacks upwards, so its spacing, offset and extent
+        all live on y.
+        """
+        return "y" if self.direction == "horizontal" else "x"
 
     @model_validator(mode="before")
     @classmethod
@@ -149,6 +190,36 @@ class LinesGenerator:
     name = "lines"
     config_model = LinesConfig
 
+    def periodic_axes(self, cfg: LinesConfig) -> dict[str, list[AxisPeriod]]:
+        """Every unlimited family, keyed by the axis it advances along (§ 8.3, § 8.5).
+
+        Limited families are left out on purpose: a family with `count` or an
+        `extent` does not fill the area, so it has no say in how the leftover
+        of that area is placed. Snapping to the single red margin rule of an
+        exercise book would be absurd.
+        """
+        axes: dict[str, list[AxisPeriod]] = {}
+        for family in cfg.families:
+            if family.count is not None or family.extent is not None:
+                continue
+            marks = period_in_marks(
+                [len(family.spacing), len(family.weight), len(family.color)]
+            )
+            axes.setdefault(family.axis, []).append(
+                AxisPeriod(
+                    step_um=family.base_spacing.um,
+                    cycle_um=period_um(
+                        family.spacing, base_um=family.base_spacing.um, marks=marks
+                    ),
+                    label=f"base_spacing {family.base_spacing.raw}",
+                    governing=family.governing,
+                    _spacing=family.spacing,
+                    _base_um=family.base_spacing.um,
+                    _offset_um=family.offset.um,
+                )
+            )
+        return axes
+
     def describe(self, cfg: LinesConfig) -> list[str]:
         """The effective period, in both sizes § 5.3 insists on keeping apart.
 
@@ -189,11 +260,23 @@ class LinesGenerator:
         extent = area.height if horizontal else area.width
         span = area.width if horizontal else area.height
 
+        lower = family.extent.start.um if family.extent and family.extent.start else 0
+        upper = family.extent.end.um if family.extent and family.extent.end else extent
+        drawn = 0
+
         for index, position in family.spacing.positions(
             base_um=family.base_spacing.um,
             extent_um=extent,
             offset_um=family.offset.um,
         ):
+            # The index keeps counting through positions that are skipped, so
+            # weight and colour stay in step with the spacing cycle. Otherwise
+            # moving an extent would quietly recolour the family.
+            if position > upper:
+                return
+            if position < lower:
+                continue
+
             start, end = (
                 (Point(0, position), Point(span, position))
                 if horizontal
@@ -206,3 +289,7 @@ class LinesGenerator:
                 color=family.color[index % len(family.color)],
                 layer=Layer.PATTERN,
             )
+
+            drawn += 1
+            if family.count is not None and drawn >= family.count:
+                return

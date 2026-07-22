@@ -171,21 +171,74 @@ class Band(Section):
         return self
 
 
+class AxisPair(Section):
+    """A setting given per axis, with a scalar as shorthand for both (§ 8.5).
+
+    One value for both axes would be wrong for calligraphy, where the y axis is
+    cyclically structured and the x axis is not — so the two are separable. The
+    scalar form records that the user did not name an axis, which matters: an
+    explicitly named axis with nothing periodic on it is an error, while the
+    shorthand simply means "both, wherever there is something to place".
+    """
+
+    x: str | None = None
+    y: str | None = None
+    explicit: bool = False
+
+    @classmethod
+    def parse(cls, value: Any, *, allowed: set[str], field: str) -> AxisPair:
+        if isinstance(value, str):
+            _check(value, allowed, field)
+            return cls(x=value, y=value, explicit=False)
+        if isinstance(value, dict):
+            pair = {axis: value.get(axis) for axis in ("x", "y")}
+            for axis, entry in pair.items():
+                if entry is not None:
+                    _check(entry, allowed, f"{field}.{axis}")
+            unknown = set(value) - {"x", "y"}
+            if unknown:
+                raise ValueError(f"{field} takes x and y, not {', '.join(sorted(unknown))}")
+            return cls(**pair, explicit=True)
+        raise ValueError(f"{field} is a value or a mapping of x and y, got {value!r}")
+
+
+def _check(value: str, allowed: set[str], field: str) -> None:
+    if value not in allowed:
+        raise ValueError(f"{field}: {value!r} is not one of {', '.join(sorted(allowed))}")
+
+
+REMAINDER_MODES = {"end", "center", "whole_cycles"}
+SNAP_MODES = {"none", "spacing", "cycle", "pixel"}
+
+
 class PatternSpec(Section):
     """The pattern block — anchor, snapping and remainder handling (§ 5.2).
 
     Not the pattern area itself; that is computed in § 8.1.
     """
 
-    deferred: ClassVar[dict[str, str]] = {
-        "snap": (
-            "arrives with milestone M2 (§ 8.3); until then the pattern area is "
-            "used exactly as computed, which is the specified default anyway"
-        ),
-        "remainder": "arrives with milestone M2 (§ 8.5)",
-    }
-
     anchor: Literal["pattern_area"] = "pattern_area"
+    #: § 8.3. `none` by default, because snapping changes the geometry § 8.1
+    #: computed: whoever writes a 10 mm margin and a header height would
+    #: otherwise quietly get a smaller pattern area than that arithmetic gives.
+    snap: AxisPair = AxisPair(x="none", y="none")
+    #: § 8.5. `center` rather than `end`, following the sketch in § 5.2 and the
+    #: way § 8.3 speaks of centring as the ordinary case: a 2 mm leftover reads
+    #: as a mistake at one edge and as breathing room split across two.
+    remainder: AxisPair = AxisPair(x="center", y="center")
+
+    @model_validator(mode="before")
+    @classmethod
+    def _accept_the_axis_shorthands(cls, data: Any) -> Any:
+        if not isinstance(data, dict):
+            return data
+        for key, modes in (("remainder", REMAINDER_MODES), ("snap", SNAP_MODES)):
+            if data.get(key) is not None:
+                data = {
+                    **data,
+                    key: AxisPair.parse(data[key], allowed=modes, field=f"pattern.{key}"),
+                }
+        return data
 
 
 class PagesSpec(Section):
@@ -201,13 +254,16 @@ class PageSpec(Section):
 
     deferred: ClassVar[dict[str, str]] = {
         "device": "— device profiles arrive with milestone M5 (§ 9.2)",
-        "duplex": "arrives with milestone M2 (§ 8.1)",
         "background": "arrives with milestone M2 (§ 5.2)",
         "hole_marks": "arrives with milestone M2 (§ 8.7)",
     }
 
     format: str = "a4"
     orientation: Literal["portrait", "landscape"] = "portrait"
+    #: § 8.1. With duplex on, `inner` and `outer` swap on even pages so the
+    #: wider margin stays at the binding edge. With it off, `inner` is simply
+    #: always the left one.
+    duplex: bool = False
     #: Left unset on purpose: the default is a property of the paper format,
     #: not of the code (§ 8.1), so the loader fills it from formats.yaml.
     margin: Margin | None = None

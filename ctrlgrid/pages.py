@@ -20,9 +20,10 @@ from collections.abc import Iterator
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
+from ctrlgrid.axes import AxisPeriod
 from ctrlgrid.errors import DefinitionError
 from ctrlgrid.marks import Area, Point, Text, Um, translate
-from ctrlgrid.model import Band, Margin
+from ctrlgrid.model import Band, Margin, PatternSpec
 from ctrlgrid.writers import DocumentMeta, Writer, WriterQuery
 
 if TYPE_CHECKING:  # `loader` imports `Sheet` from here, so the arrow points one way
@@ -92,8 +93,20 @@ class Geometry:
     header: Box | None
     footer: Box | None
 
+    notices: tuple[str, ...] = ()
+    """Things worth saying but not worth refusing over — a setting that cannot
+    take effect where it stands (§ 8.3). Reported once per run, never per page."""
+
     @classmethod
-    def of(cls, sheet: Sheet, *, header: Band | None, footer: Band | None) -> Geometry:
+    def of(
+        cls,
+        sheet: Sheet,
+        *,
+        header: Band | None,
+        footer: Band | None,
+        pattern: PatternSpec | None = None,
+        blade_axes: dict[str, list[AxisPeriod]] | None = None,
+    ) -> Geometry:
         """Work out § 8.1, and refuse with the arithmetic if nothing is left."""
         margin = sheet.margin
         header_height = header.height.um if header else 0
@@ -138,9 +151,16 @@ class Geometry:
         bottom = margin.bottom.um + footer_height + footer_gap
         right = left + width
 
+        # The bands keep the full content width; only the pattern area shrinks
+        # and moves when it snaps and its surplus is placed (§ 8.3, § 8.5).
+        notices: list[str] = []
+        inner_width, shift_x = place_pattern(width, "x", pattern, blade_axes, notices)
+        inner_height, shift_y = place_pattern(height, "y", pattern, blade_axes, notices)
+
         return cls(
-            area=Area(width=width, height=height),
-            origin=Point(left, bottom),
+            notices=tuple(notices),
+            area=Area(width=inner_width, height=inner_height),
+            origin=Point(left + shift_x, bottom + shift_y),
             header=(
                 Box(
                     left=left,
@@ -162,6 +182,172 @@ class Geometry:
                 else None
             ),
         )
+
+
+    def for_page(self, *, is_even: bool, sheet: Sheet, duplex: bool) -> Geometry:
+        """The same geometry as it sits on this particular sheet side (§ 8.1).
+
+        Under duplex the margins swap on even pages, so everything inside them
+        — pattern area, header, footer — moves sideways by the difference.
+        Nothing is recomputed: the size is identical either way, since
+        `content_width = page - inner - outer` whichever way round the two go.
+        That is also what makes § 3.3's demand hold by construction — snapping
+        is solved once, for both page sorts at a time, and can never resolve
+        differently on the two sides of a sheet.
+        """
+        if not (duplex and is_even):
+            return self
+        shift = sheet.margin.outer.um - sheet.margin.inner.um
+        if shift == 0:
+            return self
+        return Geometry(
+            area=self.area,
+            origin=Point(self.origin.x + shift, self.origin.y),
+            header=_shift(self.header, shift),
+            footer=_shift(self.footer, shift),
+            notices=self.notices,
+        )
+
+
+def _shift(box: Box | None, dx: Um) -> Box | None:
+    if box is None:
+        return None
+    return Box(left=box.left + dx, bottom=box.bottom, right=box.right + dx, top=box.top)
+
+
+def is_page_invariant(document: Document) -> bool:
+    """Whether the writer may store the pattern once and reference it (§ 10.1).
+
+    § 3.3 is explicit that duplex overrides the blade here: with the pattern
+    area sitting somewhere else on every other sheet, a single stored form
+    cannot serve both sorts. The blade is not asked in that case — its answer
+    would be about its own marks, not about where they land.
+    """
+    from ctrlgrid import generators
+
+    if document.page.duplex:
+        return False
+    return generators.get(document.generator).is_page_invariant(document.config)
+
+
+def place_pattern(
+    available: Um,
+    axis: str,
+    pattern: PatternSpec | None,
+    blade_axes: dict[str, list[AxisPeriod]] | None,
+    notices: list[str],
+) -> tuple[Um, Um]:
+    """Snap one axis and place its surplus (§ 8.3, § 8.5).
+
+    Returns how much of the axis the pattern occupies and how far to shift it.
+    The two settings work in that order and are not alternatives: snapping
+    decides how much room the pattern may use, and `remainder` decides where
+    the space it does not use ends up. § 8.3 puts it exactly so — snapping does
+    not remove the surplus, it *relocates* it, turning a cut period at the edge
+    into contiguous free space.
+
+    There is no "stretch until it fits" anywhere in here: § 8.2 rules it out
+    and deliberately offers no option for it.
+    """
+    if pattern is None:
+        return available, 0
+
+    mode = getattr(pattern.remainder, axis)
+    snap = getattr(pattern.snap, axis) or "none"
+    periods = (blade_axes or {}).get(axis, [])
+
+    if not periods:
+        # Whoever names an axis expects an effect there (§ 8.3). The scalar
+        # shorthand names no axis, so it stays silent where nothing is periodic.
+        for setting, pair in (("remainder", pattern.remainder), ("snap", pattern.snap)):
+            named = getattr(pair, axis)
+            if pair.explicit and named is not None and named != "none":
+                raise DefinitionError(
+                    f"pattern.{setting} names the {axis} axis, but the generator has no "
+                    f"periodic family running along {axis}. Snapping and remainder "
+                    "handling need a period to work with (§ 8.3, § 8.5)",
+                    field=f"pattern.{setting}.{axis}",
+                )
+        return available, 0
+
+    period = _governing(periods, axis)
+    room = _snap(available, snap, period, axis)
+
+    if snap == "cycle" and mode == "whole_cycles":
+        # § 8.3: ineffective beside `snap: cycle`, since only whole cycles
+        # arise there anyway. Said once, so nobody keeps adjusting a setting
+        # that cannot do anything.
+        notices.append(
+            f"pattern.remainder.{axis}: `whole_cycles` has no effect beside `snap: cycle` "
+            "— whole cycles are all that arise there (§ 8.3)"
+        )
+
+    used = (
+        period.used_whole_cycles(room) if mode == "whole_cycles" else period.used(room)
+    )
+    surplus = available - used
+
+    if mode == "center":
+        return used, surplus // 2
+    # `end` and `whole_cycles` both leave the pattern at the origin and let the
+    # surplus collect at the far end. Unsnapped `end` keeps the area exactly as
+    # § 8.1 computed it, which is the whole reason `none` is the default.
+    return (available if (snap == "none" and mode == "end") else used), 0
+
+
+def _snap(available: Um, mode: str, period: AxisPeriod, axis: str) -> Um:
+    """How much room the pattern may use after snapping (§ 8.3)."""
+    if mode == "none":
+        return available
+    if mode == "pixel":
+        # § 8.3.1: only ever legal with a device profile. On paper it stays an
+        # error for good — `assumed_dpi` (§ 9.1) is a yardstick for warnings,
+        # and geometry must never rest on a guessed number.
+        raise DefinitionError(
+            "`snap: pixel` needs a device profile: it rounds to whole device pixels, "
+            "and on a paper format there is no real resolution to round to — "
+            "`assumed_dpi` only feeds the media check (§ 8.3.1, § 9.1). "
+            "Device profiles arrive with milestone M5",
+            field=f"pattern.snap.{axis}",
+        )
+
+    granularity = period.step_um if mode == "spacing" else period.cycle_um
+    whole = (available // granularity) * granularity
+    if whole <= 0:
+        raise DefinitionError(
+            f"`snap: {mode}` cannot fit a single {'step' if mode == 'spacing' else 'cycle'} "
+            f"on the {axis} axis: one measures {_mm(granularity)}, the pattern area is "
+            f"{_mm(available)}. Reduce the spacing, shorten the cycle, or drop the snap "
+            "(§ 8.3)",
+            field=f"pattern.snap.{axis}",
+        )
+    return whole
+
+
+def _governing(periods: list[AxisPeriod], axis: str) -> AxisPeriod:
+    """Which family decides for this axis (§ 8.3).
+
+    Marked ones win. Failing that, families that agree need no mark — there is
+    nothing to disambiguate. Only genuine disagreement is an error, and then it
+    names the families rather than guessing.
+    """
+    marked = [period for period in periods if period.governing]
+    if len(marked) == 1:
+        return marked[0]
+    if len(marked) > 1:
+        raise DefinitionError(
+            f"{len(marked)} families on the {axis} axis are marked `governing` "
+            f"({', '.join(period.label for period in marked)}) — exactly one may be (§ 8.3)",
+            field="families",
+        )
+    if len({(period.step_um, period.cycle_um) for period in periods}) == 1:
+        return periods[0]
+    raise DefinitionError(
+        f"several families run along the {axis} axis and they do not agree on a period "
+        f"({', '.join(period.label for period in periods)}) — mark one with "
+        "`governing: true` to say which one decides (§ 8.3)",
+        field="families",
+    )
 
 
 def page_contexts(
@@ -249,25 +435,36 @@ def preflight(
     """
     from ctrlgrid.frame import layout_band
 
-    geometry = Geometry.of(document.sheet, header=document.header, footer=document.footer)
+    geometry = Geometry.of(
+        document.sheet,
+        header=document.header,
+        footer=document.footer,
+        pattern=document.pattern,
+        blade_axes=document.axes,
+    )
     contexts = list(page_contexts(count=document.pages.count, names=names))
 
     frames: list[list[Text]] = []
     for context in contexts:
+        # Under duplex the bands move with the margins, so each page is
+        # measured against the boxes it will actually be drawn in (§ 8.1).
+        placed = geometry.for_page(
+            is_even=context.is_even, sheet=document.sheet, duplex=document.page.duplex
+        )
         marks: list[Text] = []
-        if document.header and geometry.header:
+        if document.header and placed.header:
             marks += layout_band(
-                document.header, geometry.header, q=q, page=context, section="header"
+                document.header, placed.header, q=q, page=context, section="header"
             )
-        if document.footer and geometry.footer:
+        if document.footer and placed.footer:
             marks += layout_band(
-                document.footer, geometry.footer, q=q, page=context, section="footer"
+                document.footer, placed.footer, q=q, page=context, section="footer"
             )
         frames.append(marks)
     return geometry, contexts, frames
 
 
-def build(document: Document, writer: Writer, *, names: list[str] | None = None) -> int:
+def build(document: Document, writer: Writer, *, names: list[str] | None = None) -> Geometry:
     """The page loop (§ 3.1): measure everything, then write everything.
 
     The two halves are not an implementation detail. § 12 point 13 requires all
@@ -276,7 +473,8 @@ def build(document: Document, writer: Writer, *, names: list[str] | None = None)
     rendering leaves sixteen pages already in the file. Abort completely or
     build completely.
 
-    Returns the number of pages written.
+    Returns the geometry it built on, so the caller can report what the run
+    settled on — including any notice the settings earned (§ 8.3).
     """
     from ctrlgrid import generators
 
@@ -287,14 +485,19 @@ def build(document: Document, writer: Writer, *, names: list[str] | None = None)
     writer.begin_document(DocumentMeta(title=f"ctrlgrid {document.source}"))
     for context, frame in zip(contexts, frames, strict=True):
         writer.begin_page(document.sheet.width, document.sheet.height)
-        # Marks arrive in layer order; the writer does not sort (§ 3.6).
-        for mark in blade.generate(document.config, area=geometry.area, page=context, q=writer):
-            writer.draw(translate(mark, dx=geometry.origin.x, dy=geometry.origin.y))
+        placed = geometry.for_page(
+            is_even=context.is_even, sheet=document.sheet, duplex=document.page.duplex
+        )
+        # Marks arrive in layer order; the writer does not sort (§ 3.6). The
+        # blade is handed the same area every time and never learns which side
+        # of the sheet it is on — only the shift below differs (§ 3.3, § 6).
+        for mark in blade.generate(document.config, area=placed.area, page=context, q=writer):
+            writer.draw(translate(mark, dx=placed.origin.x, dy=placed.origin.y))
         for mark in frame:
             writer.draw(mark)
         writer.end_page()
     writer.end_document()
-    return len(contexts)
+    return geometry
 
 
 def _no_room(

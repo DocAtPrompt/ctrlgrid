@@ -72,6 +72,44 @@ class TestGenerating:
         assert "5" in result.output and "mm" in result.output
 
 
+class TestNotices:
+    """§ 8.3 — a setting that cannot take effect is said once, not per page."""
+
+    POINTLESS = """
+version: 1
+pattern:
+  snap: cycle
+  remainder: whole_cycles
+generator: lines
+families:
+  - {direction: horizontal, base_spacing: 5mm, spacing: [1, 1, 2]}
+"""
+
+    def test_a_setting_without_effect_is_pointed_out(self, tmp_path: Path) -> None:
+        definition = write(tmp_path, self.POINTLESS)
+        result = runner.invoke(app, ["-d", str(definition), "-o", str(tmp_path / "o.pdf")])
+        assert result.exit_code == 0, result.output
+        assert "whole_cycles" in result.output
+
+    def test_it_is_a_notice_and_not_a_refusal(self, tmp_path: Path) -> None:
+        definition = write(tmp_path, self.POINTLESS)
+        out = tmp_path / "o.pdf"
+        runner.invoke(app, ["-d", str(definition), "-o", str(out)])
+        assert out.exists()
+
+    def test_check_says_it_too(self, tmp_path: Path) -> None:
+        definition = write(tmp_path, self.POINTLESS)
+        result = runner.invoke(app, ["check", str(definition)])
+        assert result.exit_code == 0, result.output
+        assert "whole_cycles" in result.output
+
+    def test_quiet_reports_only_the_path(self, tmp_path: Path) -> None:
+        definition = write(tmp_path, self.POINTLESS)
+        out = tmp_path / "o.pdf"
+        result = runner.invoke(app, ["-d", str(definition), "-o", str(out), "--quiet"])
+        assert result.output.strip() == str(out)
+
+
 class TestNotOverwriting:
     def test_an_existing_file_is_not_overwritten_silently(self, tmp_path: Path) -> None:
         # § 11.3: comparable tools are criticised by name for doing this.

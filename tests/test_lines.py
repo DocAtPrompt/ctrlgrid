@@ -216,9 +216,7 @@ class TestValidation:
         "key,value",
         [
             ("law", "log10"),
-            ("count", 1),
-            ("extent", {"start": "0mm", "end": "100mm"}),
-            ("governing", True),
+            ("dash", [2, 1]),
         ],
     )
     def test_a_key_from_a_later_milestone_names_it(self, key: str, value: object) -> None:
@@ -229,6 +227,155 @@ class TestValidation:
         message = str(excinfo.value)
         assert key in message and "M" in message
 
+    def test_governing_is_accepted_now_that_it_does_something(self) -> None:
+        # It settles an axis several families share (§ 8.3, § 8.5).
+        config = LinesConfig.model_validate(
+            {
+                "families": [
+                    {"direction": "horizontal", "base_spacing": "5mm", "governing": True}
+                ]
+            }
+        )
+        assert config.families[0].governing is True
+
+class TestLimitedFamilies:
+    """§ 7.1 — `count` makes a family finite, `extent` bounds where it sits.
+
+    Not a contradiction of the non-goal "no single strokes at free
+    coordinates" (§ 2): a limited family still has direction, cycle start,
+    weight and colour from the same model. It is only finite. Without it every
+    one of these everyday shapes would need a generator of its own — the red
+    margin rule of a school exercise book, the two verticals of a Cornell
+    layout, the dividers on a score sheet.
+    """
+
+    def test_count_one_produces_exactly_one_line(self) -> None:
+        segments = marks(
+            {
+                "families": [
+                    {
+                        "direction": "vertical",
+                        "base_spacing": "25mm",
+                        "offset": "25mm",
+                        "count": 1,
+                    }
+                ]
+            }
+        )
+        assert len(segments) == 1
+        assert segments[0].start.x == 25000
+
+    def test_count_limits_a_family_that_would_otherwise_fill_the_area(self) -> None:
+        segments = marks(
+            {"families": [{"direction": "horizontal", "base_spacing": "5mm", "count": 3}]}
+        )
+        assert [s.start.y for s in segments] == [0, 5000, 10000]
+
+    def test_a_missing_count_means_unlimited(self) -> None:
+        # § 7.1: deliberately no magic string `unlimited`. A field that is
+        # either a word or a number forces a union and gives poor messages.
+        segments = marks(
+            {"families": [{"direction": "horizontal", "base_spacing": "10mm"}]}
+        )
+        assert len(segments) == 6
+
+    def test_count_zero_is_an_error(self) -> None:
+        with pytest.raises(ValidationError):
+            LinesConfig.model_validate(
+                {"families": [{"direction": "horizontal", "base_spacing": "5mm", "count": 0}]}
+            )
+
+    def test_a_count_larger_than_the_area_holds_stops_at_the_edge(self) -> None:
+        # The area still wins: `count` is an upper bound, not a demand for
+        # lines outside the pattern area.
+        segments = marks(
+            {"families": [{"direction": "horizontal", "base_spacing": "10mm", "count": 99}]}
+        )
+        assert len(segments) == 6
+
+    def test_extent_bounds_which_lines_exist(self) -> None:
+        # Measured perpendicular to the line direction (§ 7.1, § 7.6) — the
+        # same axis as `offset` and `base_spacing`.
+        segments = marks(
+            {
+                "families": [
+                    {
+                        "direction": "horizontal",
+                        "base_spacing": "10mm",
+                        "extent": {"start": "10mm", "end": "30mm"},
+                    }
+                ]
+            }
+        )
+        assert [s.start.y for s in segments] == [10000, 20000, 30000]
+
+    def test_extent_does_not_shorten_the_lines(self) -> None:
+        # § 2: there is still no way to place a short stroke at a chosen
+        # coordinate. A line spans the pattern area or it is not drawn.
+        segments = marks(
+            {
+                "families": [
+                    {
+                        "direction": "horizontal",
+                        "base_spacing": "10mm",
+                        "extent": {"start": "10mm", "end": "30mm"},
+                    }
+                ]
+            }
+        )
+        assert (segments[0].start.x, segments[0].end.x) == (0, AREA.width)
+
+    def test_extent_may_name_only_one_end(self) -> None:
+        segments = marks(
+            {
+                "families": [
+                    {
+                        "direction": "horizontal",
+                        "base_spacing": "10mm",
+                        "extent": {"start": "30mm"},
+                    }
+                ]
+            }
+        )
+        assert [s.start.y for s in segments] == [30000, 40000, 50000]
+
+    def test_the_cycle_keeps_counting_through_lines_outside_the_extent(self) -> None:
+        # Weight and colour must stay in step with position, or moving the
+        # extent would silently recolour the family.
+        segments = marks(
+            {
+                "families": [
+                    {
+                        "direction": "horizontal",
+                        "base_spacing": "10mm",
+                        "extent": {"start": "10mm"},
+                        "color": ["#111111", "#222222"],
+                    }
+                ]
+            }
+        )
+        # Line 0 sits at 0 mm and is excluded, so the first drawn line is
+        # index 1 and carries the second colour.
+        assert segments[0].color == "#222222"
+
+    def test_an_extent_that_ends_before_it_starts_is_an_error(self) -> None:
+        with pytest.raises(ValidationError) as excinfo:
+            LinesConfig.model_validate(
+                {
+                    "families": [
+                        {
+                            "direction": "horizontal",
+                            "base_spacing": "5mm",
+                            "extent": {"start": "30mm", "end": "10mm"},
+                        }
+                    ]
+                }
+            )
+        message = str(excinfo.value)
+        assert "30mm" in message and "10mm" in message
+
+
+class TestMoreValidation:
     def test_an_unknown_key_is_an_error(self) -> None:
         with pytest.raises(ValidationError) as excinfo:
             LinesConfig.model_validate(

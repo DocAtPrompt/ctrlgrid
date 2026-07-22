@@ -120,10 +120,24 @@ class TestPatternSpec:
     def test_the_only_anchor_in_v1(self) -> None:
         assert PatternSpec().anchor == "pattern_area"
 
-    def test_snap_names_the_milestone(self) -> None:
+    def test_snapping_defaults_to_none_on_both_axes(self) -> None:
+        # § 8.3: snapping changes the geometry § 8.1 computed, so it is never
+        # switched on behind the user's back.
+        assert (PatternSpec().snap.x, PatternSpec().snap.y) == ("none", "none")
+
+    def test_the_leftover_is_centred_by_default(self) -> None:
+        assert (PatternSpec().remainder.x, PatternSpec().remainder.y) == ("center", "center")
+
+    def test_an_unknown_snap_mode_lists_the_real_ones(self) -> None:
         with pytest.raises(ValidationError) as excinfo:
-            PatternSpec(snap={"x": "cycle", "y": "cycle"})
-        assert "M2" in str(excinfo.value)
+            PatternSpec(snap="grid")
+        message = str(excinfo.value)
+        assert "cycle" in message and "spacing" in message and "pixel" in message
+
+    def test_an_axis_pair_takes_only_x_and_y(self) -> None:
+        with pytest.raises(ValidationError) as excinfo:
+            PatternSpec(snap={"horizontal": "cycle"})
+        assert "horizontal" in str(excinfo.value)
 
 
 class TestPagesSpec:

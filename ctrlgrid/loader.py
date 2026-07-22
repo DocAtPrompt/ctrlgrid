@@ -29,6 +29,7 @@ from ruamel.yaml.comments import CommentedMap, CommentedSeq
 from ruamel.yaml.nodes import MappingNode, SequenceNode
 
 from ctrlgrid import generators
+from ctrlgrid.axes import AxisPeriod
 from ctrlgrid.errors import DefinitionError
 from ctrlgrid.model import Band, Margin, PageSpec, PagesSpec, PatternSpec
 from ctrlgrid.pages import Sheet
@@ -83,6 +84,10 @@ class Document:
     """The blade's own section, validated by its `config_model` (§ 3.6)."""
 
     sheet: Sheet
+    axes: dict[str, list[AxisPeriod]]
+    """The blade's periodic axes, asked once so the handle can place the
+    leftover and snap without ever reaching into the blade (§ 8.3, § 8.5)."""
+
     source: str
     """Where this came from — a preset name or a file path, for messages."""
 
@@ -137,6 +142,7 @@ def loads(text: str, overrides: Mapping[str, Any] | None = None, *, source: str)
         generator=generator_name,
         config=config,
         sheet=resolve_sheet(page),
+        axes=blade.periodic_axes(config),
         source=source,
     )
 
