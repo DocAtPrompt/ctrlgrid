@@ -11,9 +11,10 @@ no "fit to page", no stretching a grid so it comes out even.
 
 ## Current state — read this first
 
-**M1 to M7 are complete but for M5's small edges** — the handle, all eight
-blades of § 7, device profiles, `px`, the media check, `snap: pixel`, N-up
-imposition, and the PNG writer. Only M8 (`perspective`/`mandala`) is untouched.
+**M1 to M8 are complete but for M5's small edges** — the handle, all ten blades
+of § 7, device profiles, `px`, the media check, `snap: pixel`, N-up imposition,
+and the PNG writer. **M8 is now done too**: `perspective` and `mandala`, the two
+blades that compute their own law instead of a cycle (§ 7.11).
 0.1.0 is the version in the code; nothing since M1 has been released, because
 releasing needs a human (see *Not done*).
 
@@ -21,10 +22,11 @@ releasing needs a human (see *Not done*).
 uv sync --extra dev && uv run pytest && uv run ruff check .
 ```
 
-723 tests, all green, ruff clean. Twenty-seven commits on `main`, linear history, **no
-remote configured — nothing has ever been pushed.** Five presets (one each for
-`lines`, `dots`, `polar`, `form`, `maze`); `staves`, `grid` and `tiling` have
-none yet, though every blade is documented here and in the specification.
+763 tests, all green, ruff clean. Twenty-nine commits on `main`, linear history, **no
+remote configured — nothing has ever been pushed.** Seven presets (one each for
+`lines`, `dots`, `polar`, `form`, `maze`, `perspective`, `mandala`); `staves`,
+`grid` and `tiling` have none yet, though every blade is documented here and in
+the specification.
 
 ### Done
 
@@ -53,6 +55,8 @@ none yet, though every blade is documented here and in the specification.
 | **M5** `snap: pixel` | every step to whole pixels, exact size reported (§ 8.3.1) |
 | **M6** N-up | `--nup CxR` at 100 %, never scaled, crop marks, cover exempt (§ 14) |
 | **M7** PNG writer | raster at exact device resolution, one file per page, text via caps (§ 10.4) |
+| **M8** `perspective` | horizon + 1–3 vanishing-point fans, equal base division, Liang–Barsky clip, `verticals` (§ 7.11) |
+| **M8** `mandala` | sectors/rings scaffold, rosette of circles (`mirror`), inscribed regular / star polygons, on shared `polar_geometry` (§ 7.11) |
 | pulled forward into M1 | format table, presets, `check`, overwrite protection, placeholders — the M1 acceptance criteria needed them |
 
 ### Not done
@@ -74,18 +78,19 @@ pieces are left, and each names why:
   the rM2 numbers and whether the Paper Pro is a colour device — and § 9.2 is
   explicit that a wrong number there is worse than no profile at all.
 
-**M8 is the only milestone proper left** — `perspective` and `mandala` (§ 7.11,
-§ 15.1) as new blades. Both compute their own marks (a generator may, § 5.3)
-rather than using cycles, and their preconditions already stand: `Arc` and
-`Polygon` in the vocabulary (§ 6) and the polar geometry from M3. **`staves`
-refuses every named clef**, and
-the reason is a genuine conflict rather than missing work: § 7.3 wants clefs as
-stored vector paths, § 6 fixes the vocabulary at six primitives with no curve
-path among them (decision 24). It needs a decision, and it belongs in § 15. Three things M3 built are
-there to be reused: `labels.py` (§ 7.10) is what `grid` and `tiling` label
-with, `generators/common.py` holds the cycle and dash fields every family
-needs, and `check()` is where a blade refuses what only the pattern area can
-disprove.
+**Every milestone proper is now done — M8 shipped `perspective` and `mandala`**
+(§ 7.11). Both compute their own law instead of a cycle (a generator may, § 5.3):
+`perspective` divides a base edge equally and clips its rays with Liang–Barsky,
+`mandala` counts sectors and rings on the shared `polar_geometry` (extracted
+from M3's polar so the two blades share one arithmetic, not two that drift).
+What is left is not a milestone but a **decision**: **`staves` refuses every
+named clef**, and the reason is a genuine conflict rather than missing work —
+§ 7.3 wants clefs as stored vector paths, § 6 fixes the vocabulary at six
+primitives with no curve path among them (decision 24). It belongs in § 15.
+Three things M3 built are there to be reused: `labels.py` (§ 7.10) is what
+`grid` and `tiling` label with, `generators/common.py` holds the cycle and dash
+fields every family needs, and `check()` is where a blade refuses what only the
+pattern area can disprove.
 
 **Two things only a human can do**, both needed before `uvx ctrlgrid` works:
 configure a git remote and push; set up trusted publishing on PyPI plus a
@@ -156,7 +161,7 @@ and knows nothing about margins.
 | `impose.py` | N-up layout, the 100 % fit check, crop marks (§ 14) |
 | `fonts.py` | font files: `fsType` licence check, version, coverage (§ 10.3) |
 | `cover.py` | the cover sheet: calibration figures and settings summary (§ 8.8) |
-| `generators/` | registry, `common.py` (cycle + dash fields), and the eight blades |
+| `generators/` | registry, `common.py` (cycle + dash fields), `polar_geometry.py` (shared by `polar` + `mandala`), and the ten blades |
 | `writers/` | seam 3 protocols, `pdf.py` (reportlab) and `png.py` (Pillow) |
 
 ### The three seams (§ 3.6)
@@ -187,7 +192,7 @@ output-independent, so PNG inherits it.
 and `remainder` needed blade knowledge, the handle got a question to ask
 (`periodic_axes`) rather than the blade getting the pattern block. § 8.3 says
 the *pattern area* shrinks, so shrinking it is the handle's job. Keep new
-handle features on that side of the line: six of the eight blades would have to
+handle features on that side of the line: eight of the ten blades would have to
 reject a pattern block they were handed.
 
 `check(cfg, area, q)` came from M3 and is the other half of that rule: a blade
@@ -224,26 +229,23 @@ the pre-flight, never while pages are being written (§ 12 point 13).
 
 ## Where to start
 
-The architecture has held through seven milestones: `generate(cfg, area, page,
-q)` has never changed signature, and every feature that needed blade knowledge
-became a *query the handle asks* rather than geometry pushed into the blade.
-Keep that line. When a new feature tempts you to hand a blade the page, the
-margins, or the device, look first for the question the handle could ask
+The architecture has held through all eight milestones: `generate(cfg, area,
+page, q)` has never changed signature, and every feature that needed blade
+knowledge became a *query the handle asks* rather than geometry pushed into the
+blade. Keep that line. When a new feature tempts you to hand a blade the page,
+the margins, or the device, look first for the question the handle could ask
 instead — that is how `periodic_axes`, `check`, `sheets`, `supports_snap` and
-`capabilities` all came to be.
+`capabilities` all came to be. M8's two blades held it too: `perspective` and
+`mandala` compute their own law (§ 5.3) yet added nothing to the seam.
 
-**The one milestone proper left is M8** — `perspective` and `mandala` (§ 7.11,
-§ 15.1), two new blades that compute their own marks instead of using cycles (a
-generator may, § 5.3). Add each as a registry entry in `generators/__init__.py`
-with a `config_model` and the seam-2 methods; `Arc`, `Polygon` and the polar
-geometry from M3 are the tools. Follow the working style below: a failing test
-first, the *why* in the comment with its § number, one coherent commit, and a
-real rendered sheet read back — not just unit tests.
-
-Everything else outstanding is small and each names its reason in *Not done*
-above: M5's empty `quirks`, a general relative-measure mechanism, the two
-unverified device figures, and the `staves` clef conflict (§ 7.3 vs § 6,
-decision 24) — that last one needs a *decision*, not code, and belongs in § 15.
+**No milestone proper is left.** What remains is small, and each names its
+reason in *Not done* above: M5's empty `quirks`, a general relative-measure
+mechanism, the two unverified device figures, and the `staves` clef conflict
+(§ 7.3 vs § 6, decision 24) — that last one needs a *decision*, not code, and
+belongs in § 15. If you add a blade anyway, the recipe is unchanged: a registry
+entry in `generators/__init__.py` with a `config_model` and the seam-2 methods,
+a failing test first, the *why* in the comment with its § number, one coherent
+commit, and a real rendered sheet read back — not just unit tests.
 
 ## Open questions
 

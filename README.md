@@ -1,18 +1,19 @@
 # Ctrl+Grid
 
 Generate **dimensionally accurate** PDF templates from a small definition file:
-grid paper, ruled paper, dot grids, staff paper, mazes, polar targets, tilings
-and fillable forms — for paper formats **and** for e-ink tablets.
+grid paper, ruled paper, dot grids, staff paper, mazes, polar targets, tilings,
+fillable forms, perspective grids and mandalas — for paper formats **and** for
+e-ink tablets.
 
-> **Status: M1–M7 complete (M5 core).** All eight generators of the table
+> **Status: M1–M8 complete (M5 core).** All ten generators of the table
 > below work, and the dimensional test described below measures `lines` out of
 > a finished PDF on every commit. The handle around them is finished — multi-page output, headers
 > and footers, name lists, snapping, remainder handling, double-sided margins,
 > border, background, hole marks, stamp, the calibration cover sheet, embedded
 > font files, dashed and dotted styles, free page sizes and logos in bands.
 >
-> The other generators in the table further down, and the options marked below
-> as arriving later, are specified but not built yet. Asking for one gets you a
+> Every generator in the table further down works. The options marked below as
+> arriving later are specified but not built yet; asking for one gets you a
 > message naming the milestone it arrives with — never a silently different
 > sheet.
 >
@@ -95,6 +96,8 @@ There are no double-clickable installers, and none are planned.
 | `polar` | targets, score discs, polar paper — **works today** |
 | `tiling` | hexagons, triangles, rhombi — including colouring patterns — **works today** |
 | `form` | fillable forms: phone logs, checklists, handover sheets — **works today** |
+| `perspective` | one-, two- and three-point vanishing-point grids — **works today** |
+| `mandala` | rotationally symmetric templates: rings, rosettes, star polygons — **works today** |
 
 The interesting part is the **cycle model**: spacing, stroke weight, size, dash
 pattern and colour each follow their own repeating list, and the lists may have
