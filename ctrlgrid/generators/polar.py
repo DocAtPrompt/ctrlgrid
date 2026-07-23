@@ -47,17 +47,19 @@ from ctrlgrid.generators.common import (
     Dashable,
     describe_cycle,
 )
+from ctrlgrid.generators.polar_geometry import (
+    FULL_TURN,
+    PER_DEGREE,
+    default_center,
+    default_outer,
+    polar_point,
+    udeg,
+)
 from ctrlgrid.labels import labels_for
 from ctrlgrid.marks import Arc, Area, Layer, Mark, Point, Segment, Text, Um
 from ctrlgrid.model import AngleField, FontSpec, LengthField, Section
 from ctrlgrid.pages import PageContext
 from ctrlgrid.writers import WriterQuery
-
-#: Angles run in micro-degrees for the same reason lengths run in micrometres
-#: (§ 3.3): a full turn is an exact integer, 360_000_000, so twelve 30° spokes
-#: close the circle exactly instead of ending at 359.999999°.
-FULL_TURN = 360_000_000
-PER_DEGREE = 1_000_000
 
 
 class Center(Section):
@@ -403,30 +405,21 @@ class PolarGenerator:
 def _frame(cfg: PolarConfig, area: Area) -> tuple[Point, Um]:
     """Centre and outer radius, both defaulting as § 7.6 prescribes."""
     center = (
-        Point(area.width // 2, area.height // 2)
+        default_center(area)
         if cfg.center == "auto"
         else Point(cfg.center.x.um, cfg.center.y.um)
     )
-    outer = (
-        min(area.width, area.height) // 2
-        if cfg.outer_radius == "auto"
-        else cfg.outer_radius.um
-    )
+    outer = default_outer(area) if cfg.outer_radius == "auto" else cfg.outer_radius.um
     return center, outer
 
 
 def _polar(center: Point, radius: Um, angle_udeg: int) -> Point:
-    """A point at `radius` and `angle`, mathematically positive from the right.
+    """A point at a radius and an angle in micro-degrees (§ 7.6).
 
-    Computed from the exact angle every time rather than by stepping around the
-    circle: § 8.2 forbids accumulated drift, and the angles themselves are
-    exact integers of micro-degrees (§ 3.3, § 3.5).
+    A thin wrapper on the shared `polar_point`, kept so this module's callers go
+    on speaking in the exact-integer micro-degrees § 7.6 works in.
     """
-    radians = math.radians(angle_udeg / PER_DEGREE)
-    return Point(
-        center.x + round(radius * math.cos(radians)),
-        center.y + round(radius * math.sin(radians)),
-    )
+    return polar_point(center, radius, angle_udeg / PER_DEGREE)
 
 
 def _spoke_positions(spokes: Spokes) -> list[tuple[int, int]]:
@@ -489,8 +482,9 @@ def _ring_radii(rings: Rings, outer: Um) -> list[Um]:
     ]
 
 
-def _udeg(degrees: float) -> int:
-    return round(degrees * PER_DEGREE)
+#: Degrees to micro-degrees; the shared spelling, kept under the old name so
+#: this module's call sites read unchanged.
+_udeg = udeg
 
 
 def _mm(um: Um) -> str:

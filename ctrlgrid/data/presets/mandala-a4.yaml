@@ -1,0 +1,62 @@
+# A twelve-fold mandala template on A4 — a scaffold to draw a mandala on, not
+# a finished one.
+#
+# A preset is an ordinary definition file, never a special path through the
+# code (§ 9.3), so this one is also the documentation for `mandala` (§ 7.11):
+# copy it with `ctrlgrid show mandala-a4 > mine.yaml` and bend it.
+#
+# This blade uses no cycle model. `sectors`, `rings.count` and a polygon's
+# `sides` are plain counts — a mandala is defined by its order of symmetry, not
+# by a base value stepped through multiples (§ 5.3, § 15.1). Everything faces
+# up: a mandala has a vertical axis.
+
+version: 1
+
+defs:
+  guide:   &guide   "#c2c8d0"
+  petal:   &petal   "#8899aa"
+  star:    &star     "#334466"
+
+page:
+  format: a4
+  margin: 15mm
+
+generator: mandala
+
+# The order of symmetry. Twelve is the clock-face mandala; try 6, 8 or 16.
+sectors: 12
+
+# Centre and outer radius are left out on purpose: the centre is the middle of
+# the pattern area and the radius half its shorter side (§ 7.6). Both can be
+# written down, but then they stop following the page when the format changes.
+
+# The scaffold — faint guides to build on.
+rings:
+  count: 8
+  weight: 0.15pt
+  color: *guide
+
+spokes:
+  # A little clear at the centre, or twelve spokes would meet in one ink blot.
+  inner: 0.06
+  weight: 0.15pt
+  color: *guide
+
+# The motif: twelve overlapping circles centred halfway out, mirrored onto the
+# bisectors for the full flower-of-life ring (§ 7.11).
+rosette:
+  at: 0.5
+  radius: 0.28
+  mirror: true
+  weight: 0.2pt
+  color: *petal
+
+# Inscribed polygons: the outer boundary, and a {12/5} star woven through it.
+polygons:
+  - radius: 0.98
+    weight: 0.2pt
+    color: *star
+  - radius: 0.8
+    step: 5          # a star {12/5}; step must be coprime with the 12 sides
+    weight: 0.2pt
+    color: *star

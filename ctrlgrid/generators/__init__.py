@@ -22,6 +22,7 @@ from ctrlgrid.generators.dots import DotsGenerator
 from ctrlgrid.generators.form import FormGenerator
 from ctrlgrid.generators.grid import GridGenerator
 from ctrlgrid.generators.lines import LinesGenerator
+from ctrlgrid.generators.mandala import MandalaGenerator
 from ctrlgrid.generators.maze import MazeGenerator
 from ctrlgrid.generators.perspective import PerspectiveGenerator
 from ctrlgrid.generators.polar import PolarGenerator
@@ -97,6 +98,7 @@ REGISTRY: dict[str, Generator] = {
         FormGenerator(),
         GridGenerator(),
         LinesGenerator(),
+        MandalaGenerator(),
         MazeGenerator(),
         PerspectiveGenerator(),
         PolarGenerator(),
