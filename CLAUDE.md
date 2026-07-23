@@ -21,8 +21,10 @@ releasing needs a human (see *Not done*).
 uv sync --extra dev && uv run pytest && uv run ruff check .
 ```
 
-723 tests, all green, ruff clean. Twenty-six commits on `main`, linear history, **no
-remote configured — nothing has ever been pushed.**
+723 tests, all green, ruff clean. Twenty-seven commits on `main`, linear history, **no
+remote configured — nothing has ever been pushed.** Five presets (one each for
+`lines`, `dots`, `polar`, `form`, `maze`); `staves`, `grid` and `tiling` have
+none yet, though every blade is documented here and in the specification.
 
 ### Done
 
@@ -138,9 +140,10 @@ and knows nothing about margins.
 
 | Module | Holds |
 |---|---|
+| `cli.py` | `typer` commands, flag→override map, writer choice by `-o` extension |
 | `units.py` | `Length`/`Angle`; parsing to exact int µm via `Decimal` |
 | `errors.py` | `DefinitionError` with field path and source line |
-| `marks.py` | the six primitives, `Layer`, `Point`, `Area`, `translate` |
+| `marks.py` | the six primitives, `Layer`, `Point`, `Area`, `translate`, `mirror_x` |
 | `cycles.py` | `Cycle`, drift-free positions, effective period |
 | `axes.py` | `AxisPeriod` — what the handle needs from a blade for § 8.3/§ 8.5 |
 | `model.py` | pydantic sections; `Section` base with `extra="forbid"` + `deferred` |
@@ -163,11 +166,22 @@ and knows nothing about margins.
 2. **Generator → marks.** `generate(cfg, area, page, q) -> Iterator[Mark]`,
    plus the queries `is_page_invariant`, `describe`, `periodic_axes`, `check`,
    and the declaration `supports_snap`.
-3. **Marks → writer.** Bidirectional: marks in, font metrics out.
+3. **Marks → writer.** Bidirectional: marks in, font metrics out — plus
+   `capabilities()`, the set of mark kinds the writer can render (§ 10.2).
 
 `sheets()` came from M3's successor, `maze` (§ 7.5): a blade may say that one
 *item* needs more than one sheet, and the handle does the doubling, the
 numbering and the mirroring. Everything about pages stays on the handle side.
+
+**Seam 3 stayed a stub until M7.** `capabilities()` existed from M1 but nothing
+consumed it while PDF was the only writer. The PNG writer is the first that
+does *less* (no text — the standard fonts have metrics but no file), so the
+pre-flight now measures with a metrics **oracle** (a throwaway `PdfWriter`,
+because metrics are fixed data, not rendering) and refuses, by name, whatever
+the real writer's `capabilities()` cannot draw — found by sampling one page's
+marks, not by reading the config (decisions 38–39). The writer is chosen by the
+`-o` extension (`.png` → `png.py`), and the media check (§ 12.1) is
+output-independent, so PNG inherits it.
 
 **Seam 2 has grown four queries and `generate` has never changed.** When `snap`
 and `remainder` needed blade knowledge, the handle got a question to ask
@@ -210,13 +224,26 @@ the pre-flight, never while pages are being written (§ 12 point 13).
 
 ## Where to start
 
-`polar` passed the test § 14 designed it to be: the handle needed no change
-for a non-cartesian blade beyond one new query (`check`) and one declaration
-(`supports_snap`), and `generate` did not move. The pressure came where it was
-expected — not in the geometry but in *when* a refusal happens.
+The architecture has held through seven milestones: `generate(cfg, area, page,
+q)` has never changed signature, and every feature that needed blade knowledge
+became a *query the handle asks* rather than geometry pushed into the blade.
+Keep that line. When a new feature tempts you to hand a blade the page, the
+margins, or the device, look first for the question the handle could ask
+instead — that is how `periodic_axes`, `check`, `sheets`, `supports_snap` and
+`capabilities` all came to be.
 
-So M4 is the next step, and the cheapest of the remaining blades is `dots`:
-it is two cycles crossed, and § 10.1 already prescribes how a dot is drawn.
+**The one milestone proper left is M8** — `perspective` and `mandala` (§ 7.11,
+§ 15.1), two new blades that compute their own marks instead of using cycles (a
+generator may, § 5.3). Add each as a registry entry in `generators/__init__.py`
+with a `config_model` and the seam-2 methods; `Arc`, `Polygon` and the polar
+geometry from M3 are the tools. Follow the working style below: a failing test
+first, the *why* in the comment with its § number, one coherent commit, and a
+real rendered sheet read back — not just unit tests.
+
+Everything else outstanding is small and each names its reason in *Not done*
+above: M5's empty `quirks`, a general relative-measure mechanism, the two
+unverified device figures, and the `staves` clef conflict (§ 7.3 vs § 6,
+decision 24) — that last one needs a *decision*, not code, and belongs in § 15.
 
 ## Open questions
 

@@ -1,0 +1,35 @@
+# A medium maze on A4, with the solution on the following sheet.
+#
+# A preset is an ordinary definition file, never a special path (§ 9.3), so this
+# is also the documentation for `maze` (§ 7.5): copy it with
+# `ctrlgrid show maze-medium > mine.yaml` and bend it.
+#
+# `maze` is the one blade that is not a repeating pattern. Two things follow.
+# It is procedural, so the same `--seed` always gives the same maze and every
+# page of a `--pages 20` run gets its own — pass `--seed 4711` to fix it. And
+# `min_path_factor` guarantees the solution is not laughably short behind a
+# complicated-looking picture: 0.35 is reachable for `backtracker`, whose long
+# corridors wander furthest (measured — see docs/implementation-decisions.md 26).
+
+version: 1
+
+page:
+  format: a4
+  margin: 12mm
+
+generator: maze
+
+cells: { x: 20, y: 28 }
+algorithm: backtracker
+min_path_factor: 0.35
+wall_weight: 0.5pt
+color: "#000000"
+
+# `separate_page` prints the puzzle and its solution on their own sheets: odd
+# sheets are puzzles, even ones solutions, so `--pages 10` gives ten puzzles on
+# twenty numbered sheets, and a name list gives each child both. Change to
+# `overlay` to draw the way through on the puzzle itself, or `none` to leave it
+# out. `back_mirrored` prints the solution mirrored on the reverse so it lines
+# up when the sheet is held to the light (long-edge duplex; see the README).
+solution: separate_page
+solution_color: "#cc3333"
