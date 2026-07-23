@@ -4,7 +4,7 @@ Generate **dimensionally accurate** PDF templates from a small definition file:
 grid paper, ruled paper, dot grids, staff paper, mazes, polar targets, tilings
 and fillable forms — for paper formats **and** for e-ink tablets.
 
-> **Status: M1–M4 complete, M5 core done.** All eight generators of the table
+> **Status: M1–M6 complete (M5 core).** All eight generators of the table
 > below work, and the dimensional test described below measures `lines` out of
 > a finished PDF on every commit. The handle around them is finished — multi-page output, headers
 > and footers, name lists, snapping, remainder handling, double-sided margins,
@@ -25,13 +25,15 @@ and fillable forms — for paper formats **and** for e-ink tablets.
 > ctrlgrid millimeter-a4 --cover              # + a calibration first sheet
 > ctrlgrid check my-def.yaml
 > ctrlgrid dots-5mm --device remarkable-paper-pro   # an e-ink profile
+> ctrlgrid millimeter-a4 --format a6 --pages 4 --nup 2x2   # four-up on A4
 > ctrlgrid presets | show <name> | devices
 > ```
 >
 > Flags: `--pages`, `--names`, `--format`, `--device`, `--orientation`,
-> `--stamp`, `--cover`, `--seed`, `--strict`, `-o`, `--force`, `--quiet`.
+> `--stamp`, `--cover`, `--seed`, `--strict`, `--nup`, `--nup-sheet`,
+> `--crop-marks`, `-o`, `--force`, `--quiet`.
 >
-> Not yet: `--nup`, `--skip-unsupported`, and the interactive mode.
+> Not yet: `--skip-unsupported` and the interactive mode.
 >
 > **Not on PyPI yet**, so the `uvx`/`pip` lines below do not work until the
 > first release is published.
@@ -182,9 +184,13 @@ lacks is still an error, now naming the file.
 from the paper format and reflects the typical non-printable border; e-ink
 profiles use 0.
 
-**4. N-up does not scale.** `--nup` places pages at 100 % and fails if they do not
-fit, unlike `pdfjam` and `pdfcpu`. Define a small format and impose it onto a
-large sheet; do not expect four A4 pages to be shrunk onto one.
+**4. N-up does not scale.** `--nup 2x2` places pages at 100 % and fails with the
+arithmetic if they do not fit, unlike `pdfjam` and `pdfcpu`. The intended use is
+the reverse of the usual one: define a small format, impose it onto a large
+sheet, cut it up — `--format a6 --nup 2x2` puts four A6 pages on A4.
+`--crop-marks` adds cut guides in the margin; `--nup-sheet` picks the sheet.
+Imposition drops PDF bookmarks, and the calibration cover sheet is left out of
+it.
 
 **5. `{date}` makes output date-dependent.** Two runs on different days produce
 different files. If you want a reproducible sheet, write the date as text.

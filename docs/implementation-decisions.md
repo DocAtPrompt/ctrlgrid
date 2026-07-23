@@ -516,6 +516,41 @@ whole micrometre. Rounding 25400/229 to 111µm and multiplying by 45 gives
 what the device actually draws. So the density is carried, not a rounded pixel,
 and the exact size is used in the one final rounding to µm.
 
+## 36. Imposition renders whole pages, then translates them — no PDF post-pass
+
+**§ 14, § 3.3.** § 14 says imposition "works on finished pages", which reads
+like a post-process on the output PDF — and a `pypdf`-based re-imposition would
+be the obvious route. It is not taken, for two reasons. It would make a
+PDF-manipulation library a runtime dependency, and it would put page geometry
+in a second place outside `pages.py`.
+
+Instead the page loop renders each logical page to its own coordinates as
+before, collects the marks, and the imposed writer translates each whole page
+onto its cell of the larger sheet — the same `translate` that already places
+the pattern origin, one level up. "Finished pages" is honoured exactly: the
+pattern is untouched and complete before anything decides where it lands. The
+writer never learns imposition happened; it draws translated marks like any
+others, so a second writer (PNG, M7) gets N-up for free.
+
+Two consequences the specification names are carried here. The cover sheet
+keeps the page size and its own sheet (§ 8.8) — its 50 mm square must stay
+50 mm — and per-page bookmarks are dropped under imposition (§ 14 notes it
+destroys links): a bookmark would point at a whole imposed sheet rather than
+the page, which is worse than none.
+
+## 37. Crop marks are opt-in, and appear only where the margin holds them
+
+**§ 14.** § 14 asks for "optional crop marks" and the § 11.1 flag table does
+not name the switch, so this adds `--crop-marks`, opt-in — most of the time the
+pages butt together and the marks would have nowhere to go anyway.
+
+They are cut *guides*, not a frame: short ticks reaching in from the sheet edge
+towards each cut line, in the margin strip, never crossing the pages. Where the
+block fills the sheet in one direction — a 2×2 of A6 on A4 leaves 0.5 mm top
+and bottom — there is no room, and rather than draw a mark over a page the tool
+simply omits it on that pair of edges. Every length is clamped to the margin
+actually available, so a tight sheet gets shorter marks instead of none.
+
 ---
 
 ## Smaller calls, for completeness

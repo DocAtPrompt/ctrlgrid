@@ -22,6 +22,7 @@ from typing import TYPE_CHECKING
 
 from ctrlgrid.axes import AxisPeriod
 from ctrlgrid.errors import DefinitionError
+from ctrlgrid.impose import Imposition
 from ctrlgrid.marks import Area, Mark, Point, Text, Um, mirror_x, translate
 from ctrlgrid.model import Band, Margin, PatternSpec
 from ctrlgrid.writers import DocumentMeta, Writer, WriterQuery
@@ -600,6 +601,12 @@ def preflight(
     # 100 mm rule (§ 8.8) has to be refused before page one, not discovered
     # once the file is half written.
     cover = cover_marks(document, q=q) if document.pages.cover else []
+
+    # § 14: imposition never scales, so a page that does not fit its cell is an
+    # error with the arithmetic — refused here, before anything is written.
+    if document.nup is not None:
+        document.nup.check_fits(document.sheet.width, document.sheet.height)
+
     return geometry, contexts, frames, cover
 
 
@@ -671,7 +678,6 @@ def build(document: Document, writer: Writer) -> Geometry:
     settled on — including any notice the settings earned (§ 8.3).
     """
     from ctrlgrid import generators
-    from ctrlgrid.frame import background_mark, border_mark, hole_marks, stamp_mark
 
     geometry, contexts, frames, cover = preflight(document, writer)
     blade = generators.get(document.generator)
@@ -682,57 +688,117 @@ def build(document: Document, writer: Writer) -> Geometry:
 
     # § 8.8: an additional first page, outside the numbering and outside the
     # page loop entirely — it gets no background, no pattern, no frame, no
-    # stamp, and no `PageContext`, because there is nothing about it that a
-    # blade or a placeholder could mean.
+    # stamp, and no `PageContext`. It is also exempt from imposition (§ 14):
+    # the calibration square is a real 50 mm, so it keeps the page size.
     if cover:
         writer.begin_page(document.sheet.width, document.sheet.height)
         for mark in cover:
             writer.draw(mark)
         writer.end_page()
 
-    for context, frame in zip(contexts, frames, strict=True):
+    rendered = [
+        (context, list(_page_marks(document, geometry, blade, plan, context, frame, writer)))
+        for context, frame in zip(contexts, frames, strict=True)
+    ]
+
+    if document.nup is None:
+        _write_one_per_sheet(document, writer, rendered)
+    else:
+        _write_imposed(document, writer, rendered, document.nup)
+
+    writer.end_document()
+    return geometry
+
+
+def _page_marks(
+    document: Document,
+    geometry: Geometry,
+    blade: object,
+    plan: SheetPlan,
+    context: PageContext,
+    frame: list[Text],
+    q: WriterQuery,
+) -> Iterator[Mark]:
+    """Every mark of one logical page, in sheet coordinates (§ 3.6).
+
+    This is what "imposition works on finished pages" (§ 14) means in practice:
+    a page is rendered whole, into the small sheet's coordinates, and whether it
+    then lands on its own sheet or in a cell of a larger one is a separate,
+    later decision that only translates it.
+    """
+    from ctrlgrid.frame import background_mark, border_mark, hole_marks, stamp_mark
+
+    placed = geometry.for_page(
+        is_even=context.is_even, sheet=document.sheet, duplex=document.page.duplex
+    )
+
+    # Marks arrive in layer order and the writer does not sort (§ 3.6), so this
+    # sequence *is* the stacking: background, pattern, frame, stamp.
+    background = background_mark(document.page.background, document.sheet)
+    if background is not None:
+        yield background
+
+    # § 7.5's `back_mirrored` is the one exception to a blade never knowing
+    # which side of the sheet it is on: the handle mirrors, about the sheet's
+    # centre (the physical turning edge), and only the pattern layer so header
+    # and footer stay readable on the back.
+    mirrored = (context.index % plan.per_item) in plan.mirrored
+    for mark in blade.generate(document.config, area=placed.area, page=context, q=q):
+        placed_mark = translate(mark, dx=placed.origin.x, dy=placed.origin.y)
+        if mirrored:
+            placed_mark = mirror_x(placed_mark, about=document.sheet.width)
+        yield placed_mark
+
+    border = border_mark(document.border, placed)
+    if border is not None:
+        yield border
+    yield from hole_marks(document.page, document.sheet, is_even=context.is_even)
+    yield from frame
+
+    stamp = stamp_mark(document.stamp, document.sheet, q=q)
+    if stamp is not None:
+        yield stamp
+
+
+def _write_one_per_sheet(
+    document: Document, writer: Writer, rendered: list[tuple[PageContext, list[Mark]]]
+) -> None:
+    """The ordinary run: one logical page per physical sheet."""
+    for context, marks in rendered:
         writer.begin_page(document.sheet.width, document.sheet.height)
         if context.name is not None:
             # § 10.1: a data-driven run gets a table of contents, so a
             # thirty-page document can be navigated instead of scrolled.
             writer.outline(context.name, index=context.index)
-        placed = geometry.for_page(
-            is_even=context.is_even, sheet=document.sheet, duplex=document.page.duplex
-        )
-
-        # Marks arrive in layer order and the writer does not sort (§ 3.6), so
-        # this sequence *is* the stacking: background, pattern, frame, stamp.
-        background = background_mark(document.page.background, document.sheet)
-        if background is not None:
-            writer.draw(background)
-
-        # The blade is handed the same area every time and never learns which
-        # side of the sheet it is on — only the shift differs (§ 3.3, § 6).
-        # § 7.5's `back_mirrored` is the one exception, and it is the handle
-        # that mirrors: about the **sheet's** centre, because the reference is
-        # the physical turning edge, and only the pattern, so that header and
-        # footer stay readable on the back.
-        mirrored = (context.index % plan.per_item) in plan.mirrored
-        for mark in blade.generate(document.config, area=placed.area, page=context, q=writer):
-            placed_mark = translate(mark, dx=placed.origin.x, dy=placed.origin.y)
-            if mirrored:
-                placed_mark = mirror_x(placed_mark, about=document.sheet.width)
-            writer.draw(placed_mark)
-
-        border = border_mark(document.border, placed)
-        if border is not None:
-            writer.draw(border)
-        for mark in hole_marks(document.page, document.sheet, is_even=context.is_even):
+        for mark in marks:
             writer.draw(mark)
-        for mark in frame:
-            writer.draw(mark)
-
-        stamp = stamp_mark(document.stamp, document.sheet, q=writer)
-        if stamp is not None:
-            writer.draw(stamp)
         writer.end_page()
-    writer.end_document()
-    return geometry
+
+
+def _write_imposed(
+    document: Document,
+    writer: Writer,
+    rendered: list[tuple[PageContext, list[Mark]]],
+    nup: Imposition,
+) -> None:
+    """N-up: whole pages translated onto a larger sheet, never scaled (§ 14).
+
+    Bookmarks are dropped here on purpose. § 14 notes that imposition destroys
+    links and outlines, and a per-page bookmark would point at a whole imposed
+    sheet rather than the page — worse than none. Whoever needs both builds the
+    outline after imposing.
+    """
+    page_w, page_h = document.sheet.width, document.sheet.height
+    for start in range(0, len(rendered), nup.per_sheet):
+        group = rendered[start : start + nup.per_sheet]
+        writer.begin_page(nup.sheet_width, nup.sheet_height)
+        for position, (_, marks) in enumerate(group):
+            cell = nup.cell(position, page_w, page_h)
+            for mark in marks:
+                writer.draw(translate(mark, dx=cell.x, dy=cell.y))
+        for mark in nup.crop_mark_segments(page_w, page_h):
+            writer.draw(mark)
+        writer.end_page()
 
 
 def _no_room(

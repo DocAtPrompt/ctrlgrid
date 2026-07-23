@@ -34,6 +34,7 @@ from ruamel.yaml.nodes import MappingNode, SequenceNode
 from ctrlgrid import fonts, generators, images
 from ctrlgrid.axes import AxisPeriod
 from ctrlgrid.errors import DefinitionError
+from ctrlgrid.impose import Imposition, parse_nup
 from ctrlgrid.model import (
     Band,
     BorderSpec,
@@ -160,6 +161,11 @@ class Document:
     """§ 12.1: `--strict` turns every media warning into an error, so a CI run
     or `ctrlgrid check` can guard a preset set."""
 
+    nup: Imposition | None = None
+    """N-up imposition, from `--nup` / `--nup-sheet` (§ 14, M6). None is the
+    ordinary one-page-per-sheet run. A property of the print, not the paper, so
+    it lives on the command line and never in a definition."""
+
 
 def load(source: Path | str, overrides: Mapping[str, Any] | None = None) -> Document:
     """Definition file to model (§ 3.6, seam 1).
@@ -250,6 +256,7 @@ def loads(text: str, overrides: Mapping[str, Any] | None = None, *, source: str)
         digest=hashlib.sha256(text.encode("utf-8")).hexdigest()[:12],
         device=profile,
         strict=bool(overrides.get("strict")),
+        nup=_resolve_nup(overrides),
     )
 
 
@@ -355,6 +362,26 @@ def _hole_mark_notices(page: PageSpec) -> tuple[str, ...]:
         f"hole marks sit 12mm from the binding edge, inside a margin.inner of "
         f"{page.margin.inner.raw} — they will fall on the pattern. Set "
         "margin.inner to 15mm or more to keep them clear (§ 8.7)",
+    )
+
+
+def resolve_size(name: str) -> tuple[int, int]:
+    """A format name or a free size to a portrait (width, height) in µm (§ 9.1).
+
+    Shared by the page format and the imposition sheet (§ 14): `--nup-sheet a3`
+    and `--nup-sheet 320x450mm` go through exactly the same resolver as
+    `format:`, so nothing about sizes is spelled twice.
+    """
+    if name in formats():
+        paper = formats()[name]
+        return paper.width.um, paper.height.um
+    if _FREE_SIZE.match(name.strip()):
+        return _free_size(name)
+    known = ", ".join(sorted(formats()))
+    raise DefinitionError(
+        f"unknown sheet `{name}` (known: {known}). A free size is written as two "
+        "measures, width first: 320x450mm, 13x19in (§ 9.1)",
+        field="nup-sheet",
     )
 
 
@@ -484,6 +511,19 @@ def device_profiles() -> dict[str, DeviceProfile]:
             verified=str(entry["verified"]),
         )
     return table
+
+
+def _resolve_nup(overrides: Mapping[str, Any]) -> Imposition | None:
+    """§ 14: build the imposition from `--nup` / `--nup-sheet`, or None."""
+    if "nup" not in overrides:
+        return None
+    sheet = overrides.get("nup_sheet") or "a4"
+    imposition = parse_nup(overrides["nup"], sheet, resolve_size)
+    if overrides.get("crop_marks"):
+        from dataclasses import replace
+
+        imposition = replace(imposition, crop_marks=True)
+    return imposition
 
 
 def _resolve_device(

@@ -11,16 +11,16 @@ no "fit to page", no stretching a grid so it comes out even.
 
 ## Current state — read this first
 
-**M1 to M4 are complete, and M5 all but its edges** — the handle, all eight
-blades of § 7, device profiles, `px`, the media check and `snap: pixel`. 0.1.0
-is the version in the code; nothing since M1 has been released, because
-releasing needs a human (see *Not done*).
+**M1 to M6 are complete but for M5's small edges** — the handle, all eight
+blades of § 7, device profiles, `px`, the media check, `snap: pixel`, and N-up
+imposition. 0.1.0 is the version in the code; nothing since M1 has been
+released, because releasing needs a human (see *Not done*).
 
 ```bash
 uv sync --extra dev && uv run pytest && uv run ruff check .
 ```
 
-699 tests, all green, ruff clean. Twenty-five commits on `main`, linear history, **no
+712 tests, all green, ruff clean. Twenty-five commits on `main`, linear history, **no
 remote configured — nothing has ever been pushed.**
 
 ### Done
@@ -48,12 +48,13 @@ remote configured — nothing has ever been pushed.**
 | **M5** the `px` unit | resolves against the device density; refused on paper (§ 8.3.1) |
 | **M5** media check | § 12.1 resolution/colour findings, `--strict`, round-to-zero errors |
 | **M5** `snap: pixel` | every step to whole pixels, exact size reported (§ 8.3.1) |
+| **M6** N-up | `--nup CxR` at 100 %, never scaled, crop marks, cover exempt (§ 14) |
 | pulled forward into M1 | format table, presets, `check`, overwrite protection, placeholders — the M1 acceptance criteria needed them |
 
 ### Not done
 
-**M5 remainder, then M6.** M5's core is done; what is left of it is small and
-each piece names why:
+**M5's small edges are all that remain of M1–M6.** M5's core shipped; three
+pieces are left, and each names why:
 
 - **`quirks` ships empty** (decision 31). § 9.2 provides the field with a Boox
   dead-row example, but no shipped profile is a Boox and inventing a dead-row
@@ -69,10 +70,13 @@ each piece names why:
   the rM2 numbers and whether the Paper Pro is a colour device — and § 9.2 is
   explicit that a wrong number there is worse than no profile at all.
 
-**M6 is the next milestone proper** — N-up (§ 14): imposition at 100 %, never
-scaling, an error with the arithmetic when pages do not fit the sheet.
+**M7 PNG is the next milestone proper** (§ 10.4, optional): rasterise at exact
+device resolution, with `Pillow`. The media check (§ 12.1) already covers the
+thin-line and uneven-grid findings for both output paths, so the PNG writer
+inherits them; what it adds is a second `writers/` module and the one-time
+vertical flip § 3.5 mentions.
 
-**Later milestones**, untouched: M7 PNG, M8 `perspective`/`mandala`. **`staves`
+**Also untouched**: M8 `perspective`/`mandala` (§ 7.11). **`staves`
 refuses every named clef**, and
 the reason is a genuine conflict rather than missing work: § 7.3 wants clefs as
 stored vector paths, § 6 fixes the vocabulary at six primitives with no curve
@@ -116,7 +120,7 @@ work around it.
 
 **Where the specification was genuinely silent**, the resolution is recorded in
 [`docs/implementation-decisions.md`](docs/implementation-decisions.md) —
-thirty-five of them so far, each with the section it belongs to and the
+thirty-seven of them so far, each with the section it belongs to and the
 reasoning. Read it before changing a default; several look arbitrary and are not.
 
 ## Language split
@@ -147,6 +151,7 @@ and knows nothing about margins.
 | `labels.py` | counting patterns `n`/`a`/`A`, explicit lists (§ 7.10) |
 | `images.py` | PNG sources: signature check, pixel size, aspect (§ 5.2, § 13) |
 | `media.py` | the media check: resolution and colour findings (§ 12.1) |
+| `impose.py` | N-up layout, the 100 % fit check, crop marks (§ 14) |
 | `fonts.py` | font files: `fsType` licence check, version, coverage (§ 10.3) |
 | `cover.py` | the cover sheet: calibration figures and settings summary (§ 8.8) |
 | `generators/` | registry, `common.py` (cycle + dash fields), and the eight blades |

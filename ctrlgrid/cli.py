@@ -92,6 +92,18 @@ def generate(
         int | None,
         typer.Option(help="Seed for procedural blades, e.g. `maze` (§ 7.5)."),
     ] = None,
+    nup: Annotated[
+        str | None,
+        typer.Option(help="Impose pages CxR on a sheet, never scaled, e.g. 2x2 (§ 14)."),
+    ] = None,
+    nup_sheet: Annotated[
+        str | None,
+        typer.Option(help="Sheet format for --nup (default a4)."),
+    ] = None,
+    crop_marks: Annotated[
+        bool,
+        typer.Option("--crop-marks", help="Draw cut guides in the imposition margin (§ 14)."),
+    ] = False,
     strict: Annotated[
         bool,
         typer.Option("--strict", help="Turn media warnings into errors (§ 12.1)."),
@@ -108,7 +120,10 @@ def generate(
         document = _open(
             target,
             definition,
-            _overrides(pages, format, device, orientation, names, stamp, cover, seed, strict),
+            _overrides(
+                pages, format, device, orientation, names, stamp, cover, seed, strict,
+                nup, nup_sheet, crop_marks,
+            ),
         )
         destination = _destination(out, target, definition, force)
         geometry = build(document, PdfWriter(destination))
@@ -192,11 +207,16 @@ def _overrides(
     cover: bool = False,
     seed: int | None = None,
     strict: bool = False,
+    nup: str | None = None,
+    nup_sheet: str | None = None,
+    crop_marks: bool = False,
 ) -> dict:
     if format is not None and device is not None:
         # § 9.2: two answers to "what medium". The loader would refuse them in a
         # definition; refuse them on the command line for the same reason.
         raise CtrlGridError("--format and --device name the medium two ways — give one (§ 9.2)")
+    if nup is None and (nup_sheet is not None or crop_marks):
+        raise CtrlGridError("--nup-sheet and --crop-marks only mean something with --nup (§ 14)")
     return {
         "pages": pages,
         "format": format,
@@ -213,6 +233,11 @@ def _overrides(
         "seed": seed,
         # § 12.1: only ever switches strictness on, like --cover.
         "strict": True if strict else None,
+        # § 14: imposition is a property of the print, so it is command-line
+        # only. `nup` present is what turns it on; the loader resolves the rest.
+        "nup": nup,
+        "nup_sheet": nup_sheet,
+        "crop_marks": True if crop_marks else None,
     }
 
 
@@ -244,9 +269,17 @@ def _report(document: Document, path: Path, geometry: Geometry, *, quiet: bool) 
         typer.echo(str(path))
         return
     typer.echo(str(path))
-    sheets = document.pages.count * sheet_plan(document).per_item
-    typer.echo(f"  {sheets} page(s), {document.sheet.width / 1000:.0f} x "
+    pages = document.pages.count * sheet_plan(document).per_item
+    typer.echo(f"  {pages} page(s), {document.sheet.width / 1000:.0f} x "
                f"{document.sheet.height / 1000:.0f} mm")
+    if document.nup is not None:
+        nup = document.nup
+        sheets = -(-pages // nup.per_sheet)  # ceil
+        typer.echo(
+            f"  imposed {nup.cols}x{nup.rows} on {nup.sheet_name} "
+            f"({nup.sheet_width / 1000:.0f} x {nup.sheet_height / 1000:.0f} mm) — "
+            f"{sheets} sheet(s), at 100 %, cut to size"
+        )
     blade = generators.get(document.generator)
     for line in blade.describe(document.config):
         typer.echo(f"  {line}")
