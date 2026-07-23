@@ -335,21 +335,29 @@ bisector of the segment that contains straight up, because straight up is
 where a spoke runs on every family that divides 90°, and a number printed over
 a line is unreadable.
 
-## 24. Clefs are refused, and the refusal names a conflict rather than a milestone
+## 24. Clefs come from an embedded music font, not a vector path (resolved, § 15.3)
 
-**§ 7.3 against § 6.** § 7.3 wants clef glyphs "as stored vector paths", which
-would make the PDF font-free. § 6 fixes the mark vocabulary at six primitives
-and calls it contract rather than a build stage — and none of the six is a
-curve path. `Arc` and `Polygon` cannot draw a treble clef; they can draw
-something that looks nearly like one, which is exactly the "almost right"
-sheet § 5.1 calls the worst failure there is.
+**§ 7.3 against § 6.** § 7.3 originally wanted clef glyphs "as stored vector
+paths", which would make the PDF font-free. § 6 fixes the mark vocabulary at six
+primitives and calls it contract rather than a build stage — and none of the six
+is a curve path. `Arc` and `Polygon` cannot draw a treble clef; they can draw
+something that looks nearly like one, which is exactly the "almost right" sheet
+§ 5.1 calls the worst failure there is.
 
-So `clef: none` works and every named clef refuses, with a message that names
-both sections. This is not deferred work waiting in a queue — it is an open
-question about the specification, and the honest options are: give the
-vocabulary a seventh primitive (a path), draw clefs from an embedded music
-font now that fonts stage 2 exists (§ 10.3), or drop them. That belongs in
-§ 15, and it needs a decision rather than an implementation.
+**Resolved in § 15.3:** a clef becomes a `Text` mark in an *embedded music
+font*, not a seventh primitive. § 7.3's real goal was not "font-free" for its own
+sake but *self-contained*, and fonts stage 2 (§ 10.3) already embeds and subsets
+— so the PDF carries only the few clef glyphs and stays self-contained, with the
+six-primitive vocabulary and § 15.2 (no free paths) both untouched. The two
+rejected options are named there: a seventh path primitive (against § 6 / § 15.2,
+and work for every future writer) and dropping clefs (§ 7.3 names them, and
+pre-printed clefs are genuinely wanted). A small OFL font ships, overridable via
+`font: {file:}`.
+
+Until then this is now **deferred work, not an open question**: `clef: none`
+works and every named clef refuses with a message that names **M9** (§ 14), the
+milestone that builds it — the same "deferred features name their milestone"
+discipline every other unbuilt option follows (§ 5.1).
 
 ## 25. Staves fill from the top, and the leftover stays at the bottom
 

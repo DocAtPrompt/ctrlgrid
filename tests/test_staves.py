@@ -129,15 +129,15 @@ class TestClefs:
     def test_none_is_the_default_and_draws_nothing(self) -> None:
         assert StavesConfig.model_validate({"count": 1, "stave_space": "2mm"}).clef == "none"
 
-    def test_a_named_clef_says_why_it_cannot_be_drawn(self) -> None:
-        # § 7.3 wants clefs as stored vector paths, and § 6 fixes the mark
-        # vocabulary at six primitives with no curve path among them. An
-        # approximation out of polygons would be the "almost right" sheet
-        # § 5.1 calls the worst failure of all — so it refuses and says so.
+    def test_a_named_clef_names_the_milestone_it_arrives_with(self) -> None:
+        # The § 7.3-vs-§ 6 conflict is decided (§ 15.3): clefs come from an
+        # embedded music font, built in M9. Until then a named clef refuses like
+        # every other unbuilt option — by naming its milestone, never by
+        # approximating a clef from polygons (§ 5.1, § 6).
         with pytest.raises(ValidationError) as excinfo:
             StavesConfig.model_validate({"count": 1, "stave_space": "2mm", "clef": "treble"})
         message = str(excinfo.value)
-        assert "§ 6" in message and "clef" in message.lower()
+        assert "M9" in message and "§ 6" in message and "clef" in message.lower()
 
 
 class TestTheSeam:

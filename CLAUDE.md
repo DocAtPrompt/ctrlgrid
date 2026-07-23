@@ -83,14 +83,16 @@ pieces are left, and each names why:
 `perspective` divides a base edge equally and clips its rays with Liang–Barsky,
 `mandala` counts sectors and rings on the shared `polar_geometry` (extracted
 from M3's polar so the two blades share one arithmetic, not two that drift).
-What is left is not a milestone but a **decision**: **`staves` refuses every
-named clef**, and the reason is a genuine conflict rather than missing work —
-§ 7.3 wants clefs as stored vector paths, § 6 fixes the vocabulary at six
-primitives with no curve path among them (decision 24). It belongs in § 15.
-Three things M3 built are there to be reused: `labels.py` (§ 7.10) is what
-`grid` and `tiling` label with, `generators/common.py` holds the cycle and dash
-fields every family needs, and `check()` is where a blade refuses what only the
-pattern area can disprove.
+What is left of `staves` is now **decided, not open**: the clef conflict (§ 7.3
+wanted stored vector paths, § 6 fixes the vocabulary at six primitives with no
+curve path) is resolved in **§ 15.3** — a clef is a `Text` mark in an embedded,
+subset music font, which keeps the six primitives and § 15.2 intact and stays
+self-contained through embedding. That is real work, scheduled as **M9** (§ 14),
+so a named clef now refuses by naming its milestone like every other unbuilt
+option (§ 5.1), not as an open question. Three things M3 built are there to be
+reused: `labels.py` (§ 7.10) is what `grid` and `tiling` label with,
+`generators/common.py` holds the cycle and dash fields every family needs, and
+`check()` is where a blade refuses what only the pattern area can disprove.
 
 **Two things only a human can do**, both needed before `uvx ctrlgrid` works:
 configure a git remote and push; set up trusted publishing on PyPI plus a
@@ -238,18 +240,21 @@ instead — that is how `periodic_axes`, `check`, `sheets`, `supports_snap` and
 `capabilities` all came to be. M8's two blades held it too: `perspective` and
 `mandala` compute their own law (§ 5.3) yet added nothing to the seam.
 
-**No milestone proper is left.** What remains is small, and each names its
-reason in *Not done* above: M5's empty `quirks`, a general relative-measure
-mechanism, the two unverified device figures, and the `staves` clef conflict
-(§ 7.3 vs § 6, decision 24) — that last one needs a *decision*, not code, and
-belongs in § 15. If you add a blade anyway, the recipe is unchanged: a registry
-entry in `generators/__init__.py` with a `config_model` and the seam-2 methods,
-a failing test first, the *why* in the comment with its § number, one coherent
-commit, and a real rendered sheet read back — not just unit tests.
+**No milestone proper is left, and the one open *decision* is now made too** —
+the `staves` clef question is resolved in § 15.3 (embedded music font), leaving
+its build as **M9** (§ 14). What remains is small, and each names its reason in
+*Not done* above: M5's empty `quirks`, a general relative-measure mechanism, the
+two unverified device figures, and M9 itself (clefs). If you build M9 or add a
+blade, the recipe is unchanged: a registry entry in `generators/__init__.py`
+with a `config_model` and the seam-2 methods, a failing test first, the *why* in
+the comment with its § number, one coherent commit, and a real rendered sheet
+read back — not just unit tests.
 
 ## Open questions
 
 Six in § 15, none blocking. Two need a device or a source rather than a decision
 (reMarkable 2 figures, whether the Paper Pro counts as a colour device). If you
 are tempted to guess at a number, don't — that is exactly the failure mode
-`source`/`verified` exists to prevent.
+`source`/`verified` exists to prevent. The seventh — the `staves` clef — is now
+answered in § 15.3 (embedded music font, built in M9), and it settled part of
+open question 2: for the music case, a font *is* shipped.

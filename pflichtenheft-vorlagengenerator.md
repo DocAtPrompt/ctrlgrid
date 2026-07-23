@@ -618,8 +618,10 @@ clef_indent: 3mm
 ```
 
 Intern: gruppierte Linienfamilie + optionaler Glyph am Zeilenanfang.
-**Schlüsselglyphen als fest hinterlegte Vektorpfade** — macht das PDF fontfrei
-und selbsttragend.
+**Schlüsselglyphen aus einer eingebetteten Musikschrift** (§ 15.3) — subgesettet,
+macht das PDF selbsttragend, ohne das Markenvokabular zu vergrößern. Ursprünglich
+waren fest hinterlegte Vektorpfade vorgesehen; warum daraus eine `Text`-Marke
+wurde, steht in § 15.3. Bis zur Umsetzung (M9) ist `clef: none` der einzige Wert.
 
 **Zwei Wege, dieselbe Systemgröße anzugeben** — `stave_space` (Abstand
 benachbarter Linien) oder `stave_height` (oberste bis unterste Linie). Sie
@@ -2166,13 +2168,20 @@ gebraucht wird.
 **M8 (vorgesehen) — `perspective` und `mandala`** (§ 7.11). Nach M6, damit beide
 den gespiegelten Bundsteg von Anfang an mitbekommen.
 
+**M9 (vorgesehen) — Notenschlüssel für `staves`** (§ 7.3, § 15.3). Ein Schlüssel
+wird eine `Text`-Marke aus einer eingebetteten, subgesetzten Musikschrift. Setzt
+Fonts Stufe 2 (§ 10.3) voraus — die steht; neu sind die mitgelieferte OFL-Schrift,
+die Glyphenpositionierung über die Schrift-Metriken und
+`clef: treble | bass | alto | tenor`.
+
 ---
 
 ## 15. Offene Entscheidungen
 
 Entschieden und eingearbeitet: Lizenz (MIT), Name (`ctrlgrid`), Sprache
 (englisch), Koordinatenursprung (links unten), Schriften (zweistufig, § 10.3),
-Notenschlüssel (Vektorpfade), Farbmodell (RGB `#rrggbb`),
+Notenschlüssel (eingebettete Musikschrift statt Vektorpfad, § 15.3),
+Farbmodell (RGB `#rrggbb`),
 Markenvokabular (sechs Primitive, § 6), interne Einheit (int µm für Positionen),
 Seitenaufbau (§ 8.1), Platzhalter (§ 8.10), Beschriftungsmuster (§ 7.10),
 Rangordnung CLI über Def (§ 11).
@@ -2218,3 +2227,45 @@ Bewusst noch offen:
   auf nahezu jeden Bogen. Bei uns sitzt es stattdessen auf dem Deckblatt
   (§ 8.8) — Metainformation über den Druck gehört nicht auf das Papier selbst.
   Siehe [`docs/research.md`](docs/research.md) § 5 und § 6.
+
+### 15.3 Notenschlüssel: eingebettete Musikschrift, kein Vektorpfad
+
+Ursprünglich wollte § 7.3 die Schlüsselglyphen als **fest hinterlegte
+Vektorpfade** — fontfrei und selbsttragend. Das steht im Widerspruch zu § 6: das
+Markenvokabular ist auf sechs Primitive festgelegt, ausdrücklich als *Vertrag*
+und nicht als Baustufe, und keines der sechs ist ein Kurvenpfad. § 15.2 verwirft
+freie Pfade zusätzlich als Einstieg in eine allgemeine Zeichensprache. Ein aus
+`Arc` und `Polygon` zusammengesetzter Violinschlüssel wäre erkennbar falsch —
+genau das *fast richtige* Blatt, das § 5.1 als schlimmste Fehlerklasse führt.
+`staves` refust deshalb bis dahin jeden benannten Schlüssel (`clef: none` wirkt).
+
+**Entscheidung.** Ein Schlüssel wird eine **`Text`-Marke in einer eingebetteten
+Musikschrift** — kein neues Primitiv, kein Vektorpfad. Das eigentliche Ziel von
+§ 7.3 war nicht *fontfrei* um seiner selbst willen, sondern **selbsttragend**.
+Fonts Stufe 2 (§ 10.3) bettet ein und subsettet, das PDF trägt dann nur die
+wenigen benötigten Schlüsselglyphen und bleibt selbsttragend. Das Ziel ist damit
+erreicht, ohne das Vokabular zu vergrößern: § 6 und § 15.2 bleiben unangetastet.
+Wiederverwendet werden die `fsType`-Lizenzprüfung, das Subsetting, die
+Coverage-Prüfung (§ 10.3) und der Capability-/Orakel-Mechanismus, über den der
+PNG-Schreiber Text, den er nicht rendern kann, vorab und benannt ablehnt
+(§ 10.2, § 10.4).
+
+**Verworfen wurde** das siebte Primitiv (ein Pfad): es widerspräche § 6 und
+§ 15.2 direkt und wäre Arbeit für *jeden* künftigen Schreiber (§ 6). Ebenso
+verworfen wurde, die Schlüssel ganz zu streichen — § 7.3 nennt sie ausdrücklich,
+und Vordruck-Schlüssel sind für Unterricht und Tabulatur real gefragt.
+
+**Mitgelieferte Schrift, überschreibbar.** Damit `clef: treble` ohne Zutun
+funktioniert, liefert das Werkzeug eine kleine Musikschrift unter OFL mit (auf
+die Schlüsselglyphen subgesettet). Die Alternative — der Nutzer muss selbst eine
+SMuFL-Schrift beschaffen — ließe das bequeme Feature an der Beschaffungshürde
+scheitern. Wer eine bestimmte Stichschrift will, überschreibt sie über den
+bestehenden `font: {file:}`-Weg (§ 10.3). Für den Musik-Fall ist damit Punkt 2
+der offenen Fragen beantwortet: hier *wird* eine Schrift mitgeliefert.
+
+**Grenzen.** Die Glyphen müssen über die Schrift-Metriken korrekt auf dem System
+sitzen (der Violinschlüssel umschlingt die G-Linie) — das ist Positionierung,
+nicht Vokabular. Auf dem PNG-Weg erscheint kein Schlüssel, weil dort kein
+Schrift-Rendering existiert; der Capability-Check sagt das vorab und nennt den
+Ausweg (§ 10.4). Die Umsetzung ist M9 (§ 14); bis dahin verweist die Ablehnung
+eines benannten Schlüssels auf M9 statt auf einen ungelösten Konflikt.

@@ -37,19 +37,18 @@ from ctrlgrid.pages import PageContext
 from ctrlgrid.units import Length, parse_length
 from ctrlgrid.writers import WriterQuery
 
-#: § 7.3 asks for clef glyphs as stored vector paths, which would make the PDF
-#: font-free. § 6 fixes the mark vocabulary at six primitives, and none of them
-#: is a curve path — the vocabulary is contract, not a build stage. A treble
-#: clef assembled from polygons and arcs would be recognisably wrong, and a
-#: sheet that is *almost* right is what § 5.1 calls the worst failure there is.
-#: So this refuses, and names the conflict rather than a milestone: it is an
-#: open question for § 15, not a piece of work waiting in a queue.
+#: The § 7.3-against-§ 6 conflict is now decided (§ 15.3): a clef is a `Text`
+#: mark in an embedded, subset music font — not a seventh primitive and not a
+#: vector path, so § 6 and § 15.2 stay untouched, and the PDF stays
+#: self-contained through embedding rather than font-freeness. That is real
+#: work, scheduled as M9 (§ 14), so this now refuses like every other unbuilt
+#: option: by naming its milestone, not an open question (§ 5.1).
 _CLEF_REFUSAL = (
-    "clef {value!r} cannot be drawn: § 7.3 wants clefs as stored vector paths, and the "
-    "mark vocabulary of § 6 has six primitives with no curve path among them — it is "
-    "contract, not a build stage. Approximating a treble clef from polygons would print "
-    "something recognisably wrong, which § 5.1 calls the worst failure class there is. "
-    "Use clef: none and write the clef by hand, or raise it as an open question (§ 15)"
+    "clef {value!r} is not drawn yet: it arrives with M9 (§ 7.3, § 15.3), which renders "
+    "clefs as text from an embedded music font. The mark vocabulary of § 6 has no curve "
+    "path, so a clef is never approximated from polygons — a sheet that is almost right is "
+    "the worst failure class there is (§ 5.1). Use clef: none until then, and write the "
+    "clef by hand"
 )
 
 
