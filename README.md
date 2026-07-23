@@ -5,7 +5,7 @@ grid paper, ruled paper, dot grids, staff paper, mazes, polar targets, tilings,
 fillable forms, perspective grids and mandalas — for paper formats **and** for
 e-ink tablets.
 
-> **Status: M1–M8 complete (M5 core).** All ten generators of the table
+> **Status: M1–M9 complete (M5 core).** All ten generators of the table
 > below work, and the dimensional test described below measures `lines` out of
 > a finished PDF on every commit. The handle around them is finished — multi-page output, headers
 > and footers, name lists, snapping, remainder handling, double-sided margins,
@@ -90,7 +90,7 @@ There are no double-clickable installers, and none are planned.
 |---|---|
 | `lines` | squared, ruled, isometric, calligraphy, Cornell, log/semi-log — **works today** |
 | `dots` | dot grids with emphasised rows and columns — **works today** |
-| `staves` | blank music staves and guitar tab — **works today**, without clef glyphs |
+| `staves` | music staves and guitar tab, with treble/bass/alto/tenor clefs — **works today** |
 | `grid` | labelled cell blocks — battleship, score sheets — **works today** |
 | `maze` | rectangular mazes, optionally with solutions — **works today** |
 | `polar` | targets, score discs, polar paper — **works today** |
@@ -225,3 +225,9 @@ you an interactive preset picker, which is as far as it goes.
 ## Licence
 
 MIT — see [`LICENSE`](LICENSE).
+
+The bundled clef font in [`ctrlgrid/data/fonts/`](ctrlgrid/data/fonts/) is
+derived from **Bravura** © Steinberg Media Technologies GmbH, under the
+[SIL Open Font License 1.1](ctrlgrid/data/fonts/OFL.txt) — subset to the four
+clef glyphs, converted to TrueType, and renamed as the OFL requires for a
+modified version.

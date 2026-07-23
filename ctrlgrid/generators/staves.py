@@ -18,38 +18,53 @@ systems look. The name is deliberately not `stave_spacing`, which differs from
 resolved here once `stave_space` is known, and it exists because a system gap
 written in stave spaces keeps the sheet proportioned at every stave size.
 
-Clefs are refused, and the reason is in `_CLEF_REFUSAL` — see there.
+**Clefs are a `Text` mark in an embedded music font** (§ 15.3, M9), not a
+seventh primitive and not a vector path — so § 6's six-primitive vocabulary
+stays whole and the PDF is self-contained through embedding, not
+font-freeness. The SMuFL convention makes the placement exact rather than
+fiddled: one em is four stave spaces, and the glyph origin sits on the clef's
+reference line. See `CLEF_FONT` and `CLEFS`.
 """
 
 from __future__ import annotations
 
 from collections.abc import Iterator
 from decimal import Decimal, InvalidOperation
+from pathlib import Path
 from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, BeforeValidator, ConfigDict, Field, model_validator
 
+from ctrlgrid import fonts
 from ctrlgrid.axes import AxisPeriod
 from ctrlgrid.errors import DefinitionError
-from ctrlgrid.marks import Area, Layer, Mark, Point, Segment, Um
+from ctrlgrid.marks import Area, Layer, Mark, Point, Segment, Text, Um
 from ctrlgrid.model import ColorField, LengthField
 from ctrlgrid.pages import PageContext
 from ctrlgrid.units import Length, parse_length
 from ctrlgrid.writers import WriterQuery
 
-#: The § 7.3-against-§ 6 conflict is now decided (§ 15.3): a clef is a `Text`
-#: mark in an embedded, subset music font — not a seventh primitive and not a
-#: vector path, so § 6 and § 15.2 stay untouched, and the PDF stays
-#: self-contained through embedding rather than font-freeness. That is real
-#: work, scheduled as M9 (§ 14), so this now refuses like every other unbuilt
-#: option: by naming its milestone, not an open question (§ 5.1).
-_CLEF_REFUSAL = (
-    "clef {value!r} is not drawn yet: it arrives with M9 (§ 7.3, § 15.3), which renders "
-    "clefs as text from an embedded music font. The mark vocabulary of § 6 has no curve "
-    "path, so a clef is never approximated from polygons — a sheet that is almost right is "
-    "the worst failure class there is (§ 5.1). Use clef: none until then, and write the "
-    "clef by hand"
-)
+#: The clef font (§ 15.3): Bravura (SIL OFL), subset to the four clef glyphs and
+#: converted to TrueType — reportlab cannot embed CFF outlines — then renamed off
+#: its reserved font name as the OFL requires. It ships in the package data
+#: (§ 9.3), so `clef: treble` works with nothing to install; the PDF stays
+#: self-contained because fonts stage 2 (§ 10.3) embeds and subsets it.
+CLEF_FONT = Path(__file__).resolve().parent.parent / "data" / "fonts" / "ctrlgrid-clefs.ttf"
+
+#: name -> (SMuFL code point, reference line counted from the top of a five-line
+#: staff). The glyph origin sits on that line (SMuFL), so the text baseline goes
+#: there: treble on the G line (2nd from the bottom = 3rd from the top), bass on
+#: the F line (4th from the bottom), the C clefs on the middle and the 4th line.
+CLEFS: dict[str, tuple[int, int]] = {
+    "treble": (0xE050, 3),  # gClef
+    "bass": (0xE062, 1),  # fClef
+    "alto": (0xE05C, 2),  # cClef, centred
+    "tenor": (0xE05C, 1),  # cClef, raised
+}
+
+#: SMuFL fonts are drawn so one em spans four stave spaces (the height of a
+#: five-line staff). So a clef at font size 4 x stave_space is exactly staff-tall.
+_EM_IN_SPACES = 4
 
 
 class StaveLength:
@@ -102,15 +117,21 @@ class StavesConfig(BaseModel):
     system_gap: StaveLengthField = StaveLength(spaces=Decimal(4))
     weight: LengthField = Length(um=70, mm=0.07055555555555555, raw="0.2pt")
     color: ColorField = "#000000"
-    clef: Literal["none"] = "none"
+    clef: Literal["none", "treble", "bass", "alto", "tenor"] = "none"
     clef_indent: StaveLengthField = StaveLength(length=Length(um=3000, mm=3.0, raw="3mm"))
 
-    @model_validator(mode="before")
-    @classmethod
-    def _a_named_clef_says_why_it_cannot_be_drawn(cls, data: Any) -> Any:
-        if isinstance(data, dict) and data.get("clef") not in (None, "none"):
-            raise ValueError(_CLEF_REFUSAL.format(value=data["clef"]))
-        return data
+    @model_validator(mode="after")
+    def _a_clef_needs_a_five_line_staff(self) -> StavesConfig:
+        # A clef's reference line is defined for the five-line staff (§ 7.3); on
+        # tablature or any other count there is no line for it to sit on, so it
+        # is refused rather than placed on a guessed line (§ 12, § 5.1).
+        if self.clef != "none" and self.lines != 5:
+            raise ValueError(
+                f"clef {self.clef!r} needs a 5-line staff, but lines is {self.lines}: a "
+                f"music clef sits on a fixed staff line, and a {self.lines}-line stave has "
+                "none. Use clef: none there (§ 7.3)"
+            )
+        return self
 
     @model_validator(mode="after")
     def _exactly_one_way_of_saying_the_size(self) -> StavesConfig:
@@ -175,6 +196,18 @@ class StavesGenerator:
 
     def check(self, cfg: StavesConfig, *, area: Area, q: WriterQuery) -> None:
         """§ 12 point 10: count-driven content has to fit, and is never squeezed."""
+        if cfg.clef != "none":
+            # Fail before page one if the shipped clef font is missing or cannot
+            # set the glyph (a packaging regression), not half way through the
+            # file (§ 12 point 13). Our own font passes; this guards the promise.
+            glyph = chr(CLEFS[cfg.clef][0])
+            font = fonts.load_font(str(CLEF_FONT), field="clef")
+            if font.missing(glyph):
+                raise DefinitionError(
+                    f"the clef font {CLEF_FONT.name} cannot set clef {cfg.clef!r} "
+                    f"(U+{CLEFS[cfg.clef][0]:04X}) — the shipped font is wrong or truncated",
+                    field="clef",
+                )
         needed = cfg.block_um()
         if needed > area.height:
             gap = cfg.system_gap.um(cfg.space_um)
@@ -203,6 +236,7 @@ class StavesGenerator:
         # whatever is left over stays at the bottom, where a page of music
         # normally has room for a note about it.
         top = area.height
+        indent = cfg.clef_indent.um(space)
         for system in range(cfg.count):
             first = top - system * (cfg.system_um + gap)
             for line in range(cfg.lines):
@@ -214,6 +248,28 @@ class StavesGenerator:
                     color=cfg.color or "#000000",
                     layer=Layer.PATTERN,
                 )
+            if cfg.clef != "none":
+                yield _clef(cfg, first, space, indent)
+
+
+def _clef(cfg: StavesConfig, first: Um, space: Um, indent: Um) -> Text:
+    """One clef at the start of a system (§ 7.3, § 15.3).
+
+    Size and placement are pure SMuFL: the font size is four stave spaces (one
+    em), and the text baseline sits on the clef's reference line, `ref` spaces
+    below the top line — the glyph origin is registered on that line, so the
+    curl of the treble clef lands on the G line without any per-glyph nudging.
+    """
+    code, ref = CLEFS[cfg.clef]
+    return Text(
+        pos=Point(indent, first - ref * space),
+        content=chr(code),
+        size=_EM_IN_SPACES * space,
+        family=fonts.token_for(str(CLEF_FONT)),
+        align="left",
+        color=cfg.color or "#000000",
+        layer=Layer.PATTERN,
+    )
 
 
 def _mm(um: Um) -> str:

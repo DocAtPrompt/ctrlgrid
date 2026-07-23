@@ -1,0 +1,27 @@
+# Treble-clef manuscript paper on A4 — ten systems with a printed G clef.
+#
+# A preset is an ordinary definition file, never a special path through the
+# code (§ 9.3), so this one is also the documentation for `staves` (§ 7.3) and
+# for clefs (§ 15.3): copy it with `ctrlgrid show staves-treble-a4 > mine.yaml`
+# and bend it.
+#
+# A clef is a glyph from an embedded music font (§ 15.3) — the tool ships the
+# font, so `clef: treble` needs nothing installed, and the PDF carries only the
+# clef glyph, subset. Its size and place are the SMuFL convention: one em is
+# four stave spaces, and the clef sits on its reference line (the G line for
+# treble). Change `clef` to bass, alto or tenor; clefs need a 5-line staff.
+
+version: 1
+
+page:
+  format: a4
+  margin: 15mm
+
+generator: staves
+
+count: 10
+stave_space: 1.75mm       # the distance between neighbouring lines (the rastral size)
+system_gap: 6sp           # gap between systems, in stave spaces, so it scales with the size
+weight: 0.2pt
+clef: treble
+clef_indent: 3mm

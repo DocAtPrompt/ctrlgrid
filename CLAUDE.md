@@ -11,10 +11,11 @@ no "fit to page", no stretching a grid so it comes out even.
 
 ## Current state — read this first
 
-**M1 to M8 are complete but for M5's small edges** — the handle, all ten blades
+**M1 to M9 are complete but for M5's small edges** — the handle, all ten blades
 of § 7, device profiles, `px`, the media check, `snap: pixel`, N-up imposition,
-and the PNG writer. **M8 is now done too**: `perspective` and `mandala`, the two
-blades that compute their own law instead of a cycle (§ 7.11).
+and the PNG writer. **M8** (`perspective` and `mandala`, § 7.11) and **M9**
+(clefs for `staves` from an embedded music font, § 15.3) are both done — M9 was
+the build of the one open *decision* the handovers kept naming.
 0.1.0 is the version in the code; nothing since M1 has been released, because
 releasing needs a human (see *Not done*).
 
@@ -22,9 +23,9 @@ releasing needs a human (see *Not done*).
 uv sync --extra dev && uv run pytest && uv run ruff check .
 ```
 
-763 tests, all green, ruff clean. Twenty-nine commits on `main`, linear history, **no
-remote configured — nothing has ever been pushed.** Seven presets (one each for
-`lines`, `dots`, `polar`, `form`, `maze`, `perspective`, `mandala`); `staves`,
+771 tests, all green, ruff clean. Thirty-odd commits on `main`, linear history, **no
+remote configured — nothing has ever been pushed.** Eight presets (one each for
+`lines`, `dots`, `polar`, `form`, `maze`, `perspective`, `mandala`, `staves`);
 `grid` and `tiling` have none yet, though every blade is documented here and in
 the specification.
 
@@ -57,6 +58,7 @@ the specification.
 | **M7** PNG writer | raster at exact device resolution, one file per page, text via caps (§ 10.4) |
 | **M8** `perspective` | horizon + 1–3 vanishing-point fans, equal base division, Liang–Barsky clip, `verticals` (§ 7.11) |
 | **M8** `mandala` | sectors/rings scaffold, rosette of circles (`mirror`), inscribed regular / star polygons, on shared `polar_geometry` (§ 7.11) |
+| **M9** `staves` clefs | `treble/bass/alto/tenor` as `Text` in a bundled, subset music font (Bravura, OFL→TrueType), SMuFL placement, 5-line only (§ 15.3) |
 | pulled forward into M1 | format table, presets, `check`, overwrite protection, placeholders — the M1 acceptance criteria needed them |
 
 ### Not done
@@ -83,16 +85,17 @@ pieces are left, and each names why:
 `perspective` divides a base edge equally and clips its rays with Liang–Barsky,
 `mandala` counts sectors and rings on the shared `polar_geometry` (extracted
 from M3's polar so the two blades share one arithmetic, not two that drift).
-What is left of `staves` is now **decided, not open**: the clef conflict (§ 7.3
-wanted stored vector paths, § 6 fixes the vocabulary at six primitives with no
-curve path) is resolved in **§ 15.3** — a clef is a `Text` mark in an embedded,
-subset music font, which keeps the six primitives and § 15.2 intact and stays
-self-contained through embedding. That is real work, scheduled as **M9** (§ 14),
-so a named clef now refuses by naming its milestone like every other unbuilt
-option (§ 5.1), not as an open question. Three things M3 built are there to be
-reused: `labels.py` (§ 7.10) is what `grid` and `tiling` label with,
-`generators/common.py` holds the cycle and dash fields every family needs, and
-`check()` is where a blade refuses what only the pattern area can disprove.
+The `staves` clef conflict (§ 7.3 wanted stored vector paths, § 6 fixes the
+vocabulary at six primitives with no curve path) is **resolved and built**: § 15.3
+decided a clef is a `Text` mark in an embedded, subset music font — keeping the
+six primitives and § 15.2 intact, self-contained through embedding — and **M9
+shipped it**. The bundled font is Bravura (OFL) subset to four glyphs, converted
+CFF→TrueType (reportlab embeds no CFF), renamed off its reserved name; placement
+is pure SMuFL (`CLEF_FONT`, `CLEFS` in `staves.py`). Three things M3 built are
+still there to reuse for any new blade: `labels.py` (§ 7.10) is what `grid` and
+`tiling` label with, `generators/common.py` holds the cycle and dash fields
+every family needs, and `check()` is where a blade refuses what only the pattern
+area can disprove.
 
 **Two things only a human can do**, both needed before `uvx ctrlgrid` works:
 configure a git remote and push; set up trusted publishing on PyPI plus a
@@ -240,15 +243,15 @@ instead — that is how `periodic_axes`, `check`, `sheets`, `supports_snap` and
 `capabilities` all came to be. M8's two blades held it too: `perspective` and
 `mandala` compute their own law (§ 5.3) yet added nothing to the seam.
 
-**No milestone proper is left, and the one open *decision* is now made too** —
-the `staves` clef question is resolved in § 15.3 (embedded music font), leaving
-its build as **M9** (§ 14). What remains is small, and each names its reason in
-*Not done* above: M5's empty `quirks`, a general relative-measure mechanism, the
-two unverified device figures, and M9 itself (clefs). If you build M9 or add a
-blade, the recipe is unchanged: a registry entry in `generators/__init__.py`
-with a `config_model` and the seam-2 methods, a failing test first, the *why* in
-the comment with its § number, one coherent commit, and a real rendered sheet
-read back — not just unit tests.
+**Nothing proper is left — M9 shipped the last open decision (clefs).** What
+remains is small, and each names its reason in *Not done* above: M5's empty
+`quirks`, a general relative-measure mechanism, and the two unverified device
+figures. If you add a blade or option, the recipe is unchanged: a registry entry
+in `generators/__init__.py` with a `config_model` and the seam-2 methods, a
+failing test first, the *why* in the comment with its § number, one coherent
+commit, and a real rendered sheet read back — not just unit tests. M9 held that
+line too: a clef is a `Text` mark, no new primitive, and it read metrics through
+the same oracle the media check uses.
 
 ## Open questions
 

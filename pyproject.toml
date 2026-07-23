@@ -67,8 +67,13 @@ packages = ["ctrlgrid"]
 
 [tool.hatch.build]
 # Data files are part of the package: formats, device profiles, presets.
-# Presets are documentation (§ 9.3), so they ship.
-artifacts = ["ctrlgrid/data/**/*.yaml"]
+# Presets are documentation (§ 9.3), so they ship. The clef font (§ 15.3) and
+# its OFL licence ship too — `clef: treble` must work with nothing to install.
+artifacts = [
+    "ctrlgrid/data/**/*.yaml",
+    "ctrlgrid/data/**/*.ttf",
+    "ctrlgrid/data/**/*.txt",
+]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

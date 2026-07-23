@@ -19,10 +19,11 @@ from pathlib import Path
 import pytest
 from pydantic import ValidationError
 
+from ctrlgrid import fonts
 from ctrlgrid.errors import DefinitionError
-from ctrlgrid.generators.staves import StavesConfig, StavesGenerator
+from ctrlgrid.generators.staves import CLEF_FONT, CLEFS, StavesConfig, StavesGenerator
 from ctrlgrid.loader import loads
-from ctrlgrid.marks import Area, Segment
+from ctrlgrid.marks import Area, Segment, Text
 from ctrlgrid.pages import PageContext, build
 from ctrlgrid.writers.pdf import PdfWriter
 
@@ -125,19 +126,73 @@ class TestTheSystems:
         assert "100.0mm" in message and "12" in message
 
 
+def clefs(definition: dict, area: Area = AREA) -> list[Text]:
+    config = StavesConfig.model_validate(definition)
+    return [
+        m
+        for m in StavesGenerator().generate(config, area=area, page=PAGE, q=Q)
+        if isinstance(m, Text)
+    ]
+
+
 class TestClefs:
+    # M9 (§ 7.3, § 15.3): a clef is a Text mark in the embedded music font. The
+    # SMuFL convention makes it exact — 1 em = 4 stave spaces, and the glyph
+    # origin sits on the clef's reference line, so size = 4 x space and the text
+    # baseline goes on that line.
     def test_none_is_the_default_and_draws_nothing(self) -> None:
         assert StavesConfig.model_validate({"count": 1, "stave_space": "2mm"}).clef == "none"
+        assert clefs({"count": 2, "stave_space": "2mm"}) == []
 
-    def test_a_named_clef_names_the_milestone_it_arrives_with(self) -> None:
-        # The § 7.3-vs-§ 6 conflict is decided (§ 15.3): clefs come from an
-        # embedded music font, built in M9. Until then a named clef refuses like
-        # every other unbuilt option — by naming its milestone, never by
-        # approximating a clef from polygons (§ 5.1, § 6).
+    def test_a_treble_clef_is_text_in_the_embedded_music_font(self) -> None:
+        clef = clefs({"count": 1, "stave_space": "1.75mm", "clef": "treble"})[0]
+        assert clef.content == chr(0xE050)  # SMuFL gClef
+        assert clef.family == fonts.token_for(str(CLEF_FONT))
+        assert clef.align == "left"
+
+    def test_the_clef_is_four_stave_spaces_tall(self) -> None:
+        # § 7.3 / SMuFL: 1 em = 4 stave spaces, so the font size is 4 x space.
+        clef = clefs({"count": 1, "stave_space": "1.75mm", "clef": "treble"})[0]
+        assert clef.size == 4 * 1750
+
+    def test_each_clef_sits_on_its_reference_line(self) -> None:
+        # Top line of the first system is at area.height (music fills from the
+        # top). The reference line is N spaces down: treble 3 (the G line),
+        # bass 1 (the F line), alto 2 (the middle), tenor 1.
+        space = 1750
+        for name, (_cp, ref) in CLEFS.items():
+            clef = clefs({"count": 1, "stave_space": "1.75mm", "clef": name})[0]
+            assert clef.pos.y == AREA.height - ref * space, name
+
+    def test_the_four_clefs_map_to_the_right_glyphs(self) -> None:
+        got = {
+            name: clefs({"count": 1, "stave_space": "2mm", "clef": name})[0].content
+            for name in CLEFS
+        }
+        assert got == {
+            "treble": chr(0xE050),
+            "bass": chr(0xE062),
+            "alto": chr(0xE05C),
+            "tenor": chr(0xE05C),
+        }
+
+    def test_one_clef_per_system(self) -> None:
+        assert len(clefs({"count": 3, "stave_space": "1.75mm", "clef": "bass"})) == 3
+
+    def test_the_clef_sits_at_the_indent(self) -> None:
+        clef = clefs(
+            {"count": 1, "stave_space": "1.75mm", "clef": "treble", "clef_indent": "5mm"}
+        )[0]
+        assert clef.pos.x == 5000
+
+    def test_a_clef_needs_a_five_line_staff(self) -> None:
+        # The reference lines are defined for a 5-line staff; on tablature a
+        # music clef has no line to sit on. Refused loudly (§ 12), not guessed.
         with pytest.raises(ValidationError) as excinfo:
-            StavesConfig.model_validate({"count": 1, "stave_space": "2mm", "clef": "treble"})
-        message = str(excinfo.value)
-        assert "M9" in message and "§ 6" in message and "clef" in message.lower()
+            StavesConfig.model_validate(
+                {"count": 1, "stave_space": "2mm", "lines": 6, "clef": "treble"}
+            )
+        assert "5" in str(excinfo.value) and "clef" in str(excinfo.value).lower()
 
 
 class TestTheSeam:
@@ -180,6 +235,35 @@ class TestOnTheSheet:
         build(loads(self.DEFINITION, source="test"), PdfWriter(path))
         rows_um = sorted({round(line.y1) for line in pdfread.lines_um(path)}, reverse=True)
         assert rows_um[0] - rows_um[1] == pytest.approx(1750, abs=2)
+
+    def test_two_runs_produce_identical_bytes(self, tmp_path: Path) -> None:
+        first, second = tmp_path / "a.pdf", tmp_path / "b.pdf"
+        for path in (first, second):
+            build(loads(self.DEFINITION, source="test"), PdfWriter(path))
+        assert first.read_bytes() == second.read_bytes()
+
+
+class TestClefsOnTheSheet:
+    DEFINITION = (
+        "version: 1\n"
+        "page:\n  format: a4\n  margin: 15mm\n"
+        "generator: staves\n"
+        "count: 6\n"
+        "stave_space: 2mm\n"
+        "system_gap: 8sp\n"
+        "clef: treble\n"
+    )
+
+    def test_the_music_font_is_embedded(self, tmp_path: Path) -> None:
+        # § 15.3: self-contained through embedding. The clef font travels inside
+        # the PDF — subset to the clef glyphs — under its renamed identity.
+        from pypdf import PdfReader
+
+        path = tmp_path / "clef.pdf"
+        build(loads(self.DEFINITION, source="test"), PdfWriter(path))
+        resource = PdfReader(str(path)).pages[0]["/Resources"]["/Font"]
+        basefonts = [str(resource[key]["/BaseFont"]) for key in resource]
+        assert any("CtrlgridClefs" in name for name in basefonts)
 
     def test_two_runs_produce_identical_bytes(self, tmp_path: Path) -> None:
         first, second = tmp_path / "a.pdf", tmp_path / "b.pdf"

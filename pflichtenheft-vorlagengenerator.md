@@ -621,7 +621,9 @@ Intern: gruppierte Linienfamilie + optionaler Glyph am Zeilenanfang.
 **Schlüsselglyphen aus einer eingebetteten Musikschrift** (§ 15.3) — subgesettet,
 macht das PDF selbsttragend, ohne das Markenvokabular zu vergrößern. Ursprünglich
 waren fest hinterlegte Vektorpfade vorgesehen; warum daraus eine `Text`-Marke
-wurde, steht in § 15.3. Bis zur Umsetzung (M9) ist `clef: none` der einzige Wert.
+wurde, steht in § 15.3. Umgesetzt in M9: `clef: treble | bass | alto | tenor`
+(nur am Fünfliniensystem), Größe und Lage nach SMuFL — ein Em sind vier
+Zeilenabstände, der Glyph-Ursprung sitzt auf der Referenzlinie.
 
 **Zwei Wege, dieselbe Systemgröße anzugeben** — `stave_space` (Abstand
 benachbarter Linien) oder `stave_height` (oberste bis unterste Linie). Sie
@@ -2168,11 +2170,11 @@ gebraucht wird.
 **M8 (vorgesehen) — `perspective` und `mandala`** (§ 7.11). Nach M6, damit beide
 den gespiegelten Bundsteg von Anfang an mitbekommen.
 
-**M9 (vorgesehen) — Notenschlüssel für `staves`** (§ 7.3, § 15.3). Ein Schlüssel
-wird eine `Text`-Marke aus einer eingebetteten, subgesetzten Musikschrift. Setzt
-Fonts Stufe 2 (§ 10.3) voraus — die steht; neu sind die mitgelieferte OFL-Schrift,
-die Glyphenpositionierung über die Schrift-Metriken und
-`clef: treble | bass | alto | tenor`.
+**M9 — Notenschlüssel für `staves`** (§ 7.3, § 15.3). *Umgesetzt.* Ein Schlüssel
+ist eine `Text`-Marke aus einer eingebetteten, subgesetzten Musikschrift
+(Bravura, SIL OFL, auf die vier Schlüsselglyphen reduziert und nach
+OFL-Vorgabe umbenannt, mitgeliefert). Größe und Lage folgen SMuFL:
+`clef: treble | bass | alto | tenor` am Fünfliniensystem.
 
 ---
 
@@ -2237,7 +2239,6 @@ und nicht als Baustufe, und keines der sechs ist ein Kurvenpfad. § 15.2 verwirf
 freie Pfade zusätzlich als Einstieg in eine allgemeine Zeichensprache. Ein aus
 `Arc` und `Polygon` zusammengesetzter Violinschlüssel wäre erkennbar falsch —
 genau das *fast richtige* Blatt, das § 5.1 als schlimmste Fehlerklasse führt.
-`staves` refust deshalb bis dahin jeden benannten Schlüssel (`clef: none` wirkt).
 
 **Entscheidung.** Ein Schlüssel wird eine **`Text`-Marke in einer eingebetteten
 Musikschrift** — kein neues Primitiv, kein Vektorpfad. Das eigentliche Ziel von
@@ -2263,9 +2264,14 @@ scheitern. Wer eine bestimmte Stichschrift will, überschreibt sie über den
 bestehenden `font: {file:}`-Weg (§ 10.3). Für den Musik-Fall ist damit Punkt 2
 der offenen Fragen beantwortet: hier *wird* eine Schrift mitgeliefert.
 
-**Grenzen.** Die Glyphen müssen über die Schrift-Metriken korrekt auf dem System
-sitzen (der Violinschlüssel umschlingt die G-Linie) — das ist Positionierung,
-nicht Vokabular. Auf dem PNG-Weg erscheint kein Schlüssel, weil dort kein
-Schrift-Rendering existiert; der Capability-Check sagt das vorab und nennt den
-Ausweg (§ 10.4). Die Umsetzung ist M9 (§ 14); bis dahin verweist die Ablehnung
-eines benannten Schlüssels auf M9 statt auf einen ungelösten Konflikt.
+**Umgesetzt (M9).** Mitgeliefert wird Bravura (SIL OFL), auf die vier
+Schlüsselglyphen subgesettet und — weil reportlab keine CFF-Umrisse einbettet —
+nach TrueType konvertiert; die OFL verlangt für eine geänderte Fassung einen
+anderen Namen als den reservierten, also heißt sie nicht mehr „Bravura". Größe
+und Lage sind reine SMuFL-Konvention und brauchen keine Nachjustierung pro
+Glyph: ein Em sind vier Zeilenabstände (Schriftgröße = 4 × `stave_space`), und
+der Glyph-Ursprung sitzt auf der Referenzlinie (G-, F- bzw. Mittellinie), auf
+die die Text-Grundlinie gelegt wird. Schlüssel gibt es nur am Fünfliniensystem —
+auf Tabulatur hat ein Notenschlüssel keine Linie, das wird abgelehnt statt
+geraten. Auf dem PNG-Weg erscheint kein Schlüssel, weil dort kein
+Schrift-Rendering existiert; der Capability-Check sagt das vorab (§ 10.4).

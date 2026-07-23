@@ -354,10 +354,13 @@ and work for every future writer) and dropping clefs (§ 7.3 names them, and
 pre-printed clefs are genuinely wanted). A small OFL font ships, overridable via
 `font: {file:}`.
 
-Until then this is now **deferred work, not an open question**: `clef: none`
-works and every named clef refuses with a message that names **M9** (§ 14), the
-milestone that builds it — the same "deferred features name their milestone"
-discipline every other unbuilt option follows (§ 5.1).
+**Built in M9.** The shipped font is Bravura subset to the four clef glyphs and
+converted CFF→TrueType (reportlab embeds no CFF outlines), renamed off its
+reserved font name as the OFL requires. Placement is pure SMuFL — one em is four
+stave spaces, so size = 4 × `stave_space`, and the glyph origin sits on the
+reference line, so the text baseline goes there with no per-glyph nudging.
+Clefs are refused on anything but a five-line staff (tablature has no line for
+them), and — via the capability oracle — on the PNG writer, which has no text.
 
 ## 25. Staves fill from the top, and the leftover stays at the bottom
 
