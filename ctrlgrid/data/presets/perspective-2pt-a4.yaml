@@ -1,0 +1,56 @@
+# Two-point perspective grid on A4 — a horizon, two vanishing points off the
+# sheet, and a family of true verticals.
+#
+# A preset is an ordinary definition file, never a special path through the
+# code (§ 9.3), so this one is also the documentation for `perspective`
+# (§ 7.11): copy it with `ctrlgrid show perspective-2pt-a4 > mine.yaml` and
+# bend it.
+#
+# This blade uses no cycle model. The ray spacing converges towards each
+# vanishing point on its own — that is the law of the grid (§ 5.3, § 7.11) —
+# so there is no base value and no list of multiples here, only where the
+# points sit and how many rays each fans out.
+
+version: 1
+
+defs:
+  ray:      &ray      "#8899aa"
+  upright:  &upright  "#bcc6d2"
+  line:     &line     "#334466"
+
+page:
+  format: a4
+  margin: 12mm
+
+generator: perspective
+
+# The horizon is a share of the pattern-area height, so it follows the page
+# when the format changes. A little above the middle, the way a standing eye
+# sees a room.
+horizon:
+  at: 0.55
+  weight: 0.3pt
+  color: *line
+
+# The two points sit half an area-width off each edge, on the horizon. They are
+# given as a share of the pattern area — never a sheet coordinate — and are
+# allowed to lie outside it (§ 7.11): a two-point grid wants its points off the
+# paper. Each names no `base`, so it takes the edge farthest from it — the left
+# point draws to the right edge, the right point to the left.
+vanishing_points:
+  - at: [-0.6, 0.55]
+    count: 16
+    weight: 0.15pt
+    color: *ray
+  - at: [1.6, 0.55]
+    count: 16
+    weight: 0.15pt
+    color: *ray
+
+# The parallel family. In a two-point grid the verticals stay vertical — that
+# is what keeps it two-point and not three — so they are evenly spaced uprights,
+# not a third fan.
+verticals:
+  count: 18
+  weight: 0.15pt
+  color: *upright
