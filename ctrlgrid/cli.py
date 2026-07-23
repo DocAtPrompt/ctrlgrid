@@ -126,7 +126,7 @@ def generate(
             ),
         )
         destination = _destination(out, target, definition, force)
-        geometry = build(document, PdfWriter(destination))
+        geometry = build(document, _writer_for(destination, document))
         _report(document, destination, geometry, quiet=quiet)
 
 
@@ -250,6 +250,24 @@ def _open(target: str | None, definition: Path | None, overrides: dict) -> Docum
         "give a preset name or a definition file with -d. "
         "`ctrlgrid presets` lists what is available"
     )
+
+
+def _writer_for(destination: Path, document: Document):
+    """Pick the writer by the output extension (§ 10.4).
+
+    `.png` rasters at the medium's resolution; anything else is PDF, the v1
+    default. The PNG writer needs the dpi and the physical sheet count up front
+    so it can number its files without buffering them all.
+    """
+    if destination.suffix.lower() != ".png":
+        return PdfWriter(destination)
+    from ctrlgrid.media import _dpi
+    from ctrlgrid.pages import sheet_plan
+    from ctrlgrid.writers.png import PngWriter
+
+    pages = document.pages.count * sheet_plan(document).per_item
+    sheets = pages if document.nup is None else -(-pages // document.nup.per_sheet)
+    return PngWriter(destination, dpi=_dpi(document), sheets=sheets)
 
 
 def _destination(

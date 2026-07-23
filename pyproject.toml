@@ -27,8 +27,8 @@ classifiers = [
     "Topic :: Utilities",
 ]
 
-# Kept deliberately small. Pillow (PNG writer, M7) joins when the milestone
-# that needs it arrives — see § 13 of the specification.
+# Kept deliberately small. `Pillow` is the PNG writer (M7, § 10.4), confined to
+# `writers/png.py` by the same architecture test that confines reportlab.
 #
 # `fontTools` is here for one job that reportlab cannot do (§ 10.3): reading
 # the `fsType` field of the OS/2 table before embedding. A tool that embeds
@@ -38,6 +38,7 @@ classifiers = [
 # cover sheet and `missing_glyphs` need besides.
 dependencies = [
     "fonttools>=4.40",
+    "pillow>=10.0",
     "pydantic>=2.0",
     "reportlab>=4.0",
     "ruamel.yaml>=0.18",

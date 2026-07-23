@@ -551,6 +551,35 @@ and bottom — there is no room, and rather than draw a mark over a page the too
 simply omits it on that pair of edges. Every length is clamped to the margin
 actually available, so a tight sheet gets shorter marks instead of none.
 
+## 38. The pre-flight measures with an oracle, not with the output writer
+
+**§ 10.2, § 3.6.** Every measurement in the pre-flight — band layout, label
+fitting, the media check, the cover — needs font metrics, and § 3.6 makes the
+writer the only source of them. That held while PDF was the only writer. The
+PNG writer breaks it: it has no font file, so it cannot answer a metric.
+
+The fix keeps the seam honest. Metrics are *data* — the fixed widths of the
+standard PDF fonts — not rendering, so the pre-flight measures with a metrics
+**oracle** (a `PdfWriter` that never opens a file), and consults the real
+writer only for its `capabilities()`. For a PDF run the two are the same
+object; for PNG the oracle stands in for measuring while the PNG writer's
+missing `text` capability is what the run is checked against.
+
+## 39. What a writer cannot render is refused by sampling the marks
+
+**§ 10.2, § 14.** § 10.2 says the vocabulary is complete from M1 and a writer
+grows into it, with the pre-flight refusing the missing feature by name. Until
+M7 nothing exercised this — the PDF writer does everything. The PNG writer is
+the first that does less (no text), so the check finally had to exist.
+
+It samples one page's marks with the oracle and maps each to the capability it
+needs, rather than reading the config — so it is right for every blade without
+knowing any of them. Text has three extra sources the sample would miss because
+they are the handle's, not the blade's: header and footer fields, the stamp,
+and the cover's calibration labels, each added explicitly. The message names
+the missing capability and, for text, the three ways out: a font file, no text,
+or PDF.
+
 ---
 
 ## Smaller calls, for completeness

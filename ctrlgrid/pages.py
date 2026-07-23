@@ -23,7 +23,7 @@ from typing import TYPE_CHECKING
 from ctrlgrid.axes import AxisPeriod
 from ctrlgrid.errors import DefinitionError
 from ctrlgrid.impose import Imposition
-from ctrlgrid.marks import Area, Mark, Point, Text, Um, mirror_x, translate
+from ctrlgrid.marks import Arc, Area, Mark, Point, Polygon, Text, Um, mirror_x, translate
 from ctrlgrid.model import Band, Margin, PatternSpec
 from ctrlgrid.writers import DocumentMeta, Writer, WriterQuery
 
@@ -544,6 +544,13 @@ def preflight(
     plan = sheet_plan(document)
     _refuse_mirroring_that_cannot_line_up(document, plan)
 
+    # Everything in the pre-flight is *measuring*, and only the writer knows
+    # font metrics (§ 10.2). The PNG writer cannot answer — it has no font file
+    # to measure against — so measuring uses a metrics oracle, and the real
+    # writer is consulted only for its capabilities (§ 10.4). For PDF the two
+    # are the same object.
+    probe = _metrics_oracle(q)
+
     geometry = Geometry.of(
         document.sheet,
         header=document.header,
@@ -555,7 +562,12 @@ def preflight(
     # The blade's own pre-flight, once, against the area it will be handed
     # (§ 12 point 13). `polar` needs it for the two questions only the area can
     # answer: does the circle fit, and do the segment labels fit (§ 7.6).
-    blade.check(document.config, area=geometry.area, q=q)
+    blade.check(document.config, area=geometry.area, q=probe)
+
+    # § 10.2: what the writer cannot render is refused here, before a page is
+    # written, naming the missing feature — the PNG writer's lack of text is
+    # the first case this has ever caught.
+    _refuse_marks_the_writer_cannot_render(document, geometry, blade, plan, q, probe)
 
     # § 12.1: the definition against the medium's resolution, once the medium
     # is fixed. A round-to-zero stroke raises here; the rest become notices,
@@ -564,7 +576,7 @@ def preflight(
 
     findings = media_findings(
         document,
-        q,
+        probe,
         strict=document.strict,
         snapped={axis for axis, _ in geometry.pixel_snap},
     )
@@ -589,18 +601,18 @@ def preflight(
         marks: list[Text] = []
         if document.header and placed.header:
             marks += layout_band(
-                document.header, placed.header, q=q, page=context, section="header"
+                document.header, placed.header, q=probe, page=context, section="header"
             )
         if document.footer and placed.footer:
             marks += layout_band(
-                document.footer, placed.footer, q=q, page=context, section="footer"
+                document.footer, placed.footer, q=probe, page=context, section="footer"
             )
         frames.append(marks)
 
     # Measured here too, and for the same reason: a format too narrow for the
     # 100 mm rule (§ 8.8) has to be refused before page one, not discovered
     # once the file is half written.
-    cover = cover_marks(document, q=q) if document.pages.cover else []
+    cover = cover_marks(document, q=probe) if document.pages.cover else []
 
     # § 14: imposition never scales, so a page that does not fit its cell is an
     # error with the arithmetic — refused here, before anything is written.
@@ -639,6 +651,86 @@ def _refuse_mirroring_that_cannot_line_up(document: Document, plan: SheetPlan) -
         "duplex: false or make the two margins equal (§ 7.5, § 8.1)",
         field="page.duplex",
     )
+
+
+#: Every capability a mark can call for (§ 10.2). A writer holding all of them
+#: renders anything, so the check below can skip the sampling entirely.
+_ALL_CAPABILITIES = {"vector", "color", "opacity", "arc", "polygon", "image_png", "text"}
+
+_MARK_CAPABILITY = {
+    Text: "text",
+    Arc: "arc",
+    Polygon: "polygon",
+}
+
+
+def _metrics_oracle(q: WriterQuery) -> WriterQuery:
+    """A query that can answer font metrics (§ 10.2).
+
+    Every measurement in the pre-flight needs them, and the PNG writer cannot
+    give them — it has no font file. So when the real writer cannot measure
+    text, a PDF writer stands in as a pure metrics oracle: it never opens a
+    file, its font metrics are the fixed data of the PDF standard fonts, and
+    nothing it returns depends on which writer will finally draw.
+    """
+    if "text" in q.capabilities():
+        return q
+    from ctrlgrid.writers.pdf import PdfWriter
+
+    return PdfWriter("unused-metrics-only")
+
+
+def _refuse_marks_the_writer_cannot_render(
+    document: Document,
+    geometry: Geometry,
+    blade: object,
+    plan: SheetPlan,
+    writer: WriterQuery,
+    probe: WriterQuery,
+) -> None:
+    """§ 10.2: refuse before rendering what the writer cannot draw, and name it.
+
+    The vocabulary is complete from M1 and a writer grows into it; the missing
+    feature is caught here rather than dropped mid-file. It samples one page's
+    worth of marks with the metrics oracle — the marks themselves, not a guess
+    from the config — so it is right for every blade without knowing any of them.
+    """
+    caps = writer.capabilities()
+    if caps >= _ALL_CAPABILITIES:
+        return
+
+    from ctrlgrid.frame import stamp_mark
+
+    context = next(page_contexts(count=1, snap=geometry.pixel_snap))
+    needed: set[str] = set()
+    for mark in blade.generate(document.config, area=geometry.area, page=context, q=probe):
+        needed.add(_MARK_CAPABILITY.get(type(mark), "vector"))
+    if _band_has_text(document.header) or _band_has_text(document.footer):
+        needed.add("text")
+    if stamp_mark(document.stamp, document.sheet, q=probe) is not None:
+        needed.add("text")
+    if document.pages.cover:
+        needed.add("text")  # the cover carries the calibration labels (§ 8.8)
+
+    missing = needed - caps
+    if not missing:
+        return
+    hint = (
+        " — the PNG writer has no font file to draw glyphs with (§ 10.4). Name a font "
+        "file (`font: {file: ...}`), leave the text off, or output PDF instead"
+        if "text" in missing
+        else " — output PDF, which renders the full mark vocabulary (§ 10.2)"
+    )
+    raise DefinitionError(
+        f"this run needs {', '.join(sorted(missing))} and the PNG writer does not "
+        f"support it{hint}"
+    )
+
+
+def _band_has_text(band: Band | None) -> bool:
+    if band is None:
+        return False
+    return any(isinstance(getattr(band, side), str) for side in ("left", "center", "right"))
 
 
 def _refuse_snap_where_it_has_no_meaning(document: Document, blade: object) -> None:

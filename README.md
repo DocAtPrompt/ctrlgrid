@@ -4,7 +4,7 @@ Generate **dimensionally accurate** PDF templates from a small definition file:
 grid paper, ruled paper, dot grids, staff paper, mazes, polar targets, tilings
 and fillable forms — for paper formats **and** for e-ink tablets.
 
-> **Status: M1–M6 complete (M5 core).** All eight generators of the table
+> **Status: M1–M7 complete (M5 core).** All eight generators of the table
 > below work, and the dimensional test described below measures `lines` out of
 > a finished PDF on every commit. The handle around them is finished — multi-page output, headers
 > and footers, name lists, snapping, remainder handling, double-sided margins,
@@ -143,6 +143,12 @@ As soon as the medium is fixed the tool checks the definition against it and
 warns about what will not work there — a line too thin to render, a spacing
 that merges, two colours that become the same grey (§ 12.1). `--strict` turns
 those warnings into errors, which is what a CI run needs to guard a preset set.
+
+Output a **PNG** by giving `-o name.png`: it rasters at the medium's exact
+resolution — the Paper Pro's 1620 × 2160 px — one file per page, which is what a
+real pad template needs. The PNG writer cannot draw text (the standard fonts
+have metrics but no file), so a definition with a header, footer or labels on
+PNG is refused up front, naming the way out: a font file, or PDF.
 
 Adding a profile for your device is the easiest useful contribution — see
 [`CONTRIBUTING.md`](CONTRIBUTING.md).

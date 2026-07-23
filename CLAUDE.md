@@ -11,16 +11,17 @@ no "fit to page", no stretching a grid so it comes out even.
 
 ## Current state — read this first
 
-**M1 to M6 are complete but for M5's small edges** — the handle, all eight
-blades of § 7, device profiles, `px`, the media check, `snap: pixel`, and N-up
-imposition. 0.1.0 is the version in the code; nothing since M1 has been
-released, because releasing needs a human (see *Not done*).
+**M1 to M7 are complete but for M5's small edges** — the handle, all eight
+blades of § 7, device profiles, `px`, the media check, `snap: pixel`, N-up
+imposition, and the PNG writer. Only M8 (`perspective`/`mandala`) is untouched.
+0.1.0 is the version in the code; nothing since M1 has been released, because
+releasing needs a human (see *Not done*).
 
 ```bash
 uv sync --extra dev && uv run pytest && uv run ruff check .
 ```
 
-712 tests, all green, ruff clean. Twenty-five commits on `main`, linear history, **no
+723 tests, all green, ruff clean. Twenty-six commits on `main`, linear history, **no
 remote configured — nothing has ever been pushed.**
 
 ### Done
@@ -49,11 +50,12 @@ remote configured — nothing has ever been pushed.**
 | **M5** media check | § 12.1 resolution/colour findings, `--strict`, round-to-zero errors |
 | **M5** `snap: pixel` | every step to whole pixels, exact size reported (§ 8.3.1) |
 | **M6** N-up | `--nup CxR` at 100 %, never scaled, crop marks, cover exempt (§ 14) |
+| **M7** PNG writer | raster at exact device resolution, one file per page, text via caps (§ 10.4) |
 | pulled forward into M1 | format table, presets, `check`, overwrite protection, placeholders — the M1 acceptance criteria needed them |
 
 ### Not done
 
-**M5's small edges are all that remain of M1–M6.** M5's core shipped; three
+**M5's small edges are all that remain of M1–M7.** M5's core shipped; three
 pieces are left, and each names why:
 
 - **`quirks` ships empty** (decision 31). § 9.2 provides the field with a Boox
@@ -70,13 +72,10 @@ pieces are left, and each names why:
   the rM2 numbers and whether the Paper Pro is a colour device — and § 9.2 is
   explicit that a wrong number there is worse than no profile at all.
 
-**M7 PNG is the next milestone proper** (§ 10.4, optional): rasterise at exact
-device resolution, with `Pillow`. The media check (§ 12.1) already covers the
-thin-line and uneven-grid findings for both output paths, so the PNG writer
-inherits them; what it adds is a second `writers/` module and the one-time
-vertical flip § 3.5 mentions.
-
-**Also untouched**: M8 `perspective`/`mandala` (§ 7.11). **`staves`
+**M8 is the only milestone proper left** — `perspective` and `mandala` (§ 7.11,
+§ 15.1) as new blades. Both compute their own marks (a generator may, § 5.3)
+rather than using cycles, and their preconditions already stand: `Arc` and
+`Polygon` in the vocabulary (§ 6) and the polar geometry from M3. **`staves`
 refuses every named clef**, and
 the reason is a genuine conflict rather than missing work: § 7.3 wants clefs as
 stored vector paths, § 6 fixes the vocabulary at six primitives with no curve
@@ -120,7 +119,7 @@ work around it.
 
 **Where the specification was genuinely silent**, the resolution is recorded in
 [`docs/implementation-decisions.md`](docs/implementation-decisions.md) —
-thirty-seven of them so far, each with the section it belongs to and the
+thirty-nine of them so far, each with the section it belongs to and the
 reasoning. Read it before changing a default; several look arbitrary and are not.
 
 ## Language split
@@ -155,7 +154,7 @@ and knows nothing about margins.
 | `fonts.py` | font files: `fsType` licence check, version, coverage (§ 10.3) |
 | `cover.py` | the cover sheet: calibration figures and settings summary (§ 8.8) |
 | `generators/` | registry, `common.py` (cycle + dash fields), and the eight blades |
-| `writers/` | seam 3 protocols + `pdf.py`, the only reportlab module |
+| `writers/` | seam 3 protocols, `pdf.py` (reportlab) and `png.py` (Pillow) |
 
 ### The three seams (§ 3.6)
 
