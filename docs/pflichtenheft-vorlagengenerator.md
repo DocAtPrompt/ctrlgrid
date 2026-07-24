@@ -37,7 +37,7 @@ untersuchten Generatoren können mehr als eine Seite ausgeben; keiner kann eine
 Namensliste verarbeiten. Es existiert kein CLI-Werkzeug in der Position
 *Definitionsdatei → mehrseitiges druckbares PDF*.
 
-> **Belege: [`docs/research.md`](docs/research.md)** — Stand Juli 2026, mit
+> **Belege: [`docs/research.md`](research.md)** — Stand Juli 2026, mit
 > Quellen und Fähigkeitsmatrix. Dieses Kapitel begründet die Existenz des
 > Projekts; eine unbelegte Behauptung wäre dafür zu wenig. Wer die Aussage
 > später anzweifelt, soll sie nachprüfen können, statt die Recherche zu
@@ -667,7 +667,7 @@ kursieren zwei Konventionen:
 - **modern:** angegeben wird der **Zeilenabstand** (calcbe bietet 1,6 / 2,0 /
   3,0 mm)
 
-Beide sind unbelegt, siehe [`docs/research.md`](docs/research.md) § 8. Falsche
+Beide sind unbelegt, siehe [`docs/research.md`](research.md) § 8. Falsche
 Zahlen wären hier genauso schädlich wie falsche Gerätemaße (§ 9.2), deshalb erst
 belegen, dann ausliefern (§ 15, Punkt 4).
 
@@ -1663,7 +1663,7 @@ ein Generator muss die toten Zeilen kennen und Linien um ±1 px verschieben.
 Geräteprofile brauchen Platz für solche Fälle, nicht nur für Maße.
 
 > **Stand reMarkable:** Der Widerspruch beim Paper Pro (1620 × 2160 vs.
-> 2160 × 2880, siehe [`docs/research.md`](docs/research.md) § 8) ist **erledigt:
+> 2160 × 2880, siehe [`docs/research.md`](research.md) § 8) ist **erledigt:
 > 1620 × 2160 px bei 229 dpi.** Nicht nur quellenkonsistent, sondern **praktisch
 > belegt** — ein mit genau diesen Maßen erzeugtes PDF sitzt auf dem Gerät exakt.
 > Die Angaben sind zudem in sich stimmig (Diagonale 11,79″, physisch
@@ -2339,7 +2339,7 @@ Bewusst noch offen:
   ist; [calcbe](https://calcbe.com/en/tools/) druckt sein 50-mm-Quadrat deshalb
   auf nahezu jeden Bogen. Bei uns sitzt es stattdessen auf dem Deckblatt
   (§ 8.8) — Metainformation über den Druck gehört nicht auf das Papier selbst.
-  Siehe [`docs/research.md`](docs/research.md) § 5 und § 6.
+  Siehe [`docs/research.md`](research.md) § 5 und § 6.
 
 ### 15.3 Notenschlüssel: eingebettete Musikschrift, kein Vektorpfad
 

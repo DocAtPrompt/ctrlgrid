@@ -1,7 +1,7 @@
 # Implementation decisions
 
 Where the specification
-([`pflichtenheft-vorlagengenerator.md`](../pflichtenheft-vorlagengenerator.md))
+([`pflichtenheft-vorlagengenerator.md`](pflichtenheft-vorlagengenerator.md))
 was **genuinely silent or internally ambiguous**, and a decision had to be made
 to write the code. Each entry names the section it belongs to, what was chosen,
 and why.

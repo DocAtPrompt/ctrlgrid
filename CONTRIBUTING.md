@@ -55,7 +55,7 @@ prefer the plain form over the clever one.
 
 ### Before you start
 
-Read the specification first. It is `pflichtenheft-vorlagengenerator.md` — in
+Read the specification first. It is `docs/pflichtenheft-vorlagengenerator.md` — in
 German, and deliberately not part of the shipped package. It records not just
 what the tool does but *why*, and most design questions you will have are
 answered there with reasoning.

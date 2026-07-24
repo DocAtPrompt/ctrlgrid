@@ -252,7 +252,7 @@ to answer, it prints its help instead.
 
 ## Documentation
 
-- [`pflichtenheft-vorlagengenerator.md`](pflichtenheft-vorlagengenerator.md) —
+- [`docs/pflichtenheft-vorlagengenerator.md`](docs/pflichtenheft-vorlagengenerator.md) —
   the full specification, in German. Records not just what the tool does but why.
 - [`docs/implementation-decisions.md`](docs/implementation-decisions.md) — the
   points where the specification was silent, and what was decided instead.
