@@ -174,13 +174,60 @@ class TestLinks:
             assert "index" in targets and "year" in targets
 
 
+class TestQuarterAndWeek:
+    ALL = {"quarter_view": {}, "week_view": {}, "notes": {"count": 40}}
+
+    def test_they_are_off_by_default(self) -> None:
+        _pages, dests, _edges = _graph(cfg())
+        assert not any(d.startswith("quarter") or d.startswith("week") for d in dests)
+
+    def test_quarter_pages_appear_when_enabled(self) -> None:
+        _pages, dests, _edges = _graph(cfg(quarter_view={}))
+        assert {"quarter-1", "quarter-2", "quarter-3", "quarter-4"} <= dests
+
+    def test_week_pages_cover_the_year(self) -> None:
+        _pages, dests, _edges = _graph(cfg(week_view={}))
+        weeks = sorted(d for d in dests if d.startswith("week-"))
+        assert weeks[0] == "week-01" and len(weeks) == 53  # 2026, monday start
+
+    def test_no_link_dangles_with_every_view(self) -> None:
+        _pages, dests, edges = _graph(cfg(**self.ALL))
+        assert sorted(t for _s, t in edges if t not in dests) == []
+
+    def test_a_quarter_links_its_months_and_days(self) -> None:
+        pages, _dests, _edges = _graph(cfg(quarter_view={}))
+        q1 = next(p for p in pages if p.dest == "quarter-1")
+        targets = {link.target for link in q1.links}
+        assert {"month-01", "month-02", "month-03", "day-2026-01-01"} <= targets
+
+    def test_a_week_links_only_its_in_year_days(self) -> None:
+        pages, _dests, _edges = _graph(cfg(week_view={}))
+        week1 = next(p for p in pages if p.dest == "week-01")   # 29 Dec 2025 – 4 Jan 2026
+        targets = {link.target for link in week1.links}
+        assert "day-2026-01-01" in targets       # in the year
+        assert "day-2025-12-29" not in targets    # before the year — shown, not linked
+
+    def test_the_nav_strip_gains_quarter_and_week(self) -> None:
+        pages, _dests, _edges = _graph(cfg(**self.ALL))
+        day = next(p for p in pages if p.dest == "day-2026-06-15")
+        targets = {link.target for link in day.links}
+        assert any(t.startswith("quarter-") for t in targets)
+        assert any(t.startswith("week-") for t in targets)
+
+
 class TestPageCount:
     def test_it_matches_the_enumeration(self) -> None:
         # The report needs the real count without drawing every page; the formula
         # must agree with the pages actually produced, pagination included.
         gen = CalendarGenerator()
-        for notes in (None, {"count": 10}, {"count": 200}):
-            c = cfg(notes=notes)
+        variants = (
+            {},
+            {"notes": {"count": 200}},
+            {"quarter_view": {}, "week_view": {}},
+            {"quarter_view": {}, "week_view": {}, "notes": {"count": 40}},
+        )
+        for extra in variants:
+            c = cfg(**extra)
             assert gen.page_count(c, area=AREA) == len(list(gen.pages(c, area=AREA, q=Q)))
 
 

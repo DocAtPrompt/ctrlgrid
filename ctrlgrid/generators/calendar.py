@@ -1,15 +1,16 @@
 """`calendar` — a linked, write-on planner PDF (§ 7, the document generator).
 
 The first generator that is not a blade: it owns pages and their links (see
-`ctrlgrid.document`). This module is phase 3 — the model and the dates: the YAML
-config, the deterministic date arithmetic, the name defaults and the page
-*enumeration* (the right pages, in order, with the right destination keys). The
-drawn layouts and the links between pages are phase 4; here every page carries
-only its title, so the document is navigable in structure and testable in shape.
+`ctrlgrid.document`). This module holds the config, the deterministic date
+arithmetic and the page *orchestration* — which pages exist, in what order, with
+which destination keys and links; the drawing of each page lives in
+`calendar_layout.py`.
 
-Dates come from `year` and `week_start` through the standard library's proleptic
-Gregorian calendar — deterministic, no wall-clock (§ 10.1). Names are taken from
-the definition with English defaults, strictly language-neutral (§ 7.8).
+The core views (Index, Year, Month, Day, Notes) are always produced; Quarter and
+Week are opt-in, each enabled by its own `*_view` section. Dates come from `year`
+and `week_start` through the standard library's proleptic Gregorian calendar —
+deterministic, no wall-clock (§ 10.1). Names are taken from the definition with
+English defaults, strictly language-neutral (§ 7.8).
 """
 
 from __future__ import annotations
@@ -99,6 +100,21 @@ class MonthView(Section):
     surface: Surface = "lines"
 
 
+class QuarterView(Section):
+    """The quarter pages: three mini-months each (§ 7, opt-in)."""
+
+    weekend_shade: ColorField = "#f0f2f5"
+    cell_link: Literal["day", "month", "none"] = "day"
+
+
+class WeekView(Section):
+    """The week pages: seven day sections in week-start order (§ 7, opt-in)."""
+
+    weekend_shade: ColorField = "#f0f2f5"
+    surface: Surface = "lines"
+    tasks: bool = True
+
+
 class NotesSpec(Section):
     """The note pages and their numbered index (§ 7)."""
 
@@ -118,6 +134,8 @@ class CalendarConfig(BaseModel):
     holidays: tuple[Holiday, ...] = ()
     year_view: YearView = YearView()
     month_view: MonthView = MonthView()
+    quarter_view: QuarterView | None = None
+    week_view: WeekView | None = None
     day: DaySpec | None = None
     notes: NotesSpec | None = None
 
@@ -166,6 +184,35 @@ def days_of_year(year: int) -> Iterator[datetime.date]:
 
 def day_count(year: int) -> int:
     return 366 if _calendar.isleap(year) else 365
+
+
+def _start_weekday(week_start: str) -> int:
+    """0 for Monday, 6 for Sunday — the `datetime.weekday()` index (§ 7)."""
+    return 0 if week_start == "monday" else 6
+
+
+def weeks_of_year(year: int, week_start: str) -> list[tuple[int, datetime.date]]:
+    """(week number, start date) for every week covering the year (§ 7).
+
+    Weeks are aligned to `week_start`, not ISO — ISO assumes Monday and would
+    mislabel a Sunday-start calendar. The first week starts on the `week_start`
+    on or before Jan 1, so the year's first and last weeks may reach a few days
+    outside it; those out-of-year days are shown without a link.
+    """
+    jan1 = datetime.date(year, 1, 1)
+    dec31 = datetime.date(year, 12, 31)
+    offset = (jan1.weekday() - _start_weekday(week_start)) % 7
+    first = jan1 - datetime.timedelta(days=offset)
+    count = (dec31 - first).days // 7 + 1
+    return [(i + 1, first + datetime.timedelta(days=7 * i)) for i in range(count)]
+
+
+def week_of(date: datetime.date, year: int, week_start: str) -> int:
+    """Which week number a date falls in (§ 7), aligned to `week_start`."""
+    jan1 = datetime.date(year, 1, 1)
+    offset = (jan1.weekday() - _start_weekday(week_start)) % 7
+    first = jan1 - datetime.timedelta(days=offset)
+    return (date - first).days // 7 + 1
 
 
 # ---------------------------------------------------------------- the generator
@@ -241,6 +288,10 @@ class CalendarGenerator:
         from ctrlgrid.generators import calendar_layout as layout
 
         total = 1 + 1 + 12 + day_count(cfg.year)
+        if cfg.quarter_view is not None:
+            total += 4
+        if cfg.week_view is not None:
+            total += len(weeks_of_year(cfg.year, cfg.week_start))
         if cfg.notes is not None:
             capacity = layout.notes_capacity(area.height)
             index_pages = -(-cfg.notes.count // capacity)  # ceil
@@ -256,35 +307,68 @@ class CalendarGenerator:
         months = cfg.month_names()
         weekdays = cfg.weekday_names()
         has_notes = cfg.notes is not None
+        has_quarter = cfg.quarter_view is not None
+        has_week = cfg.week_view is not None
         holidays = {h.date: h.label for h in cfg.holidays}
         all_days = list(days_of_year(cfg.year))
+        weeks = weeks_of_year(cfg.year, cfg.week_start) if has_week else []
         day_blocks = cfg.day.blocks if cfg.day is not None else (
             DayBlock(type="notes", height="rest", surface="lines"),
         )
 
-        def page() -> layout.Page:
+        def make() -> layout.Page:
             return layout.Page(area, q)
 
-        yield layout.index_page(page(), cfg, months, has_notes)
-        yield layout.year_page(page(), cfg, months)
+        def nav(month: int = 1, week_no: int = 1) -> layout.Nav:
+            return layout.Nav(
+                month=f"month-{month:02d}", quarter=f"quarter-{(month - 1) // 3 + 1}",
+                week=f"week-{week_no:02d}",
+                has_quarter=has_quarter, has_week=has_week, has_notes=has_notes,
+            )
+
+        def wk(date: datetime.date) -> int:
+            return week_of(date, cfg.year, cfg.week_start)
+
+        yield layout.index_page(make(), cfg, nav(), months)
+        yield layout.year_page(make(), cfg, nav(), months)
+
+        if has_quarter:
+            for quarter in range(1, 5):
+                prev = f"quarter-{quarter - 1}" if quarter > 1 else None
+                nxt = f"quarter-{quarter + 1}" if quarter < 4 else None
+                first = (quarter - 1) * 3 + 1
+                n = nav(first, wk(datetime.date(cfg.year, first, 1)))
+                yield layout.quarter_page(make(), cfg, n, months, weekdays, quarter, prev, nxt)
 
         for month in range(1, 13):
             prev = f"month-{month - 1:02d}" if month > 1 else None
             nxt = f"month-{month + 1:02d}" if month < 12 else None
-            yield layout.month_page(page(), cfg, months, weekdays, month, holidays, prev, nxt)
+            n = nav(month, wk(datetime.date(cfg.year, month, 1)))
+            yield layout.month_page(make(), cfg, n, months, weekdays, month, holidays, prev, nxt)
+
+        if has_week:
+            for idx, (week_no, start) in enumerate(weeks):
+                prev = f"week-{weeks[idx - 1][0]:02d}" if idx > 0 else None
+                nxt = f"week-{weeks[idx + 1][0]:02d}" if idx < len(weeks) - 1 else None
+                month = start.month if start.year == cfg.year else 1
+                yield layout.week_page(
+                    make(), cfg, nav(month, week_no), months, weekdays,
+                    week_no=week_no, start_date=start, prev=prev, nxt=nxt,
+                )
 
         last = len(all_days) - 1
         for i, date in enumerate(all_days):
             prev = f"day-{all_days[i - 1].isoformat()}" if i > 0 else None
             nxt = f"day-{all_days[i + 1].isoformat()}" if i < last else None
             yield layout.day_page(
-                page(), cfg, months, weekdays, date, day_blocks, holidays.get(date), prev, nxt
+                make(), cfg, nav(date.month, wk(date)), months, weekdays,
+                date, day_blocks, holidays.get(date), prev, nxt,
             )
 
         if has_notes:
-            yield from self._notes_pages(cfg, layout, page)
+            yield from self._notes_pages(cfg, layout, make, nav())
 
-    def _notes_pages(self, cfg, layout, page) -> Iterator[DocumentPage]:
+    def _notes_pages(self, cfg, layout, page, nav) -> Iterator[DocumentPage]:
         count = cfg.notes.count
         cap = layout.notes_capacity(page().H)
         chunks = [list(range(i + 1, min(i + cap, count) + 1)) for i in range(0, count, cap)]
@@ -297,11 +381,12 @@ class CalendarGenerator:
             prev = index_dest(page_no - 1) if page_no > 1 else None
             nxt = index_dest(page_no + 1) if page_no < total else None
             yield layout.notes_index_page(
-                page(), cfg, page_no=page_no, page_count=total, numbers=numbers, prev=prev, nxt=nxt
+                page(), cfg, nav, page_no=page_no, page_count=total,
+                numbers=numbers, prev=prev, nxt=nxt,
             )
 
         width = len(str(count))
         for i in range(1, count + 1):
             prev = f"note-{i - 1:0{width}d}" if i > 1 else None
             nxt = f"note-{i + 1:0{width}d}" if i < count else None
-            yield layout.note_page(page(), cfg, num=i, prev=prev, nxt=nxt)
+            yield layout.note_page(page(), cfg, nav, num=i, prev=prev, nxt=nxt)

@@ -809,6 +809,8 @@ holidays:
   - { date: 2026-12-25, label: Christmas }
 year_view:  { weekend_shade: "#f0f2f5", cell_link: day }   # day | month | none
 month_view: { weekend_shade: "#f0f2f5", surface: lines }
+quarter_view: { cell_link: day }          # opt-in: 4 pages of 3 mini-months
+week_view:    { surface: lines, tasks: true }   # opt-in: one page per week
 day:
   blocks:                   # an ordered list — reorder, resize, repeat
     - { type: schedule, from: 7, to: 22, height: 55%, surface: lines }
@@ -827,6 +829,12 @@ zoom — nothing scrolls or scales):
   labelled, weekends shaded.
 - **Day** — your ordered `blocks` (a timed `schedule`, a `todo` list, `notes`),
   each with a writing `surface` (`blank` / `lines` / `dots` / `grid`).
+- **Quarter** (opt-in via `quarter_view`) — four pages, each three mini-months;
+  a month name jumps to its month, a day cell to its day.
+- **Week** (opt-in via `week_view`) — one page per week (~53), seven day
+  sections in `week_start` order with a writing surface and a tasks column; each
+  date jumps to its day page. Weeks that straddle the year edge show the
+  outside days without a link.
 - **Notes** — a numbered index that links to note pages, and the note pages
   themselves. A large `count` paginates the index over several sheets.
 
@@ -841,9 +849,9 @@ always gives the same PDF. The optional header is constant on every page — set
 personalization (no page numbers). It is **PDF only**: on PNG the run is refused,
 because links and text cannot live in a PNG.
 
-Preset: `calendar-a4` (`ctrlgrid show calendar-a4`). Currently inline holidays
-only, and the Year/Month/Day/Notes core; a holiday *file* import and Quarter and
-Week views are planned.
+Preset: `calendar-a4` (`ctrlgrid show calendar-a4`), which turns on every view.
+The only thing not yet built is importing holidays from a *file* — an inline
+list works.
 
 ---
 

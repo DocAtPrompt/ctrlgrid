@@ -16,6 +16,7 @@ page bound (`notes`) the generator paginates rather than shrink (§ 8.2, § 9).
 from __future__ import annotations
 
 import datetime
+from dataclasses import dataclass
 
 from ctrlgrid.document import DocumentPage, Link
 from ctrlgrid.marks import Area, Mark, Point, Polygon, Segment, Text
@@ -133,13 +134,36 @@ class Page:
 # ------------------------------------------------------------------ nav strip
 
 
-def nav(page: Page, *, has_notes: bool, month_dest: str) -> None:
-    """The persistent strip of underlined links at the very top (§ 7)."""
+@dataclass
+class Nav:
+    """The nav strip's context for one page: which views exist and where the
+    contextual Quarter/Month/Week links jump to (§ 7)."""
+
+    month: str
+    quarter: str
+    week: str
+    has_quarter: bool = False
+    has_week: bool = False
+    has_notes: bool = False
+
+
+def nav(page: Page, n: Nav) -> None:
+    """The persistent strip of underlined links at the very top (§ 7).
+
+    Index and Year are always there; Quarter, Week and Notes appear only when
+    those views exist. Quarter/Month/Week are contextual — the current page's
+    quarter, month and week.
+    """
     size = pt(9)
-    x = 0
-    entries = [("Index", "index"), ("Year", "year"), ("Month", month_dest)]
-    if has_notes:
+    entries = [("Index", "index"), ("Year", "year")]
+    if n.has_quarter:
+        entries.append(("Quarter", n.quarter))
+    entries.append(("Month", n.month))
+    if n.has_week:
+        entries.append(("Week", n.week))
+    if n.has_notes:
         entries.append(("Notes", "notes-index"))
+    x = 0
     for label, target in entries:
         page.link_text(x, pt(1), label, target, size)
         x += page.q.text_width(label, family="sans", size=size) + pt(14)
@@ -163,14 +187,18 @@ def crumb(page: Page, *, title, prev, nxt, up=None):
 # -------------------------------------------------------------------- the pages
 
 
-def index_page(page: Page, cfg, months, has_notes: bool) -> DocumentPage:
-    nav(page, has_notes=has_notes, month_dest="month-01")
+def index_page(page: Page, cfg, n: Nav, months) -> DocumentPage:
+    nav(page, n)
     top = pt(20)
     page.text(0, top, str(cfg.year), pt(24), INK)
     top += pt(34)
     entries = [("Year", "year")]
+    if n.has_quarter:
+        entries += [(f"Q{q}", f"quarter-{q}") for q in range(1, 5)]
     entries += [(months[i], f"month-{i + 1:02d}") for i in range(12)]
-    if has_notes:
+    if n.has_week:
+        entries.append(("Weeks", "week-01"))
+    if n.has_notes:
         entries.append(("Notes", "notes-index"))
     col_w = page.W / 3
     for i, (label, target) in enumerate(entries):
@@ -179,8 +207,8 @@ def index_page(page: Page, cfg, months, has_notes: bool) -> DocumentPage:
     return page.done("index", "index", "Index")
 
 
-def year_page(page: Page, cfg, months) -> DocumentPage:
-    nav(page, has_notes=cfg.notes is not None, month_dest="month-01")
+def year_page(page: Page, cfg, n: Nav, months) -> DocumentPage:
+    nav(page, n)
     top = pt(18)
     page.text(0, top, str(cfg.year), pt(20), INK)
     top += pt(28)
@@ -228,8 +256,8 @@ def _half_table(page: Page, cfg, months, top, h, *, first_month: int) -> None:
         page.text(pt(1), round(top + row_h * d + pt(1)), str(d), pt(6.5), INK)
 
 
-def month_page(page: Page, cfg, months, weekdays, month, holidays, prev, nxt) -> DocumentPage:
-    nav(page, has_notes=cfg.notes is not None, month_dest=f"month-{month:02d}")
+def month_page(page: Page, cfg, n: Nav, months, weekdays, month, holidays, prev, nxt):
+    nav(page, n)
     ndays = _month_length(cfg.year, month)
     top = crumb(page, title=f"{months[month - 1]} {cfg.year}", prev=prev, nxt=nxt, up="year")
     avail = page.H - top - pt(2)
@@ -250,9 +278,9 @@ def month_page(page: Page, cfg, months, weekdays, month, holidays, prev, nxt) ->
     return page.done(f"month-{month:02d}", "month", f"{months[month - 1]} {cfg.year}")
 
 
-def day_page(page: Page, cfg, months, weekdays, date, blocks, holiday_label, prev, nxt):
+def day_page(page: Page, cfg, n: Nav, months, weekdays, date, blocks, holiday_label, prev, nxt):
     month = date.month
-    nav(page, has_notes=cfg.notes is not None, month_dest=f"month-{month:02d}")
+    nav(page, n)
     title = f"{weekdays[date.weekday()]} {date.day} {months[month - 1]}"
     top = crumb(page, title=title, prev=prev, nxt=nxt, up=f"month-{month:02d}")
     if holiday_label:
@@ -262,8 +290,8 @@ def day_page(page: Page, cfg, months, weekdays, date, blocks, holiday_label, pre
     return page.done(f"day-{date.isoformat()}", "day", title)
 
 
-def notes_index_page(page: Page, cfg, *, page_no, page_count, numbers, prev, nxt) -> DocumentPage:
-    nav(page, has_notes=True, month_dest="month-01")
+def notes_index_page(page: Page, cfg, n: Nav, *, page_no, page_count, numbers, prev, nxt):
+    nav(page, n)
     title = "Notes" if page_count == 1 else f"Notes {page_no} / {page_count}"
     top = crumb(page, title=title, prev=prev, nxt=nxt)
     avail = page.H - top - pt(2)
@@ -279,12 +307,89 @@ def notes_index_page(page: Page, cfg, *, page_no, page_count, numbers, prev, nxt
     return page.done(dest, "notes_index", title)
 
 
-def note_page(page: Page, cfg, *, num, prev, nxt) -> DocumentPage:
+def note_page(page: Page, cfg, n: Nav, *, num, prev, nxt) -> DocumentPage:
     width = len(str(cfg.notes.count))
-    nav(page, has_notes=True, month_dest="month-01")
+    nav(page, n)
     top = crumb(page, title=f"Note {num}", prev=prev, nxt=nxt, up="notes-index")
     page.surface(0, top, page.W, page.H - top - pt(2), cfg.notes.surface)
     return page.done(f"note-{num:0{width}d}", "notes", f"Note {num}")
+
+
+def quarter_page(page: Page, cfg, n: Nav, months, weekdays, quarter, prev, nxt) -> DocumentPage:
+    nav(page, n)
+    top = crumb(page, title=f"Q{quarter} · {cfg.year}", prev=prev, nxt=nxt, up="year")
+    col_w = (page.W - mm(8)) / 3
+    for i in range(3):
+        month = (quarter - 1) * 3 + i + 1
+        _mini_month(page, cfg, months, weekdays, month, i * (col_w + mm(4)), top, col_w)
+    return page.done(f"quarter-{quarter}", "quarter", f"Q{quarter} · {cfg.year}")
+
+
+def _start_weekday(week_start: str) -> int:
+    return 0 if week_start == "monday" else 6
+
+
+def _mini_month(page: Page, cfg, months, weekdays, month, x, top, w) -> None:
+    start = _start_weekday(cfg.week_start)
+    shade = cfg.quarter_view.weekend_shade
+    page.link_text(round(x), round(top), months[month - 1], f"month-{month:02d}", pt(10))
+    cw = w / 7
+    hy = top + pt(14)
+    for c in range(7):
+        page.text(round(x + c * cw + cw / 2), round(hy), weekdays[(start + c) % 7][:2], pt(6),
+                  GUIDE, "center")
+    row_h = mm(6)
+    grid_top = hy + pt(8)
+    ndays = _month_length(cfg.year, month)
+    for day in range(1, ndays + 1):
+        date = datetime.date(cfg.year, month, day)
+        col = (date.weekday() - start) % 7
+        row = (day - 1 + (datetime.date(cfg.year, month, 1).weekday() - start) % 7) // 7
+        cx = x + col * cw
+        cy = grid_top + row * row_h
+        if date.weekday() >= 5 and shade:
+            page.box(cx, cy, cw, row_h, 0.0, shade, shade)
+        page.box(cx, cy, cw, row_h, 0.3, GUIDE)
+        page.text(round(cx + pt(1)), round(cy + pt(1)), str(day), pt(6), INK)
+        if cfg.quarter_view.cell_link == "day":
+            page.links.append(
+                Link(Point(round(cx), page._y(cy + row_h)), Point(round(cx + cw), page._y(cy)),
+                     f"day-{date.isoformat()}")
+            )
+
+
+def week_page(page: Page, cfg, n: Nav, months, weekdays, *, week_no, start_date, prev, nxt):
+    import datetime as _dt
+
+    nav(page, n)
+    end = start_date + _dt.timedelta(days=6)
+    label = f"Week {week_no} · {start_date.day} {months[start_date.month - 1][:3]}" \
+            f" – {end.day} {months[end.month - 1][:3]}"
+    top = crumb(page, title=label, prev=prev, nxt=nxt)
+    has_tasks = cfg.week_view.tasks
+    body = page.H - top - pt(2)
+    row_h = body / 7
+    right = page.W - (mm(48) if has_tasks else 0)
+    for i in range(7):
+        date = start_date + _dt.timedelta(days=i)
+        rtop = top + i * row_h
+        weekend = date.weekday() >= 5
+        if weekend and cfg.week_view.weekend_shade:
+            page.box(0, rtop, right, row_h, 0.0,
+                     cfg.week_view.weekend_shade, cfg.week_view.weekend_shade)
+        page.hline(0, right, rtop, 0.2, GUIDE)
+        head = f"{weekdays[date.weekday()]} {date.day}"
+        if date.year == cfg.year:
+            page.link_text(pt(1), round(rtop + pt(2)), head, f"day-{date.isoformat()}", pt(10))
+        else:
+            page.text(pt(1), round(rtop + pt(2)), head, pt(9), GUIDE)  # outside the year, no link
+        page.surface(mm(2), rtop + pt(14), right - mm(4), row_h - pt(16), cfg.week_view.surface)
+    page.hline(0, right, top + 7 * row_h, 0.2, GUIDE)
+    if has_tasks:
+        page.vline(right, top, top + 7 * row_h, 0.3, GUIDE)
+        page.text(right + pt(3), round(top + pt(2)), "tasks / notes", pt(8), LINK)
+        page.surface(right, top + pt(12), page.W - right, 7 * row_h - pt(12), "lines")
+    return page.done(f"week-{week_no:02d}", "week", label)
 
 
 # ------------------------------------------------------------------- day blocks

@@ -701,9 +701,12 @@ bend the blade model, four calls were made:
   threaded through `resolve_placeholders`/`layout_band` as an `extra` map so
   blades are unaffected.
 
-Deferred, and each cheap: holidays from a *file* (inline lists work; a file
-needs a def-relative path in the blade's own validation, unlike the handle's
-images), and the Quarter and Week views (a second pass on the same architecture).
+The Quarter and Week views were the second pass on the same architecture, and
+built: separately opt-in (`quarter_view` / `week_view`), weeks aligned to
+`week_start` (not ISO, which assumes Monday), out-of-year edge days shown without
+a link. The one thing still deferred is holidays from a *file* — inline lists
+work; a file needs a def-relative path resolved in the blade's own validation,
+unlike the handle's images.
 
 ---
 

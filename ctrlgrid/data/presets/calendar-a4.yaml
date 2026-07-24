@@ -52,6 +52,11 @@ holidays:
 year_view: { weekend_shade: "#f0f2f5", cell_link: day }
 # The month view: a list of every day; the writing surface next to each date.
 month_view: { weekend_shade: "#f0f2f5", surface: lines }
+# Quarter and week are opt-in — drop either section to leave those pages out.
+# Quarter: four pages of three mini-months. Week: one page per week (~53), seven
+# day sections in week_start order plus a tasks/notes column.
+quarter_view: { cell_link: day }
+week_view: { surface: lines, tasks: true }
 
 # The day page — an ordered list of blocks. Reorder, resize, drop or repeat.
 day:
