@@ -252,7 +252,7 @@ to answer, it prints its help instead.
 
 ## Documentation
 
-- [`handbook.md`](handbook.md) — the user handbook: install, the page model,
+- [`HANDBOOK.md`](HANDBOOK.md) — the user handbook: install, the page model,
   every generator and option, with worked examples. **Start here.**
 - [`docs/pflichtenheft-vorlagengenerator.md`](docs/pflichtenheft-vorlagengenerator.md) —
   the full specification, in German. Records not just what the tool does but why.
