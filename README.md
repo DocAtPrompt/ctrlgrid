@@ -42,8 +42,7 @@ e-ink tablets.
 >
 > Not yet: `--skip-unsupported`.
 >
-> **Not on PyPI yet**, so the `uvx`/`pip` lines below do not work until the
-> first release is published.
+> **Not on PyPI yet** — install straight from this repository (see below).
 
 ## The one promise
 
@@ -80,12 +79,35 @@ ctrlgrid
 
 ## Installation
 
+Not on PyPI yet, so install straight from this repository. With
+[uv](https://docs.astral.sh/uv/):
+
 ```bash
-uvx ctrlgrid --help          # no installation
-pip install ctrlgrid         # or the usual way
+# run it once, without installing anything
+uvx --from git+https://github.com/DocAtPrompt/ctrlgrid.git ctrlgrid --help
+
+# or install it as a tool on your PATH
+uv tool install git+https://github.com/DocAtPrompt/ctrlgrid.git
+ctrlgrid --help
 ```
 
-There are no double-clickable installers, and none are planned.
+Or with pip, into an environment of your choosing:
+
+```bash
+pip install git+https://github.com/DocAtPrompt/ctrlgrid.git
+```
+
+To work on it, clone and let uv build the environment:
+
+```bash
+git clone https://github.com/DocAtPrompt/ctrlgrid.git
+cd ctrlgrid
+uv sync --extra dev
+uv run ctrlgrid --help
+```
+
+Python 3.11 or newer. There are no double-clickable installers, and none are
+planned.
 
 ## What it generates
 
