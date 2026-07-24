@@ -18,6 +18,7 @@ from pydantic import BaseModel
 
 from ctrlgrid.axes import AxisPeriod
 from ctrlgrid.errors import DefinitionError
+from ctrlgrid.generators.calendar import CalendarGenerator
 from ctrlgrid.generators.dots import DotsGenerator
 from ctrlgrid.generators.form import FormGenerator
 from ctrlgrid.generators.grid import GridGenerator
@@ -94,6 +95,7 @@ class Generator(Protocol):
 REGISTRY: dict[str, Generator] = {
     generator.name: generator
     for generator in (
+        CalendarGenerator(),
         DotsGenerator(),
         FormGenerator(),
         GridGenerator(),
