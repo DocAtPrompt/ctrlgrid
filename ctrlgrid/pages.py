@@ -562,9 +562,13 @@ def preflight(
     """
     from ctrlgrid import generators
     from ctrlgrid.cover import cover_marks
+    from ctrlgrid.document import is_document_generator
     from ctrlgrid.frame import layout_band
 
     blade = generators.get(document.generator)
+    if is_document_generator(blade):
+        return _document_preflight(document, blade, q)
+
     _refuse_snap_where_it_has_no_meaning(document, blade)
     plan = sheet_plan(document)
     _refuse_mirroring_that_cannot_line_up(document, plan)
@@ -806,6 +810,104 @@ def _refuse_snap_where_it_has_no_meaning(document: Document, blade: object) -> N
             )
 
 
+def _attachment(document: Document) -> Attachment | None:
+    """The embedded-def attachment, or None (§ 8.8). Shared by both write paths."""
+    if not document.pages.embed_def:
+        return None
+    # The exact bytes the user wrote, so a sheet reproduces itself years later.
+    return Attachment(
+        filename=_def_filename(document.source),
+        data=document.source_text.encode("utf-8"),
+        description="ctrlgrid definition — this document's own source (§ 8.8)",
+    )
+
+
+def _document_preflight(
+    document: Document, blade: object, q: WriterQuery
+) -> tuple[Geometry, list[PageContext], list[list[Text]], list[Mark]]:
+    """Measure and validate a document generator (§ 7), the calendar's path.
+
+    None of the blade-specific machinery applies — no snap, no sheet plan, no
+    frames, no cover: a document owns its own pages. It still measures the
+    pattern area every page is handed, runs the generator's own `check`, and
+    refuses on a writer that cannot carry its links or text (§ 10.2). Returns the
+    same tuple shape as `preflight` so `check` and `build` share one entry point;
+    the three page-loop lists are empty because a document does not use them.
+    """
+    probe = _metrics_oracle(q)
+    geometry = Geometry.of(
+        document.sheet,
+        header=document.header,
+        footer=document.footer,
+        pattern=document.pattern,
+        blade_axes=document.axes,
+        density=document.device.density if document.device else None,
+    )
+    blade.check(document.config, area=geometry.area, q=probe)
+    _refuse_writer_cannot_render_document(document, blade, geometry, q, probe)
+    return geometry, [], [], []
+
+
+def _refuse_writer_cannot_render_document(
+    document: Document, blade: object, geometry: Geometry, writer: WriterQuery, probe: WriterQuery
+) -> None:
+    """§ 10.2 for a document: refuse before page one what the writer cannot do.
+
+    A document navigates by links, so it always needs `link`; the first page's
+    marks say what else (text, above all). The PNG writer has neither, so a
+    calendar to PNG is refused by name, with the way out — the same rule that
+    refuses text on PNG for a blade.
+    """
+    caps = writer.capabilities()
+    if caps >= _ALL_CAPABILITIES:
+        return
+    needed = {"link"}
+    first = next(iter(blade.pages(document.config, area=geometry.area, q=probe)), None)
+    if first is not None:
+        for mark in first.marks:
+            needed.add(_MARK_CAPABILITY.get(type(mark), "vector"))
+    missing = needed - caps
+    if not missing:
+        return
+    raise DefinitionError(
+        f"this run needs {', '.join(sorted(missing))} and the PNG writer does not "
+        "support it — a calendar's links and text need a PDF; output PDF instead (§ 10.2)"
+    )
+
+
+def _build_document(
+    document: Document, blade: object, writer: Writer, geometry: Geometry
+) -> Geometry:
+    """Write a document generator's pages (§ 7). Nothing here may raise on user
+    input — the pre-flight has already measured and refused (§ 12 point 13).
+
+    Each page's marks and links come in area-local coordinates (§ 3.3); the
+    handle translates both onto the sheet by the one origin the geometry holds,
+    exactly as the blade path does. The destination is defined before the marks,
+    so links from other pages resolve to it.
+    """
+    ox, oy = geometry.origin.x, geometry.origin.y
+    writer.begin_document(
+        DocumentMeta(title=f"ctrlgrid {document.source}", attachment=_attachment(document))
+    )
+    for index, page in enumerate(blade.pages(document.config, area=geometry.area, q=writer)):
+        writer.begin_page(document.sheet.width, document.sheet.height)
+        writer.define_dest(page.dest)
+        for mark in page.marks:
+            writer.draw(translate(mark, dx=ox, dy=oy))
+        for link in page.links:
+            writer.link(
+                Point(link.lower_left.x + ox, link.lower_left.y + oy),
+                Point(link.upper_right.x + ox, link.upper_right.y + oy),
+                link.target,
+            )
+        if page.title:
+            writer.outline(page.title, index=index)
+        writer.end_page()
+    writer.end_document()
+    return geometry
+
+
 def build(document: Document, writer: Writer) -> Geometry:
     """The page loop (§ 3.1): measure everything, then write everything.
 
@@ -819,23 +921,21 @@ def build(document: Document, writer: Writer) -> Geometry:
     settled on — including any notice the settings earned (§ 8.3).
     """
     from ctrlgrid import generators
+    from ctrlgrid.document import is_document_generator
 
     geometry, contexts, frames, cover = preflight(document, writer)
     blade = generators.get(document.generator)
+
+    # § 7: a document generator owns its own heterogeneous, linked pages, so it
+    # takes a separate write path — no cover, no frames, no imposition, no cycle.
+    if is_document_generator(blade):
+        return _build_document(document, blade, writer, geometry)
+
     plan = sheet_plan(document)
 
     # Pass two — write. Nothing below this line may raise on user input.
-    attachment = None
-    if document.pages.embed_def:
-        # § 8.8: the document carries its own source. The exact bytes the user
-        # wrote, so a sheet reproduces itself years later without the def.
-        attachment = Attachment(
-            filename=_def_filename(document.source),
-            data=document.source_text.encode("utf-8"),
-            description="ctrlgrid definition — this document's own source (§ 8.8)",
-        )
     writer.begin_document(
-        DocumentMeta(title=f"ctrlgrid {document.source}", attachment=attachment)
+        DocumentMeta(title=f"ctrlgrid {document.source}", attachment=_attachment(document))
     )
 
     # § 8.8: an additional first page, outside the numbering and outside the
