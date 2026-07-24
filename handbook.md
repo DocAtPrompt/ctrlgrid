@@ -10,9 +10,9 @@ no "fit to page", no stretching a grid so it comes out even. If a template does
 not fit a page, Ctrl+Grid tells you — it never silently shrinks it.
 
 This handbook is the user-facing manual. For *why* the tool is built the way it
-is, see the specification, [`pflichtenheft-vorlagengenerator.md`](pflichtenheft-vorlagengenerator.md)
+is, see the specification, [`pflichtenheft-vorlagengenerator.md`](docs/pflichtenheft-vorlagengenerator.md)
 (German); for the decisions taken where the spec was silent, see
-[`implementation-decisions.md`](implementation-decisions.md).
+[`implementation-decisions.md`](docs/implementation-decisions.md).
 
 ---
 
@@ -488,7 +488,7 @@ the attachment silently.
 
 Every generator fills the pattern area. Colours are `#rrggbb`. Stroke widths are
 lengths (the defaults below are the shipped values). Each has a worked example in
-[`../examples/`](../examples/) and, for most, a preset (run `ctrlgrid show <name>`).
+[`../examples/`](examples/) and, for most, a preset (run `ctrlgrid show <name>`).
 
 ### `lines` — ruled, squared, isometric, log
 
@@ -530,7 +530,7 @@ families:
   - { direction: horizontal, base_spacing: 20mm, law: log10, decades: 3 }
 ```
 
-Example: [`01-lines-squared.yaml`](../examples/01-lines-squared.yaml). Preset:
+Example: [`01-lines-squared.yaml`](examples/01-lines-squared.yaml). Preset:
 `millimeter-a4`.
 
 ### `dots` — dot grids
@@ -555,7 +555,7 @@ color:                        # a single colour, or coloured by an axis:
 `combine: max` gives the full cross grid; `intersection_only` keeps only dots
 where both cycles emphasise. A colour cycle must name its `axis`.
 
-Example: [`02-dots-grid.yaml`](../examples/02-dots-grid.yaml). Preset: `dots-5mm`.
+Example: [`02-dots-grid.yaml`](examples/02-dots-grid.yaml). Preset: `dots-5mm`.
 
 ### `grid` — labelled cell blocks
 
@@ -578,7 +578,7 @@ font: { size: 9pt }
 
 Label patterns: `n` → 1, 2, 3…; `a`/`A` → a, b, c / A, B, C; or an explicit list.
 
-Example: [`03-grid-battleship.yaml`](../examples/03-grid-battleship.yaml).
+Example: [`03-grid-battleship.yaml`](examples/03-grid-battleship.yaml).
 Preset: `grid-a4`.
 
 ### `polar` — targets, score discs, polar paper
@@ -613,7 +613,7 @@ of the centre (like a bullseye with an open middle). Ring and spoke families use
 the same cycle model as `lines`, so `radius`/`angle` and `weight` follow
 repeating lists — every fifth ring heavier, and so on.
 
-Example: [`06-polar-target.yaml`](../examples/06-polar-target.yaml). Preset:
+Example: [`06-polar-target.yaml`](examples/06-polar-target.yaml). Preset:
 `polar-a4`.
 
 ### `tiling` — hexagons, triangles, rhombi
@@ -633,7 +633,7 @@ labels: none                   # none | coordinates
 font: { size: 7pt }
 ```
 
-Example: [`07-tiling-hex.yaml`](../examples/07-tiling-hex.yaml). Preset:
+Example: [`07-tiling-hex.yaml`](examples/07-tiling-hex.yaml). Preset:
 `tiling-hex-a4`.
 
 ### `maze` — rectangular mazes
@@ -659,7 +659,7 @@ solution: none                 # none | overlay | separate_page | back_mirrored
 `back_mirrored` puts it on the back for duplex printing. A maze item can span
 several sheets — the handle does the doubling and numbering.
 
-Example: [`05-maze-booklet.yaml`](../examples/05-maze-booklet.yaml) (a multi-page
+Example: [`05-maze-booklet.yaml`](examples/05-maze-booklet.yaml) (a multi-page
 booklet). Preset: `maze-medium`.
 
 ### `form` — fillable forms
@@ -689,7 +689,7 @@ percentage or `rest`; a column's `width` is a percentage of the row. A field's
 `choice` (named `options`). Labels like "Ja"/"Nein" come from your file, never
 the tool — Ctrl+Grid adds no language of its own.
 
-Example: [`08-form-weekly.yaml`](../examples/08-form-weekly.yaml). Preset:
+Example: [`08-form-weekly.yaml`](examples/08-form-weekly.yaml). Preset:
 `phone-log-a5`.
 
 ### `staves` — music and tab
@@ -709,7 +709,7 @@ clef: treble                   # none | treble | bass | alto | tenor
 clef_indent: 3mm
 ```
 
-Example: [`04-staves-treble.yaml`](../examples/04-staves-treble.yaml). Preset:
+Example: [`04-staves-treble.yaml`](examples/04-staves-treble.yaml). Preset:
 `staves-treble-a4`.
 
 ### `perspective` — drawing grids
@@ -742,7 +742,7 @@ A vanishing point's `at` is a point in area fractions (0 = left/bottom edge,
 vanishing points usually sit. An optional `base` (`top`/`bottom`/`left`/`right`)
 picks which edge is divided into the fan. Rays are clipped to the pattern area.
 Example:
-[`09-perspective-2pt.yaml`](../examples/09-perspective-2pt.yaml). Preset:
+[`09-perspective-2pt.yaml`](examples/09-perspective-2pt.yaml). Preset:
 `perspective-2pt-a4`.
 
 ### `mandala` — rotationally symmetric templates
@@ -787,8 +787,8 @@ rosette:
   - { at: 0.5, radius: 0.16, mirror: true }
 ```
 
-Examples: [`10-mandala.yaml`](../examples/10-mandala.yaml) and
-[`10b-mandala-scallops.yaml`](../examples/10b-mandala-scallops.yaml). Preset:
+Examples: [`10-mandala.yaml`](examples/10-mandala.yaml) and
+[`10b-mandala-scallops.yaml`](examples/10b-mandala-scallops.yaml). Preset:
 `mandala-a4`.
 
 ---
@@ -924,7 +924,7 @@ The whole point is scale, so a printer that rescales defeats it. Two habits:
    fine; on an e-ink screen it may vanish — the media check warns. Without a font
    file, `ä ö ü ß é à ñ ç` work but `ł ğ ő` do not; name a font file for those.
 
-The example gallery in [`../examples/`](../examples/) shows one rendered sheet per
+The example gallery in [`../examples/`](examples/) shows one rendered sheet per
 generator, each with its definition and PDF.
 
 ---
