@@ -21,14 +21,15 @@ devices:
     physical: { x: 179.7mm, y: 239.6mm }
     density: 229dpi
     diagonal: 11.8in
-    color: grayscale
+    color: color
     margin: 0mm
     quirks: []
-    source: "owner-verified — a PDF built to these dimensions fits the device exactly"
+    source: "owner-verified — dimensions and colour confirmed on the device"
     verified: 2026-07
     # Internally consistent: 1620/229 = 7.07in, 2160/229 = 9.43in,
     # diagonal 11.79in (advertised 11.8), aspect ratio exactly 3:4.
-    # Open: whether this should be profiled as a colour device (§ 15, item 1).
+    # Colour: owner-confirmed a colour device (§ 15 item 1, resolved), so no
+    # grayscale media findings — a coloured line stays coloured.
 
   - id: remarkable-2
     name: "reMarkable 2"

@@ -35,6 +35,9 @@ def findings(definition: str) -> list[str]:
 
 
 DEVICE = "version: 1\npage:\n  device: remarkable-paper-pro\n"
+# The Paper Pro is a colour device (owner-confirmed, § 15 item 1), so the
+# grayscale colour findings are tested against the rM2, which is grayscale.
+GRAY = "version: 1\npage:\n  device: remarkable-2\n"
 PAPER = "version: 1\npage:\n  format: a4\n"
 
 
@@ -85,7 +88,7 @@ class TestResolutionFindings:
 class TestColourFindings:
     def test_colour_on_a_grayscale_device_names_the_grey(self) -> None:
         notes = findings(
-            DEVICE + "generator: lines\nfamilies:\n"
+            GRAY + "generator: lines\nfamilies:\n"
             "  - {direction: horizontal, base_spacing: 5mm, base_weight: 0.6pt, "
             "color: '#cc0000'}\n"
         )
@@ -95,7 +98,7 @@ class TestColourFindings:
         # § 12.1's insidious case: #7799bb and #4466aa are a clear difference in
         # colour and nearly the same grey — the emphasis vanishes.
         notes = findings(
-            DEVICE + "generator: lines\nfamilies:\n"
+            GRAY + "generator: lines\nfamilies:\n"
             "  - direction: horizontal\n    base_spacing: 5mm\n    base_weight: 0.6pt\n"
             "    color: ['#7799bb', '#7799bb', '#7799bb', '#7799bb', '#4466aa']\n"
         )
@@ -104,11 +107,21 @@ class TestColourFindings:
 
     def test_a_grayscale_definition_says_nothing_about_colour(self) -> None:
         notes = findings(
-            DEVICE + "generator: lines\nfamilies:\n"
+            GRAY + "generator: lines\nfamilies:\n"
             "  - {direction: horizontal, base_spacing: 5mm, base_weight: 0.6pt, "
             "color: '#000000'}\n"
         )
         assert not any("grey" in note.lower() for note in notes)
+
+    def test_a_colour_device_says_nothing_about_grey(self) -> None:
+        # The Paper Pro is a colour device (owner-confirmed, § 15 item 1): a red
+        # line stays red, so there is no grey finding — unlike on the rM2.
+        notes = findings(
+            DEVICE + "generator: lines\nfamilies:\n"
+            "  - {direction: horizontal, base_spacing: 5mm, base_weight: 0.6pt, "
+            "color: '#cc0000'}\n"
+        )
+        assert not any("grey" in note.lower() or "gray" in note.lower() for note in notes)
 
 
 class TestPaperUsesAssumedDpi:
@@ -131,7 +144,7 @@ class TestPaperUsesAssumedDpi:
 class TestStrict:
     def test_strict_turns_a_warning_into_an_error(self) -> None:
         definition = (
-            DEVICE + "generator: lines\nfamilies:\n"
+            GRAY + "generator: lines\nfamilies:\n"
             "  - {direction: horizontal, base_spacing: 5mm, base_weight: 0.6pt, "
             "color: '#cc0000'}\n"
         )

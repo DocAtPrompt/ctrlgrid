@@ -87,9 +87,10 @@ and a PNG preview, guarded by `test_every_example_validates`.
   dead-row example, but no shipped profile is a Boox and inventing a dead-row
   pattern for a device nobody here can test is the guessed number § 9.2 warns
   against. Modelled and carried, waiting for a verified contribution.
-- Two of § 15's open questions are still device figures nobody has verified —
-  the rM2 numbers and whether the Paper Pro is a colour device — and § 9.2 is
-  explicit that a wrong number there is worse than no profile at all.
+- One § 15 device figure is still unverified — the **rM2 numbers**, which are
+  only source-consistent — and § 9.2 is explicit that a wrong number there is
+  worse than no profile at all. (The Paper Pro is now fully settled: dimensions
+  *and* colour owner-confirmed, `color: color` since 2026-07.)
 
 The **general relative measure** (§ 8.11) — the other M5 edge the handovers kept
 naming — is now **built**: `%w`/`%h`/`%s` (width, height, shorter side of the
@@ -296,10 +297,10 @@ embeds the def as a PDF attachment (§ 8.8); only the original *suspicion* it
 carried (how viewers and sync services treat attachments) is left, and that is
 for practice to answer, not the code.
 
-Two of the rest need a device or a source rather than a decision (reMarkable 2
-figures, whether the Paper Pro counts as a colour device). If you are tempted to
-guess at a number, don't — that is exactly the failure mode `source`/`verified`
-exists to prevent. The seventh — the `staves` clef — is answered in § 15.3
+One of the rest still needs a device or a source rather than a decision — the
+reMarkable 2 figures. (The Paper Pro colour question is now resolved: owner-
+confirmed a colour device, § 9.2.) If you are tempted to guess at a number,
+don't — that is exactly the failure mode `source`/`verified` exists to prevent. The seventh — the `staves` clef — is answered in § 15.3
 (embedded music font, built in M9), and it settled part of open question 2: for
 the music case, a font *is* shipped. What remains are genuine
 *decide-after-experience* calls, not gaps: whether a font must be shipped for

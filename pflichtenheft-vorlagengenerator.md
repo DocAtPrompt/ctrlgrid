@@ -1624,10 +1624,10 @@ devices:
     physical: { x: 179.7mm, y: 239.6mm }  # aus Pixeln und Dichte gerechnet
     density: 229dpi
     diagonal: 11.8in
-    color: grayscale         # zu prüfen, siehe unten
+    color: color             # am Gerät bestätigt (Farbgerät), § 15 Punkt 1
     margin: 0mm              # E-Ink hat keinen unbedruckbaren Rand (§ 8.1)
     quirks: []               # gerätespezifische Eigenheiten, siehe unten
-    source: "owner-verified — PDF mit diesen Maßen am Gerät geprüft"
+    source: "owner-verified — Maße und Farbe am Gerät bestätigt"
     verified: 2026-07
 
   - id: remarkable-2
@@ -2282,9 +2282,10 @@ Rangordnung CLI über Def (§ 11).
 
 Bewusst noch offen:
 
-1. **reMarkable:** Paper Pro ist geklärt (1620 × 2160 px, 229 dpi, am Gerät
-   geprüft). Offen bleiben: ob der Paper Pro als **Farbgerät** zu führen ist,
-   und die **rM2-Zahlen**, die nur quellenkonsistent sind (§ 9.2).
+1. **reMarkable:** Paper Pro ist vollständig geklärt — 1620 × 2160 px, 229 dpi,
+   und **als Farbgerät geführt** (beides am Gerät bestätigt, 2026-07, § 9.2).
+   Offen bleiben nur noch die **rM2-Zahlen**, die weiterhin nur
+   quellenkonsistent und entsprechend markiert sind (§ 9.2).
 2. **Ob doch eine Schrift mitgeliefert werden muss.** Stufe 1 (§ 10.3) deckt nur
    Latin-1 ab. Zeigt sich, dass Namen mit `ł`, `ğ` oder `ő` häufig genug sind,
    um Stufe 2 zur Pflicht zu machen, wäre eine mitgelieferte OFL-Schrift der
