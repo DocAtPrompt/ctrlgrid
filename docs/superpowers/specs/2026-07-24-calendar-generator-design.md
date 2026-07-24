@@ -108,9 +108,14 @@ content ignores them.
 | **Index** | the hub: underlined `Year`, `Jan … Dec`, `Notes` | → year, each month, notes-index |
 | **Year** | two half-year **tables** (H1 Jan–Jun, H2 Jul–Dec), each 6 month-columns × 31 day-rows, weekends shaded, short months' surplus rows greyed | month header → month; day cell → day (`year_view.cell_link`) |
 | **Month** | a **vertical list of every day**, one row each: an underlined date (`Mon 5`) on the left → its day page, a writing line to the right; weekends shaded, holidays labelled | date → day; ‹ › prev/next month; header → year |
-| **Day** | configurable blocks top-to-bottom (see §6): optional schedule (hour rows), optional to-do, optional notes; each block's writing surface selectable | ‹ › prev/next day; header → month |
-| **Notes-index** | **numbered rows** 1…N; the underlined number → that note page; you write the title on the line | number → note page |
-| **Notes** | a writing page (lines/dots/blank) | ‹ › prev/next; → notes-index |
+| **Day** | a fully individual **ordered block list** (§6): each block a type (`schedule` hour rows / `todo` / `notes`), a height, and a writing surface — reorderable, resizable, repeatable. This is where the most work happens, so it is the most configurable page. | ‹ › prev/next day; header → month |
+| **Notes-index** | **numbered rows**; the underlined number → that note page; you write the title on the line. **Paginates**: if `notes.count` exceeds what one page holds, several index pages, each one page, ‹ › linked | number → note page; ‹ › prev/next index |
+| **Notes** | a writing page in the chosen **surface** (blank / lines / dots / grid) | ‹ › prev/next; → notes-index |
+
+**Surfaces.** A shared `surface` value — `blank`, `lines`, `dots` or `grid`
+(squared) — is used by note pages, day blocks and the month writing area. The
+calendar draws each itself, simply (a few Segments or Dots), so it stays a
+self-contained generator.
 
 Page count for a year: 1 + 1 + 12 + 365/366 + 1 + N ≈ 380 + N.
 
@@ -145,14 +150,17 @@ holidays:                   # an inline list …
 # holidays: holidays-2026.yaml    # … or a file path with the same shape
 
 year_view:  { weekend_shade: "#f0f2f5", cell_link: day }   # day | month | none
-month_view: { weekend_shade: "#f0f2f5", surface: lines }   # lines | dots | blank
+month_view: { weekend_shade: "#f0f2f5", surface: lines }   # blank | lines | dots | grid
 
-day:                        # every block optional; omit = not drawn
-  schedule: { from: 7, to: 22, surface: lines }
-  todo:     { rows: 8 }
-  notes:    { surface: lines }
+day:                        # an ordered block list — reorder, resize, repeat
+  blocks:
+    - { type: schedule, from: 7, to: 22, height: 55%, surface: lines }
+    - { type: todo,     rows: 8,          height: 20% }
+    - { type: notes,    height: rest,     surface: grid }
 
-notes: { count: 20, surface: lines }       # a numbered index page + N note pages
+notes:                      # a numbered index (paginated) + N note pages
+  count: 40
+  surface: dots             # blank | lines | dots | grid
 ```
 
 `{year}` is a new header placeholder the calendar supplies (alongside the
@@ -175,12 +183,14 @@ German user lists German names once.
 
 ## 9. Fit-or-refuse
 
-Each page sizes its rows/columns to fill the pattern area. If the content cannot
-fit at a sensible minimum (e.g. `notes.count` so high the numbered rows fall
-below a readable minimum height, or a day `schedule` hour-range too tall), the
-run is **refused in the pre-flight**, naming what does not fit and by how much —
-never scaled, never scrolled (§ 8.2, § 12 point 13). The reader zooms for detail;
-the geometry stays true.
+Each page sizes its rows/columns to fill the pattern area. Where a set has no
+natural page bound it **paginates** rather than shrinks: `notes.count` fills as
+many one-page numbered index sheets as it needs (each ‹ › linked), so a large
+count is never refused. Where a set is bound to a single page — a `day`'s block
+list, a `month`'s day rows — and it cannot fit at a sensible minimum row height,
+the run is **refused in the pre-flight**, naming what does not fit and by how
+much: never scaled, never scrolled (§ 8.2, § 12 point 13). The reader zooms for
+detail; the geometry stays true.
 
 ## 10. Fonts
 
@@ -222,10 +232,11 @@ Then, as a separate design/effort on the same architecture: Quarter and Week.
 
 ## 13. Open risks
 
-- **reMarkable link fidelity** — internal GoTo links work in synced PDFs, but the
-  exact tap target and zoom behaviour should be checked on a real device once
-  phase 1–2 produce a linked fixture. (Manufacturer-agnostic PDF links; standard
-  and widely used by planner templates.)
+- **reMarkable link fidelity** — *confirmed working:* the user has navigated a
+  hand-built linked PDF on the device (it was only too tedious to make by hand —
+  which is exactly what this feature automates). So internal GoTo links are a
+  solved problem here; a phase 1–2 fixture is still worth a look, but this is no
+  longer an open risk.
 - **Byte size** — ~380 pages with many annotations each. Underlined-text links
   and reportlab's compression keep it reasonable, but the size should be measured
   and reported, not assumed.
