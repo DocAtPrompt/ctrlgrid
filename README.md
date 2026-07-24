@@ -119,16 +119,16 @@ planned.
 
 | Generator | Produces |
 |---|---|
-| `lines` | squared, ruled, isometric, calligraphy, Cornell, log/semi-log — **works today** |
-| `dots` | dot grids with emphasised rows and columns — **works today** |
-| `staves` | music staves and guitar tab, with treble/bass/alto/tenor clefs — **works today** |
-| `grid` | labelled cell blocks — battleship, score sheets — **works today** |
-| `maze` | rectangular mazes, optionally with solutions — **works today** |
-| `polar` | targets, score discs, polar paper — **works today** |
-| `tiling` | hexagons, triangles, rhombi — including colouring patterns — **works today** |
-| `form` | fillable forms: phone logs, checklists, handover sheets — **works today** |
-| `perspective` | one-, two- and three-point vanishing-point grids — **works today** |
-| `mandala` | rotationally symmetric templates: rings, rosettes, star polygons — **works today** |
+| `lines` | squared, ruled, isometric, calligraphy, Cornell, log/semi-log |
+| `dots` | dot grids with emphasised rows and columns |
+| `staves` | music staves and guitar tab, with treble/bass/alto/tenor clefs |
+| `grid` | labelled cell blocks — battleship, score sheets |
+| `maze` | rectangular mazes, optionally with solutions |
+| `polar` | targets, score discs, polar paper |
+| `tiling` | hexagons, triangles, rhombi — including colouring patterns |
+| `form` | fillable forms: phone logs, checklists, handover sheets |
+| `perspective` | one-, two- and three-point vanishing-point grids |
+| `mandala` | rotationally symmetric templates: rings, rosettes, star polygons |
 
 The interesting part is the **cycle model**: spacing, stroke weight, size, dash
 pattern and colour each follow their own repeating list, and the lists may have
