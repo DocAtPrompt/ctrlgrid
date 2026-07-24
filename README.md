@@ -1,5 +1,9 @@
 # Ctrl+Grid
 
+[![CI](https://github.com/DocAtPrompt/ctrlgrid/actions/workflows/ci.yml/badge.svg)](https://github.com/DocAtPrompt/ctrlgrid/actions/workflows/ci.yml)
+
+**Repository:** <https://github.com/DocAtPrompt/ctrlgrid>
+
 Generate **dimensionally accurate** PDF templates from a small definition file:
 grid paper, ruled paper, dot grids, staff paper, mazes, polar targets, tilings,
 fillable forms, perspective grids and mandalas — for paper formats **and** for
