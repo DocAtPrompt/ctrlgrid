@@ -12,13 +12,15 @@ page:
 
 generator: lines
 families:
+  # The accent is first in each cycle, so the edge line starts heavy and every
+  # fifth line after it is heavy too — a bold origin, the graph-paper way.
   - direction: horizontal
     base_spacing: 5mm
     base_weight: 0.15pt
-    weight: [1, 1, 1, 1, 2]
-    color: [*fine, *fine, *fine, *fine, *accent]
+    weight: [2, 1, 1, 1, 1]
+    color: [*accent, *fine, *fine, *fine, *fine]
   - direction: vertical
     base_spacing: 5mm
     base_weight: 0.15pt
-    weight: [1, 1, 1, 1, 2]
-    color: [*fine, *fine, *fine, *fine, *accent]
+    weight: [2, 1, 1, 1, 1]
+    color: [*accent, *fine, *fine, *fine, *fine]
