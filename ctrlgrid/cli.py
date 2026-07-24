@@ -183,7 +183,7 @@ def check(
         # `begin_document`, and check never gets that far (§ 10.2).
         geometry, _, _, _ = preflight(document, PdfWriter(file))
         typer.echo(
-            f"{file}: valid — {document.pages.count} page(s), "
+            f"{file}: valid — {_page_count(document, geometry)} page(s), "
             f"generator `{document.generator}`"
         )
         for notice in (*document.notices, *geometry.notices):
@@ -364,12 +364,21 @@ def _destination(
     return out
 
 
+def _page_count(document: Document, geometry: Geometry) -> int:
+    """The page count to report. A document generator (the calendar, § 7) counts
+    its own pages; a blade is `pages.count` times its per-item sheets (§ 7.5)."""
+    blade = generators.get(document.generator)
+    if hasattr(blade, "page_count"):
+        return blade.page_count(document.config, area=geometry.area)
+    return document.pages.count * sheet_plan(document).per_item
+
+
 def _report(document: Document, path: Path, geometry: Geometry, *, quiet: bool) -> None:
     if quiet:
         typer.echo(str(path))
         return
     typer.echo(str(path))
-    pages = document.pages.count * sheet_plan(document).per_item
+    pages = _page_count(document, geometry)
     typer.echo(f"  {pages} page(s), {document.sheet.width / 1000:.0f} x "
                f"{document.sheet.height / 1000:.0f} mm")
     if document.nup is not None:

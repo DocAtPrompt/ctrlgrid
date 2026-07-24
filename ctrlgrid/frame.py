@@ -17,6 +17,7 @@ looks complete is worse than one that does not fit.
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from pathlib import Path
 
 from ctrlgrid import fonts
@@ -183,6 +184,7 @@ def layout_band(
     q: WriterQuery,
     page: PageContext,
     section: str,
+    extra: Mapping[str, str] | None = None,
 ) -> list[Mark]:
     """Lay a header or footer out inside its box, measuring every field.
 
@@ -200,7 +202,7 @@ def layout_band(
         align: (
             content
             if isinstance(content, ImageSpec)
-            else resolve_placeholders(content, page, field=f"{section}.{align}")
+            else resolve_placeholders(content, page, field=f"{section}.{align}", extra=extra)
         )
         for align, content in fields.items()
         if content

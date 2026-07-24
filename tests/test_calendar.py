@@ -174,6 +174,16 @@ class TestLinks:
             assert "index" in targets and "year" in targets
 
 
+class TestPageCount:
+    def test_it_matches_the_enumeration(self) -> None:
+        # The report needs the real count without drawing every page; the formula
+        # must agree with the pages actually produced, pagination included.
+        gen = CalendarGenerator()
+        for notes in (None, {"count": 10}, {"count": 200}):
+            c = cfg(notes=notes)
+            assert gen.page_count(c, area=AREA) == len(list(gen.pages(c, area=AREA, q=Q)))
+
+
 class TestFitOrRefuse:
     def test_a_page_too_short_for_a_month_is_refused(self) -> None:
         tiny = Area(width=120_000, height=60_000)  # 60 mm tall — no room for 31 rows
@@ -214,3 +224,19 @@ class TestItValidatesAndBuilds:
         build(loads(self.DEF, source="test"), PdfWriter(tmp_path / "a.pdf"))
         build(loads(self.DEF, source="test"), PdfWriter(tmp_path / "b.pdf"))
         assert (tmp_path / "a.pdf").read_bytes() == (tmp_path / "b.pdf").read_bytes()
+
+    def test_a_constant_header_with_year_and_a_name(self, tmp_path: Path) -> None:
+        # § 7: the optional header is constant furniture; `{year}` resolves from
+        # the calendar, and a personalization is the user's own text.
+        definition = (
+            "version: 1\n"
+            "page: {format: a4, margin: 12mm}\n"
+            'header: {height: 8mm, gap: 3mm, center: "{year}", right: "Alexander"}\n'
+            "generator: calendar\nyear: 2026\nnotes: {count: 3}\n"
+        )
+        path = tmp_path / "cal.pdf"
+        build(loads(definition, source="test"), PdfWriter(path))
+        text = PdfReader(str(path)).pages[0].extract_text()
+        assert "Alexander" in text          # the header rendered
+        assert "{year}" not in text          # the placeholder was resolved
+        assert "2026" in text

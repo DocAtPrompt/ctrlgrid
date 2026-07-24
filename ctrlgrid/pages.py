@@ -16,7 +16,7 @@ from __future__ import annotations
 import datetime
 import hashlib
 import re
-from collections.abc import Iterator
+from collections.abc import Iterator, Mapping
 from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -513,17 +513,28 @@ _PLACEHOLDER = re.compile(r"\{([a-z_]*)\}")
 _KNOWN = ("{name}", "{page}", "{page_count}", "{date}")
 
 
-def resolve_placeholders(text: str, page: PageContext, *, field: str | None = None) -> str:
+def resolve_placeholders(
+    text: str,
+    page: PageContext,
+    *,
+    field: str | None = None,
+    extra: Mapping[str, str] | None = None,
+) -> str:
     """Replace the four placeholders of § 8.10.
 
     They apply wherever the definition supplies free text — header and footer
     fields, and form titles — but never in counting patterns (§ 7.10), where
     `n`, `a` and `A` already count and a second substitution mechanism in the
     same string would be a trap.
+
+    `extra` carries document-supplied placeholders — the calendar's `{year}`
+    (§ 7) — which fill any key the four built-ins do not.
     """
 
     def replace(match: re.Match[str]) -> str:
         key = match.group(1)
+        if extra and key in extra:
+            return extra[key]
         if key == "page":
             return str(page.number)
         if key == "page_count":
@@ -834,6 +845,8 @@ def _document_preflight(
     same tuple shape as `preflight` so `check` and `build` share one entry point;
     the three page-loop lists are empty because a document does not use them.
     """
+    from ctrlgrid.frame import layout_band
+
     probe = _metrics_oracle(q)
     geometry = Geometry.of(
         document.sheet,
@@ -845,7 +858,28 @@ def _document_preflight(
     )
     blade.check(document.config, area=geometry.area, q=probe)
     _refuse_writer_cannot_render_document(document, blade, geometry, q, probe)
-    return geometry, [], [], []
+
+    # The optional header/footer are constant across a document (§ 7), so they
+    # are measured once here — against a context whose count is the real page
+    # total, and with the generator's own placeholders (`{year}`). Measured in
+    # the pre-flight so a header that does not fit is refused before page one.
+    extra = blade.placeholders(document.config) if hasattr(blade, "placeholders") else {}
+    total = blade.page_count(document.config, area=geometry.area) if hasattr(
+        blade, "page_count"
+    ) else 1
+    context = PageContext(
+        index=0, number=1, count=total, name=None, is_even=False, seed_material=b""
+    )
+    frame_marks: list[Text] = []
+    if document.header and geometry.header:
+        frame_marks += layout_band(
+            document.header, geometry.header, q=probe, page=context, section="header", extra=extra
+        )
+    if document.footer and geometry.footer:
+        frame_marks += layout_band(
+            document.footer, geometry.footer, q=probe, page=context, section="footer", extra=extra
+        )
+    return geometry, [], [frame_marks], []
 
 
 def _refuse_writer_cannot_render_document(
@@ -876,7 +910,8 @@ def _refuse_writer_cannot_render_document(
 
 
 def _build_document(
-    document: Document, blade: object, writer: Writer, geometry: Geometry
+    document: Document, blade: object, writer: Writer, geometry: Geometry,
+    frame_marks: list[Text],
 ) -> Geometry:
     """Write a document generator's pages (§ 7). Nothing here may raise on user
     input — the pre-flight has already measured and refused (§ 12 point 13).
@@ -884,7 +919,8 @@ def _build_document(
     Each page's marks and links come in area-local coordinates (§ 3.3); the
     handle translates both onto the sheet by the one origin the geometry holds,
     exactly as the blade path does. The destination is defined before the marks,
-    so links from other pages resolve to it.
+    so links from other pages resolve to it. `frame_marks` are the constant
+    header/footer, already in sheet coordinates, drawn on every page.
     """
     ox, oy = geometry.origin.x, geometry.origin.y
     writer.begin_document(
@@ -893,6 +929,8 @@ def _build_document(
     for index, page in enumerate(blade.pages(document.config, area=geometry.area, q=writer)):
         writer.begin_page(document.sheet.width, document.sheet.height)
         writer.define_dest(page.dest)
+        for mark in frame_marks:
+            writer.draw(mark)
         for mark in page.marks:
             writer.draw(translate(mark, dx=ox, dy=oy))
         for link in page.links:
@@ -927,9 +965,11 @@ def build(document: Document, writer: Writer) -> Geometry:
     blade = generators.get(document.generator)
 
     # § 7: a document generator owns its own heterogeneous, linked pages, so it
-    # takes a separate write path — no cover, no frames, no imposition, no cycle.
+    # takes a separate write path — no cover, no imposition, no cycle. The one
+    # bit of handle furniture it keeps is the optional constant header/footer,
+    # measured in the pre-flight and carried in `frames[0]`.
     if is_document_generator(blade):
-        return _build_document(document, blade, writer, geometry)
+        return _build_document(document, blade, writer, geometry, frames[0] if frames else [])
 
     plan = sheet_plan(document)
 

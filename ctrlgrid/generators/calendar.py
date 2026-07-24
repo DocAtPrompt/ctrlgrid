@@ -225,8 +225,27 @@ class CalendarGenerator:
                 field="page",
             )
 
+    def placeholders(self, cfg: CalendarConfig) -> dict[str, str]:
+        """Document-supplied header/footer placeholders (§ 8.10): `{year}`."""
+        return {"year": str(cfg.year)}
+
     def generate(self, cfg, *, area, page, q):  # never called — a document
         raise AssertionError("calendar is a document generator; it produces pages")
+
+    def page_count(self, cfg: CalendarConfig, *, area: Area) -> int:
+        """The total number of pages, without drawing any (§ 11.3 reports it).
+
+        Index + year + 12 months + every day; and, when there are notes, the
+        numbered index paginated over the area plus one page per note.
+        """
+        from ctrlgrid.generators import calendar_layout as layout
+
+        total = 1 + 1 + 12 + day_count(cfg.year)
+        if cfg.notes is not None:
+            capacity = layout.notes_capacity(area.height)
+            index_pages = -(-cfg.notes.count // capacity)  # ceil
+            total += index_pages + cfg.notes.count
+        return total
 
     # ------------------------------------------------------------------- pages
 
