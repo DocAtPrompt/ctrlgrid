@@ -23,7 +23,7 @@ releasing needs a human (see *Not done*).
 uv sync --extra dev && uv run pytest && uv run ruff check .
 ```
 
-771 tests, all green, ruff clean. Thirty-odd commits on `main`, linear history,
+791 tests, all green, ruff clean. Thirty-odd commits on `main`, linear history,
 pushed to **[github.com/DocAtPrompt/ctrlgrid](https://github.com/DocAtPrompt/ctrlgrid)**
 (public); CI runs green there on Linux (3.11–3.13), macOS and Windows. Eight presets (one each for
 `lines`, `dots`, `polar`, `form`, `maze`, `perspective`, `mandala`, `staves`);
@@ -60,26 +60,27 @@ the specification.
 | **M8** `perspective` | horizon + 1–3 vanishing-point fans, equal base division, Liang–Barsky clip, `verticals` (§ 7.11) |
 | **M8** `mandala` | sectors/rings scaffold, rosette of circles (`mirror`), inscribed regular / star polygons, on shared `polar_geometry` (§ 7.11) |
 | **M9** `staves` clefs | `treble/bass/alto/tenor` as `Text` in a bundled, subset music font (Bravura, OFL→TrueType), SMuFL placement, 5-line only (§ 15.3) |
+| **M5** relative measure | `%w`/`%h`/`%s` as a fraction of the pattern area, resolved in seam 1 like `px`, `RelativeLengthField` opt-in across the blades (§ 8.11) |
 | pulled forward into M1 | format table, presets, `check`, overwrite protection, placeholders — the M1 acceptance criteria needed them |
 
 ### Not done
 
-**M5's small edges are all that remain of M1–M7.** M5's core shipped; three
-pieces are left, and each names why:
+**Two small edges of M5 remain**, and each names why:
 
 - **`quirks` ships empty** (decision 31). § 9.2 provides the field with a Boox
   dead-row example, but no shipped profile is a Boox and inventing a dead-row
   pattern for a device nobody here can test is the guessed number § 9.2 warns
   against. Modelled and carried, waiting for a verified contribution.
-- **Relative measures** (§ 9.2) — the 3:4 e-ink aspect is not A4's 1:√2, so a
-  fixed-mm definition does not fill a device the way it fills paper. `px` and a
-  device's own pixels are a device-relative measure already; a general
-  "fraction of the pattern area" mechanism at the handle level would be a new
-  design decision and is not built. `form` has `%`, but only inside its own
-  block.
 - Two of § 15's open questions are still device figures nobody has verified —
   the rM2 numbers and whether the Paper Pro is a colour device — and § 9.2 is
   explicit that a wrong number there is worse than no profile at all.
+
+The **general relative measure** (§ 8.11) — the other M5 edge the handovers kept
+naming — is now **built**: `%w`/`%h`/`%s` (width, height, shorter side of the
+pattern area) resolve in seam 1 against the raw pattern area, the same way `px`
+resolves against a device density, so one definition fills paper and a 3:4 e-ink
+slate alike. Opted into per field via `RelativeLengthField`; refused in margins,
+bands, weights and sizes.
 
 **Every milestone proper is now done — M8 shipped `perspective` and `mandala`**
 (§ 7.11). Both compute their own law instead of a cycle (a generator may, § 5.3):
@@ -248,10 +249,10 @@ instead — that is how `periodic_axes`, `check`, `sheets`, `supports_snap` and
 `capabilities` all came to be. M8's two blades held it too: `perspective` and
 `mandala` compute their own law (§ 5.3) yet added nothing to the seam.
 
-**Nothing proper is left — M9 shipped the last open decision (clefs).** What
-remains is small, and each names its reason in *Not done* above: M5's empty
-`quirks`, a general relative-measure mechanism, and the two unverified device
-figures. If you add a blade or option, the recipe is unchanged: a registry entry
+**Nothing proper is left.** What remains is small, and each names its reason in
+*Not done* above: M5's empty `quirks` and the two unverified device figures. The
+relative measure (§ 8.11) and the clef decision (§ 15.3) — the two edges the
+handovers kept naming — are both built now. If you add a blade or option, the recipe is unchanged: a registry entry
 in `generators/__init__.py` with a `config_model` and the seam-2 methods, a
 failing test first, the *why* in the comment with its § number, one coherent
 commit, and a real rendered sheet read back — not just unit tests. M9 held that

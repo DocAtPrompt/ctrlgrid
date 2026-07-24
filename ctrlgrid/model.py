@@ -53,6 +53,27 @@ def _as_length(value: Any, info: ValidationInfo) -> Any:
         raise ValueError(error.message) from None
 
 
+def _as_relative(value: Any, info: ValidationInfo) -> Any:
+    """Like `_as_length`, but a field that also accepts a relative measure.
+
+    `%w`/`%h`/`%s` (§ 8.11) resolve against the *raw* pattern area — sheet minus
+    margins and bands — which the loader computes and passes through the same
+    validation context that already carries the density. Absolute lengths behave
+    exactly as in `_as_length`; only fields typed `RelativeLengthField` open the
+    door to a fraction, and only the loader's context supplies the area, so a
+    config validated on its own (a test, say) still refuses a bare `%w`.
+    """
+    if isinstance(value, Length):
+        return value
+    context = info.context or {}
+    try:
+        return parse_length(
+            value, density_dpi=context.get("density"), area=context.get("area")
+        )
+    except DefinitionError as error:
+        raise ValueError(error.message) from None
+
+
 def _as_angle(value: Any) -> Any:
     if isinstance(value, Angle):
         return value
@@ -69,6 +90,10 @@ def _non_negative(value: Length) -> Length:
 
 
 LengthField = Annotated[Length, BeforeValidator(_as_length)]
+#: A length that may also be written as a fraction of the pattern area
+#: (`%w`/`%h`/`%s`, § 8.11). Absolute otherwise. Used only for a generator's
+#: spatial measures — never margins, bands, weights or sizes.
+RelativeLengthField = Annotated[Length, BeforeValidator(_as_relative)]
 AngleField = Annotated[Angle, BeforeValidator(_as_angle)]
 
 

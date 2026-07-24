@@ -39,7 +39,7 @@ from ctrlgrid import fonts
 from ctrlgrid.axes import AxisPeriod
 from ctrlgrid.errors import DefinitionError
 from ctrlgrid.marks import Area, Layer, Mark, Point, Segment, Text, Um
-from ctrlgrid.model import ColorField, LengthField
+from ctrlgrid.model import ColorField, LengthField, RelativeLengthField
 from ctrlgrid.pages import PageContext
 from ctrlgrid.units import Length, parse_length
 from ctrlgrid.writers import WriterQuery
@@ -112,8 +112,8 @@ class StavesConfig(BaseModel):
 
     count: int = Field(ge=1)
     lines: int = Field(default=5, ge=2)
-    stave_space: LengthField | None = None
-    stave_height: LengthField | None = None
+    stave_space: RelativeLengthField | None = None
+    stave_height: RelativeLengthField | None = None
     system_gap: StaveLengthField = StaveLength(spaces=Decimal(4))
     weight: LengthField = Length(um=70, mm=0.07055555555555555, raw="0.2pt")
     color: ColorField = "#000000"

@@ -33,7 +33,7 @@ from ctrlgrid.generators.common import (
     describe_cycle,
 )
 from ctrlgrid.marks import Area, Dot, Layer, Mark, Point
-from ctrlgrid.model import LengthField, Section
+from ctrlgrid.model import LengthField, RelativeLengthField, Section
 from ctrlgrid.pages import PageContext
 from ctrlgrid.units import Length
 from ctrlgrid.writers import WriterQuery
@@ -42,9 +42,9 @@ from ctrlgrid.writers import WriterQuery
 class GridAxis(Section):
     """One of the two families that make the grid (§ 7.2)."""
 
-    base_spacing: LengthField
+    base_spacing: RelativeLengthField
     spacing: CycleField = ONE
-    offset: LengthField = Length(um=0, mm=0.0, raw="0mm")
+    offset: RelativeLengthField = Length(um=0, mm=0.0, raw="0mm")
 
 
 class Grid(Section):

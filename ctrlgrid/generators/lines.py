@@ -33,7 +33,7 @@ from ctrlgrid.generators.common import (
     describe_cycle,
 )
 from ctrlgrid.marks import Area, Layer, Mark, Point, Segment
-from ctrlgrid.model import LengthField, Section
+from ctrlgrid.model import LengthField, RelativeLengthField, Section
 from ctrlgrid.pages import PageContext
 from ctrlgrid.units import Length
 from ctrlgrid.writers import WriterQuery
@@ -64,8 +64,8 @@ class Extent(Section):
     Either end may be left out, in which case the pattern area bounds it.
     """
 
-    start: LengthField | None = None
-    end: LengthField | None = None
+    start: RelativeLengthField | None = None
+    end: RelativeLengthField | None = None
 
     @model_validator(mode="after")
     def _ends_are_in_order(self) -> Extent:
@@ -81,7 +81,7 @@ class Family(Section, Dashable):
     """A periodic family of like marks (§ 4, § 7.1)."""
 
     direction: DirectionField
-    base_spacing: LengthField
+    base_spacing: RelativeLengthField
     #: Linear or logarithmic (§ 7.9). A log family is periodic per decade, and
     #: `base_spacing` is then the **decade length** rather than a step.
     law: Literal["linear", "log10"] = "linear"
@@ -98,7 +98,7 @@ class Family(Section, Dashable):
     #: and a pattern describes one mark rather than a run of them.
     dash: CycleField | None = None
     color: ColorField = ("#000000",)
-    offset: LengthField = Length(um=0, mm=0.0, raw="0mm")
+    offset: RelativeLengthField = Length(um=0, mm=0.0, raw="0mm")
     extent: Extent | None = None
     #: Absent means unlimited. Deliberately no magic string `unlimited`
     #: (§ 7.1): a field that is either a word or a number forces a union in

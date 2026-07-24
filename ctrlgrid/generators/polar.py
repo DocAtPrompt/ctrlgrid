@@ -57,7 +57,7 @@ from ctrlgrid.generators.polar_geometry import (
 )
 from ctrlgrid.labels import labels_for
 from ctrlgrid.marks import Arc, Area, Layer, Mark, Point, Segment, Text, Um
-from ctrlgrid.model import AngleField, FontSpec, LengthField, Section
+from ctrlgrid.model import AngleField, FontSpec, LengthField, RelativeLengthField, Section
 from ctrlgrid.pages import PageContext
 from ctrlgrid.writers import WriterQuery
 
@@ -65,8 +65,8 @@ from ctrlgrid.writers import WriterQuery
 class Center(Section):
     """A point in pattern-local coordinates, origin bottom left (§ 3.5)."""
 
-    x: LengthField
-    y: LengthField
+    x: RelativeLengthField
+    y: RelativeLengthField
 
 
 class RadialExtent(Section):
@@ -77,8 +77,8 @@ class RadialExtent(Section):
     direction of the lines, and one name for two reference axes is a trap.
     """
 
-    start: LengthField | None = None
-    end: LengthField | None = None
+    start: RelativeLengthField | None = None
+    end: RelativeLengthField | None = None
 
     @model_validator(mode="after")
     def _ends_are_in_order(self) -> RadialExtent:
@@ -93,7 +93,7 @@ class RadialExtent(Section):
 class Rings(Section, Dashable):
     """Concentric circles: the radial family (§ 7.6)."""
 
-    base_radius: LengthField
+    base_radius: RelativeLengthField
     radius: CycleField = ONE
     base_weight: LengthField = HAIRLINE
     weight: CycleField = ONE
@@ -159,7 +159,7 @@ class PolarConfig(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
     center: Center | Literal["auto"] = "auto"
-    outer_radius: LengthField | Literal["auto"] = "auto"
+    outer_radius: RelativeLengthField | Literal["auto"] = "auto"
     rings: Rings | None = None
     spokes: Spokes | None = None
     labels: PolarLabels | None = None

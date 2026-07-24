@@ -28,7 +28,7 @@ from ctrlgrid.axes import AxisPeriod
 from ctrlgrid.errors import DefinitionError
 from ctrlgrid.labels import labels_for
 from ctrlgrid.marks import Area, Layer, Mark, Point, Polygon, Segment, Text, Um
-from ctrlgrid.model import ColorField, FontSpec, LengthField
+from ctrlgrid.model import ColorField, FontSpec, LengthField, RelativeLengthField
 from ctrlgrid.pages import PageContext
 from ctrlgrid.units import Length
 from ctrlgrid.writers import WriterQuery
@@ -181,7 +181,7 @@ class TilingConfig(BaseModel):
     shape: Shape
     #: The **edge length**, for every shape — so `size` means one thing across
     #: all five and a hexagon sheet stays comparable to a triangle one.
-    size: LengthField
+    size: RelativeLengthField
     orientation: Literal["pointy", "flat"] = "pointy"
     weight: LengthField = Length(um=141, mm=0.1411111111111111, raw="0.4pt")
     color: ColorField = "#333333"

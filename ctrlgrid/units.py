@@ -59,6 +59,11 @@ _DEFERRED_UNITS: dict[str, str] = {
 
 _ANGLE_UNITS = {"deg"}
 
+# The general relative measure (§ 8.11): a fraction of the pattern area's width,
+# height or shorter side. Spelled `%w`/`%h`/`%s` so they never collide with
+# form's own `%` (§ 7.8), which is refused here and handled by that blade.
+_RELATIVE_UNITS: dict[str, str] = {"%w": "w", "%h": "h", "%s": "s"}
+
 # A number, optional whitespace, then the unit. `%` is matched so that it can
 # be refused by name rather than as "no unit at all".
 _QUANTITY = re.compile(r"^([+-]?(?:\d+\.?\d*|\.\d+))\s*([A-Za-z%]*)$")
@@ -88,7 +93,11 @@ class Angle:
 
 
 def parse_length(
-    value: object, *, field: str | None = None, density_dpi: int | None = None
+    value: object,
+    *,
+    field: str | None = None,
+    density_dpi: int | None = None,
+    area: tuple[int, int] | None = None,
 ) -> Length:
     """Normalise a length such as `5mm`, `8.5in`, `0.15pt` or — on a device — `45px`.
 
@@ -112,6 +121,25 @@ def parse_length(
         # 1 px = 1/density inch. Kept in Decimal so the same input gives the
         # same micrometre on every machine (§ 3.3), exactly as the other units.
         exact = number * Decimal(25400) / Decimal(density_dpi)
+        return Length(um=_to_micrometres(exact), mm=float(exact / 1000), raw=text)
+
+    if unit in _RELATIVE_UNITS:
+        # A fraction of the pattern area — resolvable only once that area is
+        # known, exactly as `px` needs a density. The area is the *raw* pattern
+        # block (sheet minus margins and bands), so the reference is fixed
+        # before snapping shrinks it (§ 8.1, § 8.3). Decimal keeps the same
+        # micrometre on every machine (§ 3.3).
+        if area is None:
+            raise DefinitionError(
+                f"{text!r} is a relative measure and there is no pattern area to take a "
+                "fraction of here — %w/%h/%s belong in a generator's spatial measures, "
+                "not in margins, bands, weights or sizes, which either have no area or "
+                "define it (§ 8.1)",
+                field=field,
+            )
+        width, height = area
+        reference = {"w": width, "h": height, "s": min(width, height)}[_RELATIVE_UNITS[unit]]
+        exact = number * Decimal(reference) / Decimal(100)
         return Length(um=_to_micrometres(exact), mm=float(exact / 1000), raw=text)
 
     if not unit:

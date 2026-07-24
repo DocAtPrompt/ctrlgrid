@@ -1482,6 +1482,38 @@ Die Reproduzierbarkeitsanforderung an die PDF-Metadaten (§ 10.1) bleibt davon
 unberührt — sie betrifft das Erstellungsdatum *im Dateikopf*, nicht sichtbaren
 Inhalt.
 
+### 8.11 Relatives Maß
+
+Ein festes Millimetermaß füllt A4 (1:√2) und ein 3:4-E-Ink-Gerät verschieden
+(§ 9.2). Damit **dieselbe Definition jedes Medium füllt**, darf eine Länge als
+**Anteil des Musterbereichs** geschrieben werden:
+
+- `%w` — Anteil der **Breite** des Musterbereichs,
+- `%h` — Anteil der **Höhe**,
+- `%s` — Anteil der **kürzeren Seite** (natürlich für Kreise und Radien).
+
+**Explizit, nicht magisch.** Der Musterbereich hat Breite *und* Höhe; welche
+gemeint ist, sagt der Nutzer selbst über die Einheit, statt dass die Klinge aus
+der Richtung eines Feldes rät. So bleibt es eindeutig — dieselbe Sorgfalt wie
+bei `inner`/`outer` (§ 8.1). Die Schreibweise `%w`/`%h`/`%s` kollidiert bewusst
+nicht mit dem generatorlokalen `%` von `form` (§ 7.8).
+
+**Auflösung wie `px`.** Ein `%`-Maß wird gegen den **Rohbereich** aufgelöst —
+Blatt minus Ränder und Bänder (§ 8.1), *vor* dem Einrasten. Dieser Bezug hängt
+nicht vom Generator ab und ist bereits in Naht 1 bekannt, genau wie die
+Gerätedichte für `px` (§ 8.3.1): der Griff reicht ihn über denselben
+Validierungskontext, und danach sieht der Kern keine Einheit mehr (§ 3.6). Rastet
+das Muster ein, schrumpft der Bereich auf ganze Perioden des nun konkreten
+Maßes — der Anteil ist am Rohbereich fixiert, das Ergebnis bleibt maßhaltig
+(§ 8.2, § 8.3).
+
+**Nur Raummaße.** Erlaubt in den Raummaßen einer Klinge — Abständen, Radien,
+Extents, Systemgrößen. **Nicht** in Rändern und Bändern (sie *definieren* den
+Bereich — ein Anteil davon wäre zirkulär), und nicht in Strichstärken oder
+Schriftgrößen (die skalieren nicht mit dem Blatt). Dort ist `%w`/`%h`/`%s` ein
+lauter Fehler mit Begründung, nie eine stille Null — dasselbe Muster wie `px`
+auf Papier (§ 8.3.1).
+
 ---
 
 ## 9. Datendateien

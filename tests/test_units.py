@@ -117,6 +117,44 @@ class TestRefusals:
             parse_length("")
 
 
+class TestRelativeMeasures:
+    # A general relative measure (§ 8.11): `%w`/`%h`/`%s` are a fraction of the
+    # pattern area's width, height or shorter side. They resolve here only when
+    # the area is handed in — the same way `px` resolves only with a density.
+    AREA = (100_000, 80_000)  # 100 x 80 mm pattern area, shorter side 80
+
+    def test_percent_of_width(self) -> None:
+        assert parse_length("50%w", area=self.AREA).um == 50_000
+
+    def test_percent_of_height(self) -> None:
+        assert parse_length("50%h", area=self.AREA).um == 40_000
+
+    def test_percent_of_the_shorter_side(self) -> None:
+        # min(100, 80) = 80 mm, so 50% is 40 mm — a circle that fills the disc.
+        assert parse_length("50%s", area=self.AREA).um == 40_000
+
+    def test_the_raw_text_survives_for_error_messages(self) -> None:
+        assert parse_length("25%w", area=self.AREA).raw == "25%w"
+
+    def test_rounding_is_deterministic_ties_away_from_zero(self) -> None:
+        # 50% of 3 µm is 1.5 → 2, away from zero, like every other unit (§ 3.3).
+        assert parse_length("50%w", area=(3, 100)).um == 2
+
+    def test_without_an_area_it_is_refused_not_guessed(self) -> None:
+        # Like `px` without a device: a relative measure with no reference is an
+        # error, never a silent zero. Margins, bands, weights and sizes hit this.
+        with pytest.raises(DefinitionError) as excinfo:
+            parse_length("50%w", field="page.margin.top")
+        message = str(excinfo.value)
+        assert "page.margin.top" in message and "%w" in message
+
+    def test_a_bare_percent_is_still_the_form_local_one(self) -> None:
+        # `%` alone stays refused outside `form` (§ 7.8); the general measure is
+        # spelled `%w`/`%h`/`%s` so the two never collide.
+        with pytest.raises(DefinitionError):
+            parse_length("50%", area=self.AREA)
+
+
 class TestAngles:
     def test_degrees(self) -> None:
         assert parse_angle("45deg").deg == pytest.approx(45.0)

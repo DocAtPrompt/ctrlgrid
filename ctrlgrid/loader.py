@@ -45,7 +45,7 @@ from ctrlgrid.model import (
     PatternSpec,
     StampSpec,
 )
-from ctrlgrid.pages import Sheet
+from ctrlgrid.pages import Sheet, raw_extent
 from ctrlgrid.units import Length, parse_length
 
 DATA = Path(__file__).parent / "data"
@@ -230,7 +230,15 @@ def loads(text: str, overrides: Mapping[str, Any] | None = None, *, source: str)
     stamp = section(StampSpec, "stamp")
     pattern = section(PatternSpec, "pattern", {})
     pages = section(PagesSpec, "pages", {})
-    config = _section(blade.config_model, data, raw, None, context)
+
+    # The pattern area a relative measure (`%w`/`%h`/`%s`, § 8.11) takes its
+    # fraction of is the sheet minus margins and bands — known here, now that
+    # page, header and footer are settled. It joins the density in the config's
+    # context, so `%w` resolves in seam 1 exactly as `px` does, and nothing
+    # downstream ever sees a relative unit (§ 3.6).
+    sheet = resolve_sheet(page, profile)
+    config_context = {**(context or {}), "area": raw_extent(sheet, header, footer)}
+    config = _section(blade.config_model, data, raw, None, config_context)
     pages, names, notices = _resolve_names(pages, overrides)
     notices += _hole_mark_notices(page)
     _check_fonts({"header": header, "footer": footer}, raw)
@@ -250,7 +258,7 @@ def loads(text: str, overrides: Mapping[str, Any] | None = None, *, source: str)
         config=config,
         names=names,
         notices=notices,
-        sheet=resolve_sheet(page, profile),
+        sheet=sheet,
         axes=blade.periodic_axes(config),
         source=source,
         digest=hashlib.sha256(text.encode("utf-8")).hexdigest()[:12],

@@ -98,6 +98,26 @@ class Sheet:
     margin: Margin
 
 
+def raw_extent(sheet: Sheet, header: Band | None, footer: Band | None) -> tuple[Um, Um]:
+    """The pattern area before snapping — sheet minus margins and bands (§ 8.1).
+
+    Shared with the loader (seam 1) so a relative measure (`%w`/`%h`/`%s`, § 8.11)
+    takes its fraction of the very width and height the pattern area is built
+    from — fixed here, before `place_pattern` shrinks it to whole periods
+    (§ 8.3). Keeping it in one function is what stops the two from drifting.
+    """
+    margin = sheet.margin
+    width = sheet.width - margin.inner.um - margin.outer.um
+    height = (
+        sheet.height
+        - margin.top.um
+        - margin.bottom.um
+        - (header.height.um + header.gap.um if header else 0)
+        - (footer.height.um + footer.gap.um if footer else 0)
+    )
+    return width, height
+
+
 @dataclass(frozen=True, slots=True)
 class Box:
     """A rectangle in sheet coordinates — a header or footer band."""
@@ -158,16 +178,9 @@ class Geometry:
         footer_height = footer.height.um if footer else 0
         footer_gap = footer.gap.um if footer else 0
 
-        width = sheet.width - margin.inner.um - margin.outer.um
-        height = (
-            sheet.height
-            - margin.top.um
-            - margin.bottom.um
-            - header_height
-            - header_gap
-            - footer_height
-            - footer_gap
-        )
+        # The same raw extent the loader resolved relative measures against
+        # (§ 8.11), before this shrinks it to whole periods (§ 8.3).
+        width, height = raw_extent(sheet, header, footer)
 
         if width <= 0:
             raise _no_room(

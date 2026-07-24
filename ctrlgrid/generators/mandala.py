@@ -36,7 +36,7 @@ from ctrlgrid.errors import DefinitionError
 from ctrlgrid.generators.common import HAIRLINE
 from ctrlgrid.generators.polar_geometry import default_center, default_outer, polar_point
 from ctrlgrid.marks import Arc, Area, Layer, Mark, Point, Polygon, Segment, Um
-from ctrlgrid.model import ColorField, LengthField, Section
+from ctrlgrid.model import ColorField, LengthField, RelativeLengthField, Section
 from ctrlgrid.pages import PageContext
 from ctrlgrid.writers import WriterQuery
 
@@ -48,8 +48,8 @@ UP = 90.0
 class Center(Section):
     """A point in pattern-local coordinates, origin bottom left (§ 3.5)."""
 
-    x: LengthField
-    y: LengthField
+    x: RelativeLengthField
+    y: RelativeLengthField
 
 
 class Rings(Section):
@@ -111,7 +111,7 @@ class MandalaConfig(BaseModel):
     #: never a cycle. Two is the fewest that repeats.
     sectors: int = Field(ge=2)
     center: Center | Literal["auto"] = "auto"
-    outer_radius: LengthField | Literal["auto"] = "auto"
+    outer_radius: RelativeLengthField | Literal["auto"] = "auto"
     rings: Rings | None = None
     spokes: Spokes | None = None
     rosette: Rosette | None = None

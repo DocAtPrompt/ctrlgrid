@@ -14,7 +14,9 @@ e-ink tablets.
 > a finished PDF on every commit. The handle around them is finished — multi-page output, headers
 > and footers, name lists, snapping, remainder handling, double-sided margins,
 > border, background, hole marks, stamp, the calibration cover sheet, embedded
-> font files, dashed and dotted styles, free page sizes and logos in bands.
+> font files, dashed and dotted styles, free page sizes, logos in bands, and
+> relative measures (`%w`/`%h`/`%s`) so one definition fills paper and a 3:4
+> e-ink slate alike.
 >
 > Every generator in the table further down works. The options marked below as
 > arriving later are specified but not built yet; asking for one gets you a
