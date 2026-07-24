@@ -1,9 +1,12 @@
-# lines — 5 mm squared paper, every fifth line a heavy major. A4.
+# lines — 5 mm squared paper filling the whole page. A4.
 #
-# `snap: cycle` is the convention that only *whole* cells are drawn: the pattern
-# area is rounded down to a whole number of 25 mm major blocks, so every edge is
-# a heavy line and no partial cell is ever drawn — whatever does not make a whole
-# block is left as blank margin. It also keeps that true on any other format.
+# This is the "as much as fits" convention: cells fill right up to the edges, so
+# the last block of major lines may be incomplete — a thick line that no longer
+# fits is simply left off. Only whole cells are ever drawn; the small leftover
+# under one cell stays blank margin, never a partial cell.
+#
+# For the other convention — only complete 25 mm blocks, every edge a heavy line
+# — see 01b-lines-squared-blocks.yaml, which sets `snap: cycle`.
 # Regenerate:  ctrlgrid -d examples/01-lines-squared.yaml -o out.pdf
 version: 1
 
@@ -16,12 +19,13 @@ page:
   margin: 12mm
 
 pattern:
-  snap: { x: cycle, y: cycle }   # only whole major blocks — no partial cells
+  # Flush at the origin and let the small sub-cell leftover sit blank at the far
+  # edge, rather than centring it.
+  remainder: { x: end, y: end }
 
 generator: lines
 families:
-  # Accent first, so every major block opens with a heavy line and all four
-  # edges of the grid are heavy.
+  # Accent first, so a heavy major line every fifth cell starts at the origin.
   - direction: horizontal
     base_spacing: 5mm
     base_weight: 0.15pt
