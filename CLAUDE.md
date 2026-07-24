@@ -21,9 +21,9 @@ things landed on the handle side, each small and each in the spec: the
 **`pattern.align`** — anchor the grid at a chosen corner (§ 8.5). Since then,
 `--embed-def` — **the PDF carries its own source** as a file attachment (§ 8.8,
 was § 15 open question 5) — open question 3 closed (reportlab is BSD-3-Clause,
-verified), and **`mandala` grew three motif families** — `petals`, `beads` and a
-single-or-list `rosette` (§ 7.11). Only M5's two device edges are left (see *Not
-done*).
+verified), and **`mandala` grew five motif families** — `petals`, `beads`,
+`scallops`, `pinwheel` and a single-or-list `rosette` (§ 7.11). Only M5's two
+device edges are left (see *Not done*).
 0.1.0 is the version in the code; nothing has been released, because releasing
 needs a human *and* the user has chosen to defer PyPI for now (see *Not done*).
 
@@ -69,7 +69,7 @@ and a PNG preview, guarded by `test_every_example_validates`.
 | **M7** PNG writer | raster at exact device resolution, one file per page, text via caps (§ 10.4) |
 | **M8** `perspective` | horizon + 1–3 vanishing-point fans, equal base division, Liang–Barsky clip, `verticals` (§ 7.11) |
 | **M8** `mandala` | sectors/rings scaffold, rosette of circles (`mirror`), inscribed regular / star polygons, on shared `polar_geometry` (§ 7.11) |
-| post-M9 `mandala` motifs | three more families: `petals` (a leaf = two arcs, `Arc` only), `beads` (dots on a ring — introduces `Dot` to the blade, § 7.11 mark line extended), and `rosette` widened to **single-or-list**; `petals`/`beads` take single-or-list too (layered bands). `check`/`_max_reach`/`describe` iterate the rings; the example gallery shows them (§ 7.11) |
+| post-M9 `mandala` motifs | five more families: `petals` (a leaf = two arcs, `Arc` only), `beads` (dots on a ring — introduces `Dot` to the blade, § 7.11 mark line extended), `scallops` (a wavy ring of arcs, `inward` for cusps), `pinwheel` (twisted small polygons on a ring), and `rosette` widened to **single-or-list**; all five ring families take single-or-list (layered bands). `check`/`_max_reach`/`describe` iterate the rings; two gallery entries (`10`, `10b`) show them (§ 7.11) |
 | **M9** `staves` clefs | `treble/bass/alto/tenor` as `Text` in a bundled, subset music font (Bravura, OFL→TrueType), SMuFL placement, 5-line only (§ 15.3) |
 | **M5** relative measure | `%w`/`%h`/`%s` as a fraction of the pattern area, resolved in seam 1 like `px`, `RelativeLengthField` opt-in across the blades (§ 8.11) |
 | post-M9 interactive | `ctrlgrid` with no args → preset browser (preset → pages → output), TTY-guarded, help otherwise (§ 11.2) |

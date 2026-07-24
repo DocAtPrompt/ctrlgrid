@@ -1,0 +1,54 @@
+# mandala (variant) — the same blade, a different character: a scalloped outer
+# border, a pinwheel of tilted squares, a second scalloped ring turned inward
+# around a flower-of-life centre, and a small bead ring. Sixteen-fold. A4.
+# Regenerate:  ctrlgrid -d examples/10b-mandala-scallops.yaml -o out.pdf
+version: 1
+
+defs:
+  guide: &guide "#c2c8d0"
+  petal: &petal "#8aa0b8"
+  star:  &star  "#2f5686"
+
+page:
+  format: a4
+  margin: 16mm
+
+generator: mandala
+sectors: 16
+outer_radius: 48%s
+
+rings:
+  count: 4
+  weight: 0.15pt
+  color: *guide
+spokes:
+  inner: 0.06
+  weight: 0.15pt
+  color: *guide
+
+# Two wavy rings: thirty-two lobes bulging out at the rim, and sixteen turned
+# inward (cusps) around the centre.
+scallops:
+  - {at: 0.98, count: 32, depth: 0.05, color: *star}
+  - {at: 0.62, count: 16, depth: 0.05, inward: true, color: *petal}
+
+# A pinwheel: sixteen little squares on a ring, each twisted 22° so the ring
+# looks to spin.
+pinwheel:
+  at: 0.80
+  size: 0.10
+  sides: 4
+  count: 16
+  twist: 22
+  weight: 0.2pt
+  color: *star
+
+# A flower-of-life rosette and a small bead ring at the middle.
+rosette:
+  at: 0.34
+  radius: 0.16
+  mirror: true
+  weight: 0.2pt
+  color: *petal
+beads:
+  - {at: 0.16, count: 16, size: 1.0mm, color: *star}

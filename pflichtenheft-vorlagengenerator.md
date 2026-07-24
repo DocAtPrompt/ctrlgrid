@@ -1105,12 +1105,18 @@ Die Motivfamilien (jede optional):
 - **`beads`** — Punkte gleichmäßig auf einem Ring (`at`, `count`, `size`,
   `rotate`); führt `Dot` ein. `Dot` ist ein reguläres Primitiv (§ 6), also kein
   neues Vokabular, nur eine bisher ungenutzte Marke.
+- **`scallops`** — ein gewellter Ring aus N Bögen, die von einem Basiskreis
+  (`at`) um `depth` nach außen wölben; `inward` dreht die Wölbung nach innen
+  (Spitzen statt Lappen). Nur `Arc`.
+- **`pinwheel`** — kleine `sides`-Ecke (Umkreisradius `size`) auf einem Ring
+  (`at`), jede mit ihrer Position und um `twist` gedreht — ein Windrad. Nur
+  `Polygon`.
 - **`polygons`** — einbeschriebene reguläre oder Sternpolygone.
 
-**Motivring einzeln oder als Liste.** `rosette`, `petals` und `beads` nehmen
-entweder eine einzelne Angabe **oder** eine Liste — gestapelte Bänder in
-verschiedenen Radien. Eine einzelne Map bleibt gültig, ältere Defs laufen
-unverändert. (`polygons` ist wie bisher stets eine Liste.)
+**Motivring einzeln oder als Liste.** `rosette`, `petals`, `beads`, `scallops`
+und `pinwheel` nehmen entweder eine einzelne Angabe **oder** eine Liste —
+gestapelte Bänder in verschiedenen Radien. Eine einzelne Map bleibt gültig,
+ältere Defs laufen unverändert. (`polygons` ist wie bisher stets eine Liste.)
 
 Beide sind bewusst **nicht** in v1. Sie stehen hier, damit die Architektur sie
 nicht ausschließt — insbesondere `Arc` und `Polygon` im Vokabular (§ 6) und die

@@ -14,7 +14,12 @@ license = "MIT"
 license-files = ["LICENSE"]
 requires-python = ">=3.11"
 authors = [{ name = "DocAtPrompt (Alexander Erben)" }]
-keywords = ["pdf", "graph-paper", "grid", "template", "eink", "remarkable"]
+keywords = [
+    "pdf", "pdf-generation", "graph-paper", "grid-paper", "dot-grid",
+    "isometric", "printable", "template", "reproducible", "cli",
+    "eink", "remarkable", "mandala", "maze", "staff-paper", "sheet-music",
+    "polar-graph", "tiling", "perspective-grid",
+]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Environment :: Console",

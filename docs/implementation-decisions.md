@@ -635,13 +635,13 @@ no extension — a preset name like `millimeter-a4` is not a filename until it d
 **§ 7.11.** Making `mandala` more varied added three families (`petals`,
 `beads`, and a widened `rosette`). Three calls were made where § 7.11 was silent:
 
-- **A motif ring is single *or* a list.** `rosette`, `petals` and `beads` each
-  accept one mapping or a list of them (`Rosette | tuple[Rosette, ...]`), so a
-  band can be stacked at several radii. A single mapping still validates, so the
-  old example and preset are untouched — backward compatibility over a second
-  plural key. `polygons` stays a plain list, as it already was. A `_as_rings`
-  helper normalises to a tuple so `generate`/`check`/`describe`/`_max_reach`
-  iterate one shape.
+- **A motif ring is single *or* a list.** `rosette`, `petals`, `beads`,
+  `scallops` and `pinwheel` each accept one mapping or a list of them
+  (`Rosette | tuple[Rosette, ...]`), so a band can be stacked at several radii. A
+  single mapping still validates, so the old example and preset are untouched —
+  backward compatibility over a second plural key. `polygons` stays a plain list,
+  as it already was. A `_as_rings` helper normalises to a tuple so
+  `generate`/`check`/`describe`/`_max_reach` iterate one shape.
 - **A petal is two arcs, not a new primitive.** § 6 fixes six primitives and
   § 15.2 forbids free paths. A pointed leaf is two circular arcs meeting at a
   base and a tip: `_arc_geometry` turns two endpoints and a sagitta into a
@@ -653,9 +653,17 @@ no extension — a preset name like `millimeter-a4` is not a filename until it d
   bead ring is not new vocabulary, only a mark the blade had not used; the
   spec's § 7.11 mark line is extended to say so rather than adding it silently.
 
+Two later families joined on the same terms. **`scallops`** — a wavy ring — is N
+arcs between adjacent base points, each reusing `_arc_geometry` with the side
+that bulges away from the centre (`inward` flips it to cusps); no new geometry,
+the petal's own two-arc helper. **`pinwheel`** — small polygons turned round a
+ring — is `polar_point` + `Polygon`, the polygon family's own tools. Both are
+single-or-list like the rest.
+
 The area check follows the existing rule (§ 8.2, § 12 point 13): each ring
 reports its reach — petal tip (`outer`, with a lateral term for a fat leaf),
-bead ring (`at + size/2`) — so a motif past the pattern area is refused before
+bead ring (`at + size/2`), scallop lobe (`at + depth`, or `at` for cusps),
+pinwheel (`at + size`) — so a motif past the pattern area is refused before
 page one, named, never clipped.
 
 ---

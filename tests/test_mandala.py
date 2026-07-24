@@ -379,3 +379,90 @@ class TestTheNewFamiliesRenderToAPdf:
         for path in (first, second):
             build(loads(self.DEFINITION, source="test"), PdfWriter(path))
         assert first.read_bytes() == second.read_bytes()
+
+
+class TestScallops:
+    """A wavy ring: N arcs bulging out from (or into) a base circle (§ 7.11)."""
+
+    def test_default_count_is_the_sector_count(self) -> None:
+        scallops = arcs({**BARE, "scallops": {"at": 0.9, "depth": 0.06}})
+        assert len(scallops) == 4
+
+    def test_count_can_be_overridden(self) -> None:
+        scallops = arcs({**BARE, "scallops": {"at": 0.9, "depth": 0.06, "count": 16}})
+        assert len(scallops) == 16
+
+    def test_each_scallop_spans_two_points_on_the_base_ring(self) -> None:
+        # 0.9 of a 40 mm radius = 36 mm; every scallop arc runs between two
+        # adjacent points sitting on that ring.
+        scallops = arcs({**BARE, "scallops": {"at": 0.9, "depth": 0.06}})
+        for arc in scallops:
+            for end in arc_endpoints(arc):
+                assert math.dist(end, (50_000, 40_000)) == pytest.approx(36_000, abs=3)
+
+    def test_scallops_can_be_a_list(self) -> None:
+        scallops = arcs({**BARE, "scallops": [
+            {"at": 0.5, "depth": 0.05, "count": 8},
+            {"at": 0.9, "depth": 0.05, "count": 16},
+        ]})
+        assert len(scallops) == 24
+
+    def test_zero_depth_is_refused(self) -> None:
+        with pytest.raises(ValidationError):
+            MandalaConfig.model_validate({**BARE, "scallops": {"at": 0.9, "depth": 0.0}})
+
+
+class TestPinwheel:
+    """Small polygons repeated round a ring, each twisted (§ 7.11)."""
+
+    def test_default_count_is_the_sector_count(self) -> None:
+        wheel = polygons({**BARE, "pinwheel": {"at": 0.6, "size": 0.12}})
+        assert len(wheel) == 4
+
+    def test_each_is_a_polygon_with_the_asked_sides(self) -> None:
+        wheel = polygons({**BARE, "pinwheel": {"at": 0.6, "size": 0.12, "sides": 3}})
+        assert all(len(p.points) == 3 for p in wheel)
+
+    def test_a_polygon_sits_on_its_ring(self) -> None:
+        # Its vertices are `size`·R from a centre `at`·R out: their mean is that
+        # centre, 0.6 * 40 = 24 mm from the disc centre.
+        wheel = polygons({**BARE, "pinwheel": {"at": 0.6, "size": 0.12, "count": 4}})
+        first = wheel[0]
+        mx = sum(p.x for p in first.points) / len(first.points)
+        my = sum(p.y for p in first.points) / len(first.points)
+        assert math.dist((mx, my), (50_000, 40_000)) == pytest.approx(24_000, abs=50)
+
+    def test_pinwheel_can_be_a_list(self) -> None:
+        wheel = polygons({**BARE, "pinwheel": [
+            {"at": 0.4, "size": 0.08},
+            {"at": 0.8, "size": 0.08},
+        ]})
+        assert len(wheel) == 8
+
+
+class TestTheLastTwoRespectTheArea:
+    def test_scallops_past_the_area_are_refused(self) -> None:
+        config = MandalaConfig.model_validate(
+            {**BARE, "scallops": {"at": 0.99, "depth": 0.4}}
+        )
+        with pytest.raises(DefinitionError):
+            MandalaGenerator().check(config, area=AREA, q=Q)
+
+    def test_a_pinwheel_past_the_area_is_refused(self) -> None:
+        config = MandalaConfig.model_validate(
+            {**BARE, "pinwheel": {"at": 0.95, "size": 0.5}}
+        )
+        with pytest.raises(DefinitionError):
+            MandalaGenerator().check(config, area=AREA, q=Q)
+
+
+class TestDescribeNamesTheLastTwo:
+    def test_it_names_scallops_and_the_pinwheel(self) -> None:
+        config = MandalaConfig.model_validate({
+            **BARE,
+            "scallops": {"at": 0.9, "depth": 0.05},
+            "pinwheel": {"at": 0.6, "size": 0.1},
+        })
+        report = " ".join(MandalaGenerator().describe(config))
+        assert "scallops" in report
+        assert "pinwheel" in report

@@ -132,6 +132,42 @@ class Beads(Section):
     color: ColorField = "#000000"
 
 
+class Scallops(Section):
+    """A wavy ring: N arcs bulging out from (or into) a base circle (§ 7.11).
+
+    The scallops sit on a base circle at `at` of the outer radius; each arc runs
+    between two adjacent points and bulges by `depth` (a share of the outer
+    radius). `inward` turns the bulge in, for a ring of cusps rather than lobes.
+    Only `Arc`. Count defaults to the sector count.
+    """
+
+    at: float = Field(gt=0.0)
+    count: int | None = Field(default=None, ge=1)
+    depth: float = Field(default=0.06, gt=0.0)
+    inward: bool = False
+    weight: LengthField = HAIRLINE
+    color: ColorField = "#000000"
+
+
+class Pinwheel(Section):
+    """Small polygons repeated round a ring, each twisted (§ 7.11).
+
+    N little `sides`-gons of circumradius `size` (a share of the outer radius)
+    sit on a ring at `at`. Each is turned with its position and by an extra
+    `twist`, which is what makes the ring spin rather than sit still. Only
+    `Polygon`. Count defaults to the sector count.
+    """
+
+    at: float = Field(gt=0.0)
+    size: float = Field(gt=0.0)
+    sides: int = Field(default=4, ge=3)
+    count: int | None = Field(default=None, ge=1)
+    twist: float = 0.0
+    weight: LengthField = HAIRLINE
+    color: ColorField = "#000000"
+    fill_color: ColorField = None
+
+
 class PolygonSpec(Section):
     """An inscribed regular polygon or star polygon (§ 7.11).
 
@@ -165,6 +201,8 @@ class MandalaConfig(BaseModel):
     rosette: Rosette | tuple[Rosette, ...] | None = None
     petals: Petals | tuple[Petals, ...] | None = None
     beads: Beads | tuple[Beads, ...] | None = None
+    scallops: Scallops | tuple[Scallops, ...] | None = None
+    pinwheel: Pinwheel | tuple[Pinwheel, ...] | None = None
     polygons: tuple[PolygonSpec, ...] | None = None
 
     @property
@@ -179,14 +217,24 @@ class MandalaConfig(BaseModel):
     def bead_rings(self) -> tuple[Beads, ...]:
         return _as_rings(self.beads)
 
+    @property
+    def scallop_rings(self) -> tuple[Scallops, ...]:
+        return _as_rings(self.scallops)
+
+    @property
+    def pinwheels(self) -> tuple[Pinwheel, ...]:
+        return _as_rings(self.pinwheel)
+
     @model_validator(mode="after")
     def _something_has_to_be_drawn(self) -> MandalaConfig:
-        if not any(
-            (self.rings, self.spokes, self.rosette, self.petals, self.beads, self.polygons)
-        ):
+        if not any((
+            self.rings, self.spokes, self.rosette, self.petals, self.beads,
+            self.scallops, self.pinwheel, self.polygons,
+        )):
             raise ValueError(
-                "a mandala needs `rings`, `spokes`, a `rosette`, `petals`, `beads` or "
-                "`polygons` — with none there is only an empty disc (§ 7.11)"
+                "a mandala needs `rings`, `spokes`, a `rosette`, `petals`, `beads`, "
+                "`scallops`, a `pinwheel` or `polygons` — with none there is only an "
+                "empty disc (§ 7.11)"
             )
         return self
 
@@ -244,6 +292,14 @@ class MandalaGenerator:
         for beads in cfg.bead_rings:
             count = beads.count if beads.count is not None else cfg.sectors
             lines.append(f"beads: {count} at {beads.at:.2f} of the radius")
+        for scallops in cfg.scallop_rings:
+            count = scallops.count if scallops.count is not None else cfg.sectors
+            lines.append(f"scallops: {count} at {scallops.at:.2f} of the radius")
+        for pinwheel in cfg.pinwheels:
+            count = pinwheel.count if pinwheel.count is not None else cfg.sectors
+            lines.append(
+                f"pinwheel: {count} {pinwheel.sides}-gons at {pinwheel.at:.2f} of the radius"
+            )
         for index, spec in enumerate(cfg.polygons or ()):
             sides = spec.sides if spec.sides is not None else cfg.sectors
             shape = f"{{{sides}/{spec.step}}}" if spec.step > 1 else f"{sides}-gon"
@@ -296,6 +352,10 @@ class MandalaGenerator:
             yield from _petals(petals, cfg.sectors, center, outer)
         for beads in cfg.bead_rings:
             yield from _beads(beads, cfg.sectors, center, outer)
+        for scallops in cfg.scallop_rings:
+            yield from _scallops(scallops, cfg.sectors, center, outer)
+        for pinwheel in cfg.pinwheels:
+            yield from _pinwheel(pinwheel, cfg.sectors, center, outer)
         for spec in cfg.polygons or ():
             yield _polygon(spec, cfg.sectors, center, outer)
 
@@ -420,6 +480,63 @@ def _beads(beads: Beads, sectors: int, center: Point, outer: Um) -> Iterator[Dot
         )
 
 
+def _scallops(scallops: Scallops, sectors: int, center: Point, outer: Um) -> Iterator[Arc]:
+    """A closed wavy ring: one arc between each pair of adjacent base points."""
+    count = scallops.count if scallops.count is not None else sectors
+    at = round(scallops.at * outer)
+    depth = round(scallops.depth * outer)
+    points = [polar_point(center, at, UP + i * 360.0 / count) for i in range(count)]
+    for i in range(count):
+        p1, p2 = points[i], points[(i + 1) % count]
+        side = _outward_side(p1, p2, center, inward=scallops.inward)
+        o, radius, start, sweep = _arc_geometry(p1, p2, depth, side)
+        yield Arc(
+            center=o,
+            radius=radius,
+            start_angle=start,
+            sweep=sweep,
+            weight=scallops.weight.mm,
+            color=scallops.color or "#000000",
+            layer=Layer.PATTERN,
+        )
+
+
+def _outward_side(p1: Point, p2: Point, center: Point, *, inward: bool) -> float:
+    """Which side of the chord bulges away from the centre (§ 7.11).
+
+    `_arc_geometry` bulges toward the perpendicular `(-dy, dx)` scaled by the
+    returned sign; picking the sign that points away from the centre makes a
+    lobe, its opposite makes a cusp.
+    """
+    mx, my = (p1.x + p2.x) / 2, (p1.y + p2.y) / 2
+    dx, dy = p2.x - p1.x, p2.y - p1.y
+    outward = (-dy) * (mx - center.x) + dx * (my - center.y)
+    side = 1.0 if outward >= 0 else -1.0
+    return -side if inward else side
+
+
+def _pinwheel(pinwheel: Pinwheel, sectors: int, center: Point, outer: Um) -> Iterator[Polygon]:
+    """Small polygons round a ring, each turned with its place and by `twist`."""
+    count = pinwheel.count if pinwheel.count is not None else sectors
+    at = round(pinwheel.at * outer)
+    size = round(pinwheel.size * outer)
+    for i in range(count):
+        angle = UP + i * 360.0 / count
+        hub = polar_point(center, at, angle)
+        points = tuple(
+            polar_point(hub, size, angle + pinwheel.twist + k * 360.0 / pinwheel.sides)
+            for k in range(pinwheel.sides)
+        )
+        yield Polygon(
+            points=points,
+            closed=True,
+            weight=pinwheel.weight.mm,
+            color=pinwheel.color or "#000000",
+            fill_color=pinwheel.fill_color,
+            layer=Layer.PATTERN,
+        )
+
+
 def _rosette(rosette: Rosette, sectors: int, center: Point, outer: Um) -> Iterator[Arc]:
     at = round(rosette.at * outer)
     radius = round(rosette.radius * outer)
@@ -478,6 +595,12 @@ def _max_reach(cfg: MandalaConfig, outer: Um) -> tuple[Um, str]:
         reaches.append((round(share * outer), "petals"))
     for beads in cfg.bead_rings:
         reaches.append((round(beads.at * outer) + round(beads.size.um / 2), "beads"))
+    for scallops in cfg.scallop_rings:
+        # Outward lobes reach `at + depth`; cusps turned in reach only the ring.
+        share = scallops.at + (0.0 if scallops.inward else scallops.depth)
+        reaches.append((round(share * outer), "scallops"))
+    for pinwheel in cfg.pinwheels:
+        reaches.append((round((pinwheel.at + pinwheel.size) * outer), "pinwheel"))
     for index, spec in enumerate(cfg.polygons or ()):
         reaches.append((round(spec.radius * outer), f"polygons.{index}"))
     return max(reaches, key=lambda item: item[0])
