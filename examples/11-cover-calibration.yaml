@@ -1,0 +1,23 @@
+# cover sheet — the extra first page --cover adds (§ 8.8). It carries a 50 mm
+# square and a 100 mm rule to catch a print driver that quietly scales, a ladder
+# of stroke weights so you can see how each one actually prints on your device,
+# and a settings summary that makes the sheet reproducible years later. The
+# preview here is that cover page; the grid it precedes is page two.
+# Regenerate:  ctrlgrid -d examples/11-cover-calibration.yaml -o out.pdf
+version: 1
+
+page:
+  format: a4
+  margin: 12mm
+
+pages:
+  cover: true
+
+generator: lines
+families:
+  - direction: horizontal
+    base_spacing: 5mm
+    base_weight: 0.2pt
+  - direction: vertical
+    base_spacing: 5mm
+    base_weight: 0.2pt

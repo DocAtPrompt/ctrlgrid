@@ -1,9 +1,9 @@
 # Examples
 
 A taste of what Ctrl+Grid makes — one A4 example per generator, plus a
-multi-page document. Each is an ordinary definition file: open the `.yaml`,
-change it, regenerate. The `.pdf` is the real output (measured, to scale); the
-image is just a preview.
+multi-page document and the calibration cover sheet. Each is an ordinary
+definition file: open the `.yaml`, change it, regenerate. The `.pdf` is the real
+output (measured, to scale); the image is just a preview.
 
 Try one without installing anything:
 
@@ -19,7 +19,7 @@ proportionally.
 
 | Preview | What it is |
 |---|---|
-| <img src="previews/01-lines-squared.png" width="220"> | **`lines`** — 5 mm squared paper, every fifth line accented.<br>[`01-lines-squared.yaml`](01-lines-squared.yaml) · [PDF](01-lines-squared.pdf) |
+| <img src="previews/01-lines-squared.png" width="220"> | **`lines`** — 5 mm squared paper inside a bold frame, every fifth line accented.<br>[`01-lines-squared.yaml`](01-lines-squared.yaml) · [PDF](01-lines-squared.pdf) |
 | <img src="previews/02-dots-grid.png" width="220"> | **`dots`** — a 5 mm dot grid, every fifth dot larger and darker.<br>[`02-dots-grid.yaml`](02-dots-grid.yaml) · [PDF](02-dots-grid.pdf) |
 | <img src="previews/03-grid-battleship.png" width="220"> | **`grid`** — a 12 × 12 labelled board (A…, 1…) with a checker fill.<br>[`03-grid-battleship.yaml`](03-grid-battleship.yaml) · [PDF](03-grid-battleship.pdf) |
 | <img src="previews/04-staves-treble.png" width="220"> | **`staves`** — treble-clef manuscript paper; the clef is a glyph from the bundled music font.<br>[`04-staves-treble.yaml`](04-staves-treble.yaml) · [PDF](04-staves-treble.pdf) |
@@ -29,6 +29,7 @@ proportionally.
 | <img src="previews/08-form-weekly.png" width="220"> | **`form`** — a weekly planner: seven day rows with a done-box, then a notes block.<br>[`08-form-weekly.yaml`](08-form-weekly.yaml) · [PDF](08-form-weekly.pdf) |
 | <img src="previews/09-perspective-2pt.png" width="220"> | **`perspective`** — a two-point drawing grid: a horizon, two vanishing points off the sheet, and true verticals.<br>[`09-perspective-2pt.yaml`](09-perspective-2pt.yaml) · [PDF](09-perspective-2pt.pdf) |
 | <img src="previews/10-mandala.png" width="220"> | **`mandala`** — a twelve-fold template: guide rings and spokes, a flower-of-life rosette, an outer polygon and a woven {12/5} star.<br>[`10-mandala.yaml`](10-mandala.yaml) · [PDF](10-mandala.pdf) |
+| <img src="previews/11-cover-calibration.png" width="220"> | **`--cover`** — the calibration cover sheet (§ 8.8): a 50 mm square and 100 mm rule to catch a scaling print driver, a ladder of stroke weights so you see how each one prints, and a settings summary. The preview is the cover; the grid it precedes is page two.<br>[`11-cover-calibration.yaml`](11-cover-calibration.yaml) · [PDF](11-cover-calibration.pdf) |
 
 The maze booklet uses a fixed seed for a reproducible set — regenerate it with:
 

@@ -8,9 +8,9 @@ page:
   margin: 16mm
 
 generator: staves
-count: 10
+count: 15               # fifteen systems fill the A4 page top to bottom
 stave_space: 1.75mm
-system_gap: 6sp
+system_gap: 6.5sp
 weight: 0.2pt
 color: "#1e2a36"
 clef: treble

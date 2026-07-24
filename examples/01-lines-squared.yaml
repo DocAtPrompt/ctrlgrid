@@ -1,4 +1,4 @@
-# lines — 5 mm squared paper, every fifth line accented. A4.
+# lines — 5 mm squared paper inside a bold frame, every fifth line accented. A4.
 # Regenerate:  ctrlgrid -d examples/01-lines-squared.yaml -o out.pdf
 version: 1
 
@@ -10,10 +10,20 @@ page:
   format: a4
   margin: 12mm
 
+# A border frames the pattern area cleanly on all four edges — a bold boundary
+# that does not depend on where the grid lines happen to fall.
+border:
+  weight: 0.5pt
+  color: *accent
+
+pattern:
+  # Anchor the grid at the origin (bottom-left) so the major lines line up with
+  # the frame; any leftover from a non-even fit sits at the far edge.
+  remainder: { x: end, y: end }
+
 generator: lines
 families:
-  # The accent is first in each cycle, so the edge line starts heavy and every
-  # fifth line after it is heavy too — a bold origin, the graph-paper way.
+  # Accent first, so a heavy major line every fifth cell starts at the frame.
   - direction: horizontal
     base_spacing: 5mm
     base_weight: 0.15pt
