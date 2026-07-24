@@ -11,11 +11,19 @@ from __future__ import annotations
 from pathlib import Path
 
 import pdfread
+import pytest
 from typer.testing import CliRunner
 
+import ctrlgrid.cli as cli
 from ctrlgrid.cli import app
+from ctrlgrid.loader import preset_names
 
 runner = CliRunner()
+
+
+def _number_of(preset: str) -> int:
+    """The 1-based position a preset gets in the picker's numbered list."""
+    return preset_names().index(preset) + 1
 
 WITH_HEADER = """
 version: 1
@@ -269,6 +277,60 @@ class TestListing:
         result = runner.invoke(app, ["show", "millimeter-a4"])
         assert "version: 1" in result.output
         assert "base_spacing: 1mm" in result.output
+
+
+class TestInteractive:
+    # § 11.2: `ctrlgrid` with no arguments is a preset browser — preset from a
+    # list, then page count, then output. A picker only makes sense at a
+    # terminal, so the tty check sits behind `_stdin_is_a_tty`, which these
+    # tests flip; a real CliRunner stdin is never a tty.
+
+    def test_no_arguments_without_a_terminal_prints_help(self) -> None:
+        # Piped or in CI there is no one to answer the prompts, so the old
+        # no-args behaviour — the help — stands. It must never hang.
+        result = runner.invoke(app, [])
+        assert result.exit_code == 0
+        assert "Usage" in result.output
+
+    def test_the_picker_lists_presets_and_generates_the_chosen_one(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setattr(cli, "_stdin_is_a_tty", lambda: True)
+        out = tmp_path / "picked.pdf"
+        answers = f"{_number_of('millimeter-a4')}\n2\n{out}\n"
+        result = runner.invoke(app, [], input=answers)
+        assert result.exit_code == 0, result.output
+        assert "millimeter-a4" in result.output  # the list was shown
+        assert out.exists()
+        assert pdfread.page_count(out) == 2
+
+    def test_the_page_count_defaults_to_one(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setattr(cli, "_stdin_is_a_tty", lambda: True)
+        out = tmp_path / "one.pdf"
+        answers = f"{_number_of('millimeter-a4')}\n\n{out}\n"  # empty pages -> default
+        result = runner.invoke(app, [], input=answers)
+        assert result.exit_code == 0, result.output
+        assert pdfread.page_count(out) == 1
+
+    def test_an_out_of_range_choice_is_refused_not_accepted(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # A number past the list is rejected and re-asked (click.IntRange), so a
+        # valid choice after it still works — never a silent wrong preset.
+        monkeypatch.setattr(cli, "_stdin_is_a_tty", lambda: True)
+        out = tmp_path / "ranged.pdf"
+        answers = f"999\n{_number_of('millimeter-a4')}\n1\n{out}\n"
+        result = runner.invoke(app, [], input=answers)
+        assert result.exit_code == 0, result.output
+        assert out.exists()
+
+    def test_a_given_command_still_runs_and_skips_the_picker(self) -> None:
+        # The callback must not swallow real commands: `presets` still lists.
+        result = runner.invoke(app, ["presets"])
+        assert result.exit_code == 0
+        assert "millimeter-a4" in result.output
 
 
 class TestFailingLoudly:

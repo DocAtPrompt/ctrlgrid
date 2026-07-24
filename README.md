@@ -38,7 +38,7 @@ e-ink tablets.
 > `--stamp`, `--cover`, `--seed`, `--strict`, `--nup`, `--nup-sheet`,
 > `--crop-marks`, `-o`, `--force`, `--quiet`.
 >
-> Not yet: `--skip-unsupported` and the interactive mode.
+> Not yet: `--skip-unsupported`.
 >
 > **Not on PyPI yet**, so the `uvx`/`pip` lines below do not work until the
 > first release is published.
@@ -71,6 +71,9 @@ ctrlgrid maze-medium --pages 20 --seed 4711
 
 # your own definition, on Letter, with a calibration cover sheet
 ctrlgrid -d my-def.yaml --format letter --pages 5 --cover
+
+# no arguments: browse the presets interactively
+ctrlgrid
 ```
 
 ## Installation
@@ -207,9 +210,10 @@ back_mirrored` prints the maze solution mirrored on the reverse so it lines up
 when held to the light. Short-edge flipping puts it upside down, and whether it
 shows through at all depends on your paper.
 
-**7. There is no GUI**, and none is planned. Today `ctrlgrid` with no arguments
-prints its help; an interactive preset picker for that case is the most that is
-considered, and it is not built yet.
+**7. There is no GUI**, and none is planned. `ctrlgrid` with no arguments opens
+an interactive preset browser — pick a preset, a page count and an output path
+(§ 11.2) — and that is as far as it goes. Piped or in CI, where there is no one
+to answer, it prints its help instead.
 
 ## Documentation
 

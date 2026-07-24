@@ -57,9 +57,38 @@ class PresetAsCommand(TyperGroup):
 app = typer.Typer(
     cls=PresetAsCommand,
     add_completion=False,
-    no_args_is_help=True,
+    # No `no_args_is_help`: the no-arguments case is the interactive preset
+    # browser (§ 11.2), decided in the callback below so it can fall back to the
+    # help when there is no terminal to prompt at.
+    no_args_is_help=False,
     help="Dimensionally accurate PDF templates. What says 5 mm measures 5 mm.",
 )
+
+
+def _stdin_is_a_tty() -> bool:
+    """Whether there is a terminal to prompt at (§ 11.2).
+
+    Split into its own function so a test can force the interactive path: a
+    CliRunner's stdin is never a tty, yet the picker is exactly what wants
+    exercising.
+    """
+    return sys.stdin.isatty()
+
+
+@app.callback(invoke_without_command=True)
+def _entry(ctx: typer.Context) -> None:
+    """No subcommand and a terminal → the preset browser; otherwise the help.
+
+    § 11.2 makes `ctrlgrid` with no arguments a preset browser. Piped or in CI
+    there is no one to answer the prompts, so the old behaviour — the help —
+    stands, and the tool never hangs on a prompt that will never be answered.
+    """
+    if ctx.invoked_subcommand is not None:
+        return
+    if _stdin_is_a_tty():
+        _interactive()
+    else:
+        typer.echo(ctx.get_help())
 
 
 @app.command()
@@ -182,6 +211,51 @@ def devices_command() -> None:
 
 
 # ----------------------------------------------------------------- internals
+
+
+def _interactive() -> None:
+    """The no-arguments preset browser (§ 11.2): preset, page count, output.
+
+    A convenience for people who already know the command line, not a bridge
+    around it (§ 11.2) — so it browses the shipped presets and reuses the very
+    same build path `generate` does, overwrite protection (§ 11.3) included.
+    """
+    names = preset_names()
+    typer.echo("Presets:")
+    for index, name in enumerate(names, start=1):
+        typer.echo(f"  {index:>2}  {name}")
+    preset = names[_prompt_int("Preset", minimum=1, maximum=len(names)) - 1]
+    pages = _prompt_int("Pages", minimum=1, default=1)
+    # `force=True` here only asks for the default *path*; the real overwrite
+    # check happens below, once the user has confirmed or changed it (§ 11.3).
+    default_out = _destination(None, preset, None, force=True)
+    out = Path(typer.prompt("Output", default=str(default_out)))
+    with _reporting():
+        document = _open(preset, None, _overrides(pages, None, None, None))
+        destination = _destination(out, preset, None, force=False)
+        geometry = build(document, _writer_for(destination, document))
+        _report(document, destination, geometry, quiet=False)
+
+
+def _prompt_int(
+    text: str, *, minimum: int, maximum: int | None = None, default: int | None = None
+) -> int:
+    """Ask for an integer in range, re-asking until it is one.
+
+    typer re-asks on a non-number by itself; the range is checked here so a
+    choice past the end of the list is refused and re-asked, never silently
+    taken as some other preset (§ 12: loud, never a quiet wrong sheet).
+    """
+    while True:
+        value = (
+            typer.prompt(text, type=int)
+            if default is None
+            else typer.prompt(text, default=default, type=int)
+        )
+        if value < minimum or (maximum is not None and value > maximum):
+            typer.echo(f"  choose a number from {minimum} to {maximum if maximum else '…'}")
+            continue
+        return value
 
 
 class _reporting:
