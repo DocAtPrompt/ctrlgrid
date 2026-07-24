@@ -71,13 +71,7 @@ ctrlgrid maze-medium --pages 20 --seed 4711
 
 # your own definition, on Letter, with a calibration cover sheet
 ctrlgrid -d my-def.yaml --format letter --pages 5 --cover
-
-# no arguments: pick a preset interactively
-ctrlgrid
 ```
-
-*Some of those need milestones that are not finished — see the status note
-above for what runs today.*
 
 ## Installation
 
@@ -213,8 +207,9 @@ back_mirrored` prints the maze solution mirrored on the reverse so it lines up
 when held to the light. Short-edge flipping puts it upside down, and whether it
 shows through at all depends on your paper.
 
-**7. There is no GUI**, and none is planned. `ctrlgrid` with no arguments gives
-you an interactive preset picker, which is as far as it goes.
+**7. There is no GUI**, and none is planned. Today `ctrlgrid` with no arguments
+prints its help; an interactive preset picker for that case is the most that is
+considered, and it is not built yet.
 
 ## Documentation
 
