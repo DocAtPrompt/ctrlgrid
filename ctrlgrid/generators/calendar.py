@@ -22,7 +22,8 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from ctrlgrid.document import DocumentPage
-from ctrlgrid.marks import Area, Mark, Point, Text
+from ctrlgrid.errors import DefinitionError
+from ctrlgrid.marks import Area
 from ctrlgrid.model import ColorField, Section
 from ctrlgrid.writers import WriterQuery
 
@@ -33,8 +34,6 @@ _DEFAULT_MONTHS = [
     "July", "August", "September", "October", "November", "December",
 ]
 _DEFAULT_WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
-
-_TITLE_PT = 16
 
 
 class Holiday(Section):
@@ -199,10 +198,32 @@ class CalendarGenerator:
         return lines
 
     def check(self, cfg: CalendarConfig, *, area: Area, q: WriterQuery) -> None:
-        """Fit-or-refuse lives here (§ 12 point 13). The layout-dependent checks
-        (a day's blocks, a month's day rows) arrive with the drawing in phase 4;
-        the structural ones are already in the config validators above."""
-        return None
+        """Fit-or-refuse: what can only be judged against the area (§ 9, § 12).
+
+        The structural refusals are already in the config validators; here are
+        the two that depend on the page size — a day whose fixed block heights
+        exceed the page, and a month whose 31 day rows cannot fit at a readable
+        size. Nothing is ever scaled or scrolled (§ 8.2); the reader zooms.
+        """
+        if cfg.day is not None:
+            fixed = sum(int(b.height[:-1]) for b in cfg.day.blocks if b.height != "rest")
+            if fixed > 100:
+                raise DefinitionError(
+                    f"the day's block heights add up to {fixed}% — over the 100% of one "
+                    "page. Lower a height or use `rest` (§ 9)",
+                    field="day",
+                )
+        # A month lists all 31 possible day rows on one page; below a readable
+        # minimum the run is refused rather than shrunk (§ 8.2).
+        min_row = 4000  # 4 mm
+        header = round(40 * 25400 / 72)  # nav + crumb, roughly
+        if area.height - header < 31 * min_row:
+            raise DefinitionError(
+                "the pattern area is too short for a month's 31 day rows at a readable "
+                f"size (needs about {round((31 * min_row + header) / 1000)} mm of height) — "
+                "use a taller page or smaller margins (§ 9)",
+                field="page",
+            )
 
     def generate(self, cfg, *, area, page, q):  # never called — a document
         raise AssertionError("calendar is a document generator; it produces pages")
@@ -210,24 +231,58 @@ class CalendarGenerator:
     # ------------------------------------------------------------------- pages
 
     def pages(self, cfg: CalendarConfig, *, area: Area, q: WriterQuery) -> Iterator[DocumentPage]:
-        """The page skeleton (phase 3): the right pages, in order, with the right
-        destination keys and a title. Layouts and links are phase 4."""
-        months = cfg.month_names()
-        yield self._page(area, "index", "index", "Index")
-        yield self._page(area, "year", "year", str(cfg.year))
-        for month in range(1, 13):
-            yield self._page(area, f"month-{month:02d}", "month", f"{months[month - 1]} {cfg.year}")
-        for date in days_of_year(cfg.year):
-            yield self._page(area, f"day-{date.isoformat()}", "day", date.isoformat())
-        if cfg.notes is not None:
-            width = len(str(cfg.notes.count))
-            yield self._page(area, "notes-index", "notes_index", "Notes")
-            for i in range(1, cfg.notes.count + 1):
-                yield self._page(area, f"note-{i:0{width}d}", "notes", f"Note {i}")
+        """Every page of the calendar, in order, drawn and linked (§ 7)."""
+        from ctrlgrid.generators import calendar_layout as layout
 
-    def _page(self, area: Area, dest: str, kind: str, title: str) -> DocumentPage:
-        size = round(_TITLE_PT * 25400 / 72)
-        marks: tuple[Mark, ...] = (
-            Text(pos=Point(0, area.height - size), content=title, size=size),
+        months = cfg.month_names()
+        weekdays = cfg.weekday_names()
+        has_notes = cfg.notes is not None
+        holidays = {h.date: h.label for h in cfg.holidays}
+        all_days = list(days_of_year(cfg.year))
+        day_blocks = cfg.day.blocks if cfg.day is not None else (
+            DayBlock(type="notes", height="rest", surface="lines"),
         )
-        return DocumentPage(dest=dest, kind=kind, marks=marks, links=(), title=title)
+
+        def page() -> layout.Page:
+            return layout.Page(area, q)
+
+        yield layout.index_page(page(), cfg, months, has_notes)
+        yield layout.year_page(page(), cfg, months)
+
+        for month in range(1, 13):
+            prev = f"month-{month - 1:02d}" if month > 1 else None
+            nxt = f"month-{month + 1:02d}" if month < 12 else None
+            yield layout.month_page(page(), cfg, months, weekdays, month, holidays, prev, nxt)
+
+        last = len(all_days) - 1
+        for i, date in enumerate(all_days):
+            prev = f"day-{all_days[i - 1].isoformat()}" if i > 0 else None
+            nxt = f"day-{all_days[i + 1].isoformat()}" if i < last else None
+            yield layout.day_page(
+                page(), cfg, months, weekdays, date, day_blocks, holidays.get(date), prev, nxt
+            )
+
+        if has_notes:
+            yield from self._notes_pages(cfg, layout, page)
+
+    def _notes_pages(self, cfg, layout, page) -> Iterator[DocumentPage]:
+        count = cfg.notes.count
+        cap = layout.notes_capacity(page().H)
+        chunks = [list(range(i + 1, min(i + cap, count) + 1)) for i in range(0, count, cap)]
+        total = len(chunks)
+
+        def index_dest(page_no: int) -> str:
+            return "notes-index" if page_no == 1 else f"notes-index-{page_no}"
+
+        for page_no, numbers in enumerate(chunks, start=1):
+            prev = index_dest(page_no - 1) if page_no > 1 else None
+            nxt = index_dest(page_no + 1) if page_no < total else None
+            yield layout.notes_index_page(
+                page(), cfg, page_no=page_no, page_count=total, numbers=numbers, prev=prev, nxt=nxt
+            )
+
+        width = len(str(count))
+        for i in range(1, count + 1):
+            prev = f"note-{i - 1:0{width}d}" if i > 1 else None
+            nxt = f"note-{i + 1:0{width}d}" if i < count else None
+            yield layout.note_page(page(), cfg, num=i, prev=prev, nxt=nxt)

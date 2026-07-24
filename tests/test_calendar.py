@@ -15,6 +15,7 @@ import pytest
 from pydantic import ValidationError
 from pypdf import PdfReader
 
+from ctrlgrid.errors import DefinitionError
 from ctrlgrid.generators import REGISTRY
 from ctrlgrid.generators.calendar import (
     CalendarConfig,
@@ -127,6 +128,65 @@ class TestPageEnumeration:
         d = dests(cfg())
         assert not any(x.startswith("note") for x in d)
         assert len(d) == 1 + 1 + 12 + 365
+
+
+def _graph(c: CalendarConfig):
+    pages = list(CalendarGenerator().pages(c, area=AREA, q=Q))
+    dests = {page.dest for page in pages}
+    edges = {(page.dest, link.target) for page in pages for link in page.links}
+    return pages, dests, edges
+
+
+class TestLinks:
+    def test_no_link_dangles(self) -> None:
+        # The whole point: every link resolves to a page that exists. With 40
+        # notes the numbered index paginates, so its own page dests are exercised.
+        _pages, dests, edges = _graph(cfg(notes={"count": 40}))
+        dangling = sorted(target for _src, target in edges if target not in dests)
+        assert dangling == []
+
+    def test_the_index_links_to_year_months_and_notes(self) -> None:
+        pages, _dests, _edges = _graph(cfg(notes={"count": 5}))
+        index = next(p for p in pages if p.dest == "index")
+        targets = {link.target for link in index.links}
+        assert {"year", "month-01", "month-12", "notes-index"} <= targets
+
+    def test_a_month_links_every_date_to_its_day(self) -> None:
+        pages, _dests, _edges = _graph(cfg())
+        january = next(p for p in pages if p.dest == "month-01")
+        targets = {link.target for link in january.links}
+        assert "day-2026-01-01" in targets and "day-2026-01-31" in targets
+
+    def test_the_notes_index_numbers_link_to_notes(self) -> None:
+        pages, _dests, _edges = _graph(cfg(notes={"count": 5}))
+        index = next(p for p in pages if p.dest == "notes-index")
+        targets = {link.target for link in index.links}
+        assert {"note-1", "note-5"} <= targets
+
+    def test_the_notes_index_paginates_for_a_large_count(self) -> None:
+        _pages, dests, _edges = _graph(cfg(notes={"count": 200}))
+        assert "notes-index" in dests and "notes-index-2" in dests
+
+    def test_every_page_carries_the_nav_strip(self) -> None:
+        pages, _dests, _edges = _graph(cfg(notes={"count": 3}))
+        for page in pages:
+            targets = {link.target for link in page.links}
+            assert "index" in targets and "year" in targets
+
+
+class TestFitOrRefuse:
+    def test_a_page_too_short_for_a_month_is_refused(self) -> None:
+        tiny = Area(width=120_000, height=60_000)  # 60 mm tall — no room for 31 rows
+        with pytest.raises(DefinitionError):
+            CalendarGenerator().check(cfg(), area=tiny, q=Q)
+
+    def test_day_blocks_over_one_page_are_refused(self) -> None:
+        c = cfg(day={"blocks": [
+            {"type": "notes", "height": "60%"},
+            {"type": "notes", "height": "60%"},
+        ]})
+        with pytest.raises(DefinitionError):
+            CalendarGenerator().check(c, area=AREA, q=Q)
 
 
 class TestItValidatesAndBuilds:
