@@ -37,8 +37,8 @@ e-ink tablets.
 > ```
 >
 > Flags: `--pages`, `--names`, `--format`, `--device`, `--orientation`,
-> `--stamp`, `--cover`, `--seed`, `--strict`, `--nup`, `--nup-sheet`,
-> `--crop-marks`, `-o`, `--force`, `--quiet`.
+> `--stamp`, `--cover`, `--embed-def`, `--seed`, `--strict`, `--nup`,
+> `--nup-sheet`, `--crop-marks`, `-o`, `--force`, `--quiet`.
 >
 > Not yet: `--skip-unsupported`.
 >
@@ -201,6 +201,11 @@ margins, base values, cycles, effective period, tool version and a checksum of
 the definition — so a print that came out right stays reproducible. It is not
 counted in the page numbering, and it is never scaled to fit: on a format too
 narrow for the 100 mm rule the run is refused rather than shrunk.
+
+For the fullest record, add `--embed-def`: the PDF then carries its own source
+as a file attachment — the exact definition it was built from — so the document
+can be regenerated years later without hunting for the file. PDF only; on PNG
+output the run is refused with the reason rather than dropping the attachment.
 
 **2. Character coverage is Latin-1 by default.** Without a font file of your own,
 `ä ö ü ß é à ñ ç` work but `ł ğ ő` do not — you will hit this on the first Polish

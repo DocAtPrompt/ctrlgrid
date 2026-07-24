@@ -18,8 +18,10 @@ and `mandala` (M8, § 7.11) and the `staves` clefs (M9, § 15.3). Since M9, four
 things landed on the handle side, each small and each in the spec: the
 **interactive preset browser** (no-args, § 11.2), the **general relative measure**
 `%w`/`%h`/`%s` (§ 8.11), the cover sheet's **stroke-weight ladder** (§ 8.8), and
-**`pattern.align`** — anchor the grid at a chosen corner (§ 8.5). Only M5's two
-device edges are left (see *Not done*).
+**`pattern.align`** — anchor the grid at a chosen corner (§ 8.5). Since then,
+`--embed-def` — **the PDF carries its own source** as a file attachment (§ 8.8,
+was § 15 open question 5) — and open question 3 closed (reportlab is BSD-3-Clause,
+verified). Only M5's two device edges are left (see *Not done*).
 0.1.0 is the version in the code; nothing has been released, because releasing
 needs a human *and* the user has chosen to defer PyPI for now (see *Not done*).
 
@@ -27,7 +29,7 @@ needs a human *and* the user has chosen to defer PyPI for now (see *Not done*).
 uv sync --extra dev && uv run pytest && uv run ruff check .
 ```
 
-802 tests, all green, ruff clean. Forty-odd commits on `main`, linear history,
+816 tests, all green, ruff clean. Forty-odd commits on `main`, linear history,
 pushed to **[github.com/DocAtPrompt/ctrlgrid](https://github.com/DocAtPrompt/ctrlgrid)**
 (public); CI runs green there on Linux (3.11–3.13), macOS and Windows. Eight
 presets (one each for `lines`, `dots`, `polar`, `form`, `maze`, `perspective`,
@@ -70,6 +72,7 @@ and a PNG preview, guarded by `test_every_example_validates`.
 | post-M9 interactive | `ctrlgrid` with no args → preset browser (preset → pages → output), TTY-guarded, help otherwise (§ 11.2) |
 | post-M9 weight ladder | cover sheet's rising stroke-weight samples, with the device pixel width where a device is active (§ 8.8) |
 | post-M9 `pattern.align` | anchor at `bottom-left` (default) / `top-left` / … — a `mirror_y` reflection re-anchors the cycle so the incomplete block moves corners (§ 8.5) |
+| post-M9 `--embed-def` | the PDF carries its own source: the def's exact bytes as an `EmbeddedFile` in the catalog's `/Names /EmbeddedFiles` tree, built by hand (reportlab has no filespec support), deterministic, PDF-only — PNG refuses it by name via the `attachment` capability (§ 8.8, § 10.2) |
 | post-M9 examples | rendered gallery in `examples/`, one per generator + multi-page + cover, `test_every_example_validates` guards it |
 | pulled forward into M1 | format table, presets, `check`, overwrite protection, placeholders — the M1 acceptance criteria needed them |
 
@@ -153,7 +156,7 @@ work around it.
 
 **Where the specification was genuinely silent**, the resolution is recorded in
 [`docs/implementation-decisions.md`](docs/implementation-decisions.md) —
-thirty-nine of them so far, each with the section it belongs to and the
+forty of them so far, each with the section it belongs to and the
 reasoning. Read it before changing a default; several look arbitrary and are not.
 
 ## Language split
@@ -282,9 +285,21 @@ this project runs on — claims are backed by a command's output, never asserted
 
 ## Open questions
 
-Six in § 15, none blocking. Two need a device or a source rather than a decision
-(reMarkable 2 figures, whether the Paper Pro counts as a colour device). If you
-are tempted to guess at a number, don't — that is exactly the failure mode
-`source`/`verified` exists to prevent. The seventh — the `staves` clef — is now
-answered in § 15.3 (embedded music font, built in M9), and it settled part of
-open question 2: for the music case, a font *is* shipped.
+Two of § 15's six are now settled since the last handover. **Question 3 closed**
+— reportlab 5.0.0 is BSD-3-Clause, verified against the shipped licence text and
+package metadata (2026-07-24), permissive-compatible with ctrlgrid's MIT and
+nothing to do. **Question 5 is built** — `--embed-def` / `pages.embed_def`
+embeds the def as a PDF attachment (§ 8.8); only the original *suspicion* it
+carried (how viewers and sync services treat attachments) is left, and that is
+for practice to answer, not the code.
+
+Two of the rest need a device or a source rather than a decision (reMarkable 2
+figures, whether the Paper Pro counts as a colour device). If you are tempted to
+guess at a number, don't — that is exactly the failure mode `source`/`verified`
+exists to prevent. The seventh — the `staves` clef — is answered in § 15.3
+(embedded music font, built in M9), and it settled part of open question 2: for
+the music case, a font *is* shipped. What remains are genuine
+*decide-after-experience* calls, not gaps: whether a font must be shipped for
+non-Latin-1 names (q2), extra domain units like nib widths / `lpi` / rastral
+sizes (q4), and the short-edge duplex flip (q6) — each cheap, each waiting on
+real use rather than a design answer.

@@ -40,6 +40,22 @@ class WriterQuery(Protocol):
 
 
 @dataclass(frozen=True, slots=True)
+class Attachment:
+    """A file to embed in the document (§ 8.8, § 15 point 5).
+
+    `data` is the exact bytes to carry — for `embed_def` the source of the
+    definition, unre-encoded — and `filename` the name a viewer offers to save
+    it under. A writer that cannot carry a file does not declare the
+    `attachment` capability, and the pre-flight refuses the run rather than
+    dropping the attachment silently (§ 10.2).
+    """
+
+    filename: str
+    data: bytes
+    description: str = ""
+
+
+@dataclass(frozen=True, slots=True)
 class DocumentMeta:
     """What goes into the PDF information dictionary (§ 10.1).
 
@@ -50,6 +66,9 @@ class DocumentMeta:
     title: str = "ctrlgrid template"
     author: str = ""
     subject: str = ""
+    #: An optional file to embed alongside the document (§ 8.8). One only: the
+    #: single use is the definition carrying its own source.
+    attachment: Attachment | None = None
 
 
 class Writer(WriterQuery, Protocol):
@@ -68,4 +87,4 @@ class Writer(WriterQuery, Protocol):
     def end_document(self) -> None: ...
 
 
-__all__ = ["DocumentMeta", "Mark", "Mm", "Um", "Writer", "WriterQuery"]
+__all__ = ["Attachment", "DocumentMeta", "Mark", "Mm", "Um", "Writer", "WriterQuery"]

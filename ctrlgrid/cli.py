@@ -141,6 +141,10 @@ def generate(
         bool,
         typer.Option("--cover", help="Extra first sheet: calibration and settings (§ 8.8)."),
     ] = False,
+    embed_def: Annotated[
+        bool,
+        typer.Option("--embed-def", help="Embed the definition's source in the PDF (§ 8.8)."),
+    ] = False,
     force: Annotated[bool, typer.Option("--force", help="Overwrite an existing file.")] = False,
     quiet: Annotated[bool, typer.Option("--quiet", help="Report only the output path.")] = False,
 ) -> None:
@@ -151,7 +155,7 @@ def generate(
             definition,
             _overrides(
                 pages, format, device, orientation, names, stamp, cover, seed, strict,
-                nup, nup_sheet, crop_marks,
+                nup, nup_sheet, crop_marks, embed_def,
             ),
         )
         destination = _destination(out, target, definition, force)
@@ -284,6 +288,7 @@ def _overrides(
     nup: str | None = None,
     nup_sheet: str | None = None,
     crop_marks: bool = False,
+    embed_def: bool = False,
 ) -> dict:
     if format is not None and device is not None:
         # § 9.2: two answers to "what medium". The loader would refuse them in a
@@ -302,6 +307,9 @@ def _overrides(
         # "no cover", it is "the definition decides", which is why it is
         # dropped here rather than sent as an override.
         "cover": True if cover else None,
+        # § 8.8: the same one-way switch as --cover — on, or "the definition
+        # decides", never off.
+        "embed_def": True if embed_def else None,
         # § 7.5: a blade key rather than a handle one, and the only one the
         # command line reaches into — a run's seed is a property of the run.
         "seed": seed,

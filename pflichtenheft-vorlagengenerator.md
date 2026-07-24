@@ -1409,9 +1409,19 @@ Dokumentation.
 - Es enthält die Werkzeugversion und ist deshalb **von Golden-File-Tests
   auszunehmen** (§ 13.2), sonst bricht jede Versionsanhebung die Suite.
 
-Erwägenswert als Ergänzung: die vollständige Def als **Dateianhang im PDF**
-einbetten. Dann trägt das Dokument buchstäblich seinen eigenen Quelltext.
-Billig in `reportlab`, aber noch nicht entschieden (§ 15, Punkt 5).
+**Die Def als Dateianhang im PDF** (§ 15, Punkt 5) — **gebaut.** `--embed-def`
+bzw. `pages.embed_def: true` bettet die vollständige Def als Anhang ein: die
+*exakten Bytes*, die der Nutzer geschrieben hat (dieselben, über die die
+Prüfsumme oben läuft), nicht das aufgelöste Modell. Dann trägt das Dokument
+buchstäblich seinen eigenen Quelltext, und ein gelungenes Blatt reproduziert sich
+Jahre später, ohne dass jemand die Def wiederfinden muss. Default aus, nur ein
+Weg an — dieselbe Einweg-Logik wie `--cover` (§ 11). **Nur PDF:** der
+PNG-Schreiber kann keine Datei tragen, also lehnt die Vorabprüfung den Lauf
+benannt ab, statt den Anhang stillschweigend fallenzulassen (§ 10.2). `reportlab`
+kennt keine Filespecs, also baut der Schreiber die Objekte selbst — eine
+`EmbeddedFile`-Stream, ein `Filespec` und der Namensbaum `/Names /EmbeddedFiles`
+im Katalog (PDF 1.4+, genau die Zielversion) —, alles aus Bytes und Name
+abgeleitet, ohne Datum und ohne Zufalls-ID, damit § 10.1 hält.
 
 ### 8.9 Textüberlauf in Kopf und Fuß
 
@@ -1878,6 +1888,7 @@ einen Lauf.
 | `--stamp <text>` | Ganzseitiger Stempel | § 8.6 |
 | `--seed <n>` | Basis-Seed für prozedurale Generatoren | § 7.5 |
 | `--cover` | Deckblatt mit Kalibrierquadrat erzeugen | § 8.8 |
+| `--embed-def` | Die Def als Dateianhang ins PDF einbetten | § 8.8 |
 | `--nup <sxz>` | Ausschießen, **ohne Skalierung** | § 14, M6 |
 | `--nup-sheet <format>` | Bogenformat fürs Ausschießen | § 14, M6 |
 | `--force` | Vorhandene Ausgabedatei überschreiben | § 11.3 |
@@ -2266,9 +2277,15 @@ Bewusst noch offen:
    wenn die betroffenen Generatoren stehen.
    Ebenso offen: die **nummerierten Rastralgrößen 0–8** — erst belegen, dann
    ausliefern (§ 7.3).
-5. **Def als Dateianhang im PDF einbetten** (§ 8.8). Das Dokument trüge dann
-   seinen eigenen Quelltext. Billig, aber ungeprüft, wie Betrachter und
-   Synchronisationsdienste mit Anhängen umgehen.
+5. ~~**Def als Dateianhang im PDF einbetten** (§ 8.8).~~ **Gebaut (2026-07-24):**
+   `--embed-def` / `pages.embed_def`. Das Dokument trägt jetzt seinen eigenen
+   Quelltext — die exakten Bytes, über die auch die Prüfsumme läuft. Mechanik in
+   § 8.8: ein `EmbeddedFile`-Stream und der Namensbaum `/Names /EmbeddedFiles`,
+   von Hand gebaut (reportlab kennt keine Filespecs), determiniert und PDF-only
+   (der PNG-Schreiber lehnt benannt ab, § 10.2). Verifiziert per CLI und zwei
+   unabhängigen Parsern (pypdf, pikepdf/qpdf). Offen bleibt nur der ursprüngliche
+   *Verdacht* — wie Betrachter und Synchronisationsdienste mit Anhängen umgehen;
+   das entscheidet die Praxis, nicht der Code.
 6. **Wendekante beim Duplexdruck.** `back_mirrored` (§ 7.5) setzt Wenden über
    die lange Kante voraus. Ob ein Schalter für die kurze Kante nötig ist, zeigt
    erst die Praxis — er wäre eine einzige Fallunterscheidung beim Spiegeln.

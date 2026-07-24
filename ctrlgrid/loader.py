@@ -144,6 +144,11 @@ class Document:
     source: str
     """Where this came from — a preset name or a file path, for messages."""
 
+    source_text: str
+    """The exact bytes of the definition, as the user wrote them. `embed_def`
+    carries these into the PDF (§ 8.8), and the digest is taken over the same
+    text, so the attachment and the checksum can never disagree."""
+
     digest: str
     """A short SHA-256 over the definition text, for the cover sheet (§ 8.8).
 
@@ -261,6 +266,7 @@ def loads(text: str, overrides: Mapping[str, Any] | None = None, *, source: str)
         sheet=sheet,
         axes=blade.periodic_axes(config),
         source=source,
+        source_text=text,
         digest=hashlib.sha256(text.encode("utf-8")).hexdigest()[:12],
         device=profile,
         strict=bool(overrides.get("strict")),
@@ -758,6 +764,10 @@ def _apply_overrides(handle: dict[str, Any], overrides: Mapping[str, Any]) -> No
         # this one run, and there is no flag that unwishes what the definition
         # asked for, because `--no-cover` would be a fifth spelling of nothing.
         handle["pages"] = {**(handle.get("pages") or {}), "cover": True}
+    if overrides.get("embed_def"):
+        # § 8.8: `--embed-def` switches embedding on, and only on — the same
+        # one-way flag as `--cover`, for the same reason (§ 11).
+        handle["pages"] = {**(handle.get("pages") or {}), "embed_def": True}
     for key in ("format", "orientation"):
         if key in overrides:
             handle["page"] = {**(handle.get("page") or {}), key: overrides[key]}

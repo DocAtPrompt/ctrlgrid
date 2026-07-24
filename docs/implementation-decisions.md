@@ -593,6 +593,43 @@ or PDF.
 
 ---
 
+## 40. Embedding the def: raw source, no `/Subtype`, no `/AF`, PNG refuses
+
+**§ 8.8, § 15 point 5.** The spec named the feature ("die vollständige Def als
+Dateianhang") and its purpose (the document carries its own source) but not the
+mechanics. Four calls were made building it:
+
+- **What is embedded is the raw source text, not the resolved model.** "Seinen
+  eigenen Quelltext" is the source the user wrote — comments, anchors and all —
+  and it is the same bytes the cover's checksum runs over, so the attachment and
+  the checksum can never disagree. CLI overrides (`--pages`, …) are deliberately
+  *not* folded in; the cover's settings summary already records effective
+  settings, and the two are complementary (§ 8.8).
+- **Its own opt-in, one-way like `--cover`.** `pages.embed_def` / `--embed-def`,
+  independent of the cover — a user may want the attachment without a cover page
+  or the reverse. The flag only ever switches it on (§ 11), the same reasoning
+  as `--cover`: there is no `--no-embed-def`, because it would be a second
+  spelling of "the definition decides".
+- **The objects are built by hand, and two obvious keys are left off.** reportlab
+  has no filespec support ("skipping filespecs" in its own source), so the writer
+  emits an `EmbeddedFile` stream, a `Filespec`, and the catalog's `/Names
+  /EmbeddedFiles` name tree itself. No `/Subtype`: reportlab's `PDFName` leaves
+  the MIME slash raw (`/application/yaml`), which a strict parser reads as two
+  name tokens and rejects — verified with pypdf — and Subtype is optional, so the
+  `.yaml` filename carries the type instead. No `/AF` (the PDF 2.0 association
+  array): reportlab's `PDFCatalog` serialises only a fixed key set and silently
+  drops it — verified with pikepdf — and the name tree is what viewers actually
+  read on PDF 1.4, which is the version this writer targets.
+- **PNG refuses by name.** Carrying a file is a writer capability like text
+  (§ 10.2). PDF declares `attachment`, PNG does not, and the pre-flight refuses
+  `embed_def` on PNG with the way out (drop it, or output PDF) rather than
+  dropping the attachment silently.
+
+The filename comes from the source's basename, with `.yaml` appended when it has
+no extension — a preset name like `millimeter-a4` is not a filename until it does.
+
+---
+
 ## Smaller calls, for completeness
 
 - **Rounding is ties-away-from-zero**, not Python's banker's rounding, and runs

@@ -24,13 +24,14 @@ from pathlib import Path
 
 from reportlab.lib.colors import HexColor
 from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.pdfdoc import PDFArray, PDFDictionary, PDFName, PDFStream, PDFString
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.pdfgen import canvas
 
 from ctrlgrid import __version__, fonts
 from ctrlgrid.errors import CtrlGridError
 from ctrlgrid.marks import Arc, Dot, Image, Mark, Point, Polygon, Segment, Text, Um
-from ctrlgrid.writers import DocumentMeta
+from ctrlgrid.writers import Attachment, DocumentMeta
 
 PT_PER_UM = 72 / 25400
 
@@ -64,7 +65,10 @@ class PdfWriter:
         The vocabulary is complete from M1; a writer grows into it, and the
         pre-flight check refuses anything missing instead of dropping it.
         """
-        return {"vector", "color", "text", "opacity", "arc", "polygon", "image_png"}
+        return {
+            "vector", "color", "text", "opacity", "arc", "polygon", "image_png",
+            "attachment",
+        }
 
     def text_width(self, content: str, *, family: str, size: Um) -> Um:
         return _to_um(pdfmetrics.stringWidth(content, _font(family), _to_pt(size)))
@@ -112,6 +116,53 @@ class PdfWriter:
         self._canvas.setSubject(meta.subject)
         self._canvas.setCreator(f"ctrlgrid {__version__}")
         self._canvas.setProducer(f"ctrlgrid {__version__}")
+        if meta.attachment is not None:
+            self._embed(meta.attachment)
+
+    def _embed(self, attachment: Attachment) -> None:
+        """Carry a file inside the PDF as an EmbeddedFile (§ 8.8, § 15 point 5).
+
+        reportlab has no filespec support ("skipping filespecs" in its own
+        source), so the objects are built by hand: an EmbeddedFile stream, a
+        Filespec that points at it, and the catalog's `/Names /EmbeddedFiles`
+        name tree — the standard PDF 1.4+ mechanism, and exactly the version
+        this writer targets, so every viewer lists it in its attachments panel.
+        (`/AF`, the PDF 2.0 association array, is not added: reportlab's
+        `PDFCatalog` only serialises a fixed set of keys and silently drops it,
+        and the name tree is what viewers actually read.) Everything here is
+        derived from the bytes and the name — no date, no random id — so § 10.1
+        holds: identical input still gives identical bytes, and this is covered
+        by a determinism test like every other addition to the writer.
+
+        No `/Subtype`: reportlab's `PDFName` leaves the MIME slash raw
+        (`/application/yaml`), which a strict parser reads as two name tokens and
+        chokes on. Subtype is optional, so it is left off and the `.yaml`
+        filename carries the type instead.
+        """
+        doc = self._pdf._doc
+        data = attachment.data
+        stream = PDFStream(
+            dictionary=PDFDictionary({
+                "Type": PDFName("EmbeddedFile"),
+                "Params": PDFDictionary({"Size": len(data)}),
+            }),
+            content=data,
+        )
+        file_ref = doc.Reference(stream)
+        spec: dict[str, object] = {
+            "Type": PDFName("Filespec"),
+            "F": PDFString(attachment.filename),
+            "UF": PDFString(attachment.filename),
+            "EF": PDFDictionary({"F": file_ref, "UF": file_ref}),
+        }
+        if attachment.description:
+            spec["Desc"] = PDFString(attachment.description)
+        spec_ref = doc.Reference(PDFDictionary(spec))
+        doc.Catalog.Names = PDFDictionary({
+            "EmbeddedFiles": PDFDictionary({
+                "Names": PDFArray([PDFString(attachment.filename), spec_ref]),
+            }),
+        })
 
     def begin_page(self, width: Um, height: Um) -> None:
         # The exact MediaBox is the whole promise (§ 8.2): no rounding to a

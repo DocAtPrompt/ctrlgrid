@@ -18,6 +18,7 @@ import hashlib
 import re
 from collections.abc import Iterator
 from dataclasses import dataclass, replace
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 from ctrlgrid.axes import AxisPeriod
@@ -36,7 +37,7 @@ from ctrlgrid.marks import (
     translate,
 )
 from ctrlgrid.model import Band, Margin, PatternSpec
-from ctrlgrid.writers import DocumentMeta, Writer, WriterQuery
+from ctrlgrid.writers import Attachment, DocumentMeta, Writer, WriterQuery
 
 if TYPE_CHECKING:  # `loader` imports `Sheet` from here, so the arrow points one way
     from ctrlgrid.loader import Document
@@ -679,7 +680,22 @@ def _refuse_mirroring_that_cannot_line_up(document: Document, plan: SheetPlan) -
 
 #: Every capability a mark can call for (§ 10.2). A writer holding all of them
 #: renders anything, so the check below can skip the sampling entirely.
-_ALL_CAPABILITIES = {"vector", "color", "opacity", "arc", "polygon", "image_png", "text"}
+_ALL_CAPABILITIES = {
+    "vector", "color", "opacity", "arc", "polygon", "image_png", "text", "attachment",
+}
+
+
+def _def_filename(source: str) -> str:
+    """A filename for the embedded definition (§ 8.8).
+
+    The source's own basename — `my-grid.yaml` stays that. A preset name like
+    `millimeter-a4` has no extension, so `.yaml` is added, otherwise a viewer
+    would not know what it is opening.
+    """
+    name = Path(source).name
+    if not Path(name).suffix:
+        name = f"{name}.yaml"
+    return name
 
 _MARK_CAPABILITY = {
     Text: "text",
@@ -735,16 +751,24 @@ def _refuse_marks_the_writer_cannot_render(
         needed.add("text")
     if document.pages.cover:
         needed.add("text")  # the cover carries the calibration labels (§ 8.8)
+    if document.pages.embed_def:
+        needed.add("attachment")  # the def rides along as a file (§ 8.8)
 
     missing = needed - caps
     if not missing:
         return
-    hint = (
-        " — the PNG writer has no font file to draw glyphs with (§ 10.4). Name a font "
-        "file (`font: {file: ...}`), leave the text off, or output PDF instead"
-        if "text" in missing
-        else " — output PDF, which renders the full mark vocabulary (§ 10.2)"
-    )
+    if "text" in missing:
+        hint = (
+            " — the PNG writer has no font file to draw glyphs with (§ 10.4). Name a font "
+            "file (`font: {file: ...}`), leave the text off, or output PDF instead"
+        )
+    elif "attachment" in missing:
+        hint = (
+            " — the PNG writer cannot carry a file. Drop `embed_def`, or output PDF, "
+            "which embeds the definition as an attachment (§ 8.8)"
+        )
+    else:
+        hint = " — output PDF, which renders the full mark vocabulary (§ 10.2)"
     raise DefinitionError(
         f"this run needs {', '.join(sorted(missing))} and the PNG writer does not "
         f"support it{hint}"
@@ -800,7 +824,18 @@ def build(document: Document, writer: Writer) -> Geometry:
     plan = sheet_plan(document)
 
     # Pass two — write. Nothing below this line may raise on user input.
-    writer.begin_document(DocumentMeta(title=f"ctrlgrid {document.source}"))
+    attachment = None
+    if document.pages.embed_def:
+        # § 8.8: the document carries its own source. The exact bytes the user
+        # wrote, so a sheet reproduces itself years later without the def.
+        attachment = Attachment(
+            filename=_def_filename(document.source),
+            data=document.source_text.encode("utf-8"),
+            description="ctrlgrid definition — this document's own source (§ 8.8)",
+        )
+    writer.begin_document(
+        DocumentMeta(title=f"ctrlgrid {document.source}", attachment=attachment)
+    )
 
     # § 8.8: an additional first page, outside the numbering and outside the
     # page loop entirely — it gets no background, no pattern, no frame, no

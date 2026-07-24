@@ -398,6 +398,13 @@ class PagesSpec(Section):
     #: numbered sheets *plus* a cover, and `{page} / {page_count}` goes on
     #: meaning 1…30. `--cover` is the intended route, as with the stamp (§ 8.6).
     cover: bool = False
+    #: § 8.8 / § 15 point 5. When on, the PDF carries its own source: the exact
+    #: bytes of the definition, embedded as a file attachment, so a sheet that
+    #: came out right reproduces itself without anyone finding the def again.
+    #: Off by default and PDF-only — the PNG writer cannot carry a file and the
+    #: pre-flight refuses it by name (§ 10.2). `--embed-def` is the flag, and
+    #: like `--cover` it only ever switches it on.
+    embed_def: bool = False
     #: § 9.4 allows an inline list for the one-off case but does not encourage
     #: it: the structure is the form, the list is a throwaway file. `--names`
     #: is the intended route and beats this one (§ 11).
