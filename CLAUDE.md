@@ -3,32 +3,38 @@
 ## What this is
 
 A CLI tool that generates **dimensionally accurate PDF templates**: grid paper,
-ruled paper, dot grids, staff paper, mazes, polar targets, tilings and fillable
-forms — for paper formats and for e-ink devices.
+ruled paper, dot grids, staff paper, mazes, polar targets, tilings, fillable
+forms, perspective grids and mandalas — for paper formats and for e-ink devices.
 
 **The one promise:** what says 5 mm measures 5 mm on the printout. No scaling,
 no "fit to page", no stretching a grid so it comes out even.
 
 ## Current state — read this first
 
-**M1 to M9 are complete but for M5's small edges** — the handle, all ten blades
-of § 7, device profiles, `px`, the media check, `snap: pixel`, N-up imposition,
-and the PNG writer. **M8** (`perspective` and `mandala`, § 7.11) and **M9**
-(clefs for `staves` from an embedded music font, § 15.3) are both done — M9 was
-the build of the one open *decision* the handovers kept naming.
-0.1.0 is the version in the code; nothing since M1 has been released, because
-releasing needs a human (see *Not done*).
+**Every milestone (M1–M9) is complete**, and so are the four post-M9 features the
+handovers kept circling back to — all ten blades of § 7, device profiles, `px`,
+the media check, `snap: pixel`, N-up imposition, the PNG writer, `perspective`
+and `mandala` (M8, § 7.11) and the `staves` clefs (M9, § 15.3). Since M9, four
+things landed on the handle side, each small and each in the spec: the
+**interactive preset browser** (no-args, § 11.2), the **general relative measure**
+`%w`/`%h`/`%s` (§ 8.11), the cover sheet's **stroke-weight ladder** (§ 8.8), and
+**`pattern.align`** — anchor the grid at a chosen corner (§ 8.5). Only M5's two
+device edges are left (see *Not done*).
+0.1.0 is the version in the code; nothing has been released, because releasing
+needs a human *and* the user has chosen to defer PyPI for now (see *Not done*).
 
 ```bash
 uv sync --extra dev && uv run pytest && uv run ruff check .
 ```
 
-791 tests, all green, ruff clean. Thirty-odd commits on `main`, linear history,
+802 tests, all green, ruff clean. Forty-odd commits on `main`, linear history,
 pushed to **[github.com/DocAtPrompt/ctrlgrid](https://github.com/DocAtPrompt/ctrlgrid)**
-(public); CI runs green there on Linux (3.11–3.13), macOS and Windows. Eight presets (one each for
-`lines`, `dots`, `polar`, `form`, `maze`, `perspective`, `mandala`, `staves`);
-`grid` and `tiling` have none yet, though every blade is documented here and in
-the specification.
+(public); CI runs green there on Linux (3.11–3.13), macOS and Windows. Eight
+presets (one each for `lines`, `dots`, `polar`, `form`, `maze`, `perspective`,
+`mandala`, `staves`; `grid` and `tiling` have none yet), and a rendered
+**example gallery** in [`examples/`](examples/) — one A4 sheet per generator plus
+a multi-page maze booklet and a cover sheet, each an ordinary definition, its PDF
+and a PNG preview, guarded by `test_every_example_validates`.
 
 ### Done
 
@@ -61,6 +67,10 @@ the specification.
 | **M8** `mandala` | sectors/rings scaffold, rosette of circles (`mirror`), inscribed regular / star polygons, on shared `polar_geometry` (§ 7.11) |
 | **M9** `staves` clefs | `treble/bass/alto/tenor` as `Text` in a bundled, subset music font (Bravura, OFL→TrueType), SMuFL placement, 5-line only (§ 15.3) |
 | **M5** relative measure | `%w`/`%h`/`%s` as a fraction of the pattern area, resolved in seam 1 like `px`, `RelativeLengthField` opt-in across the blades (§ 8.11) |
+| post-M9 interactive | `ctrlgrid` with no args → preset browser (preset → pages → output), TTY-guarded, help otherwise (§ 11.2) |
+| post-M9 weight ladder | cover sheet's rising stroke-weight samples, with the device pixel width where a device is active (§ 8.8) |
+| post-M9 `pattern.align` | anchor at `bottom-left` (default) / `top-left` / … — a `mirror_y` reflection re-anchors the cycle so the incomplete block moves corners (§ 8.5) |
+| post-M9 examples | rendered gallery in `examples/`, one per generator + multi-page + cover, `test_every_example_validates` guards it |
 | pulled forward into M1 | format table, presets, `check`, overwrite protection, placeholders — the M1 acceptance criteria needed them |
 
 ### Not done
@@ -99,15 +109,21 @@ still there to reuse for any new blade: `labels.py` (§ 7.10) is what `grid` and
 every family needs, and `check()` is where a blade refuses what only the pattern
 area can disprove.
 
-**The remote is set up and `main` is pushed** (public, CI green on Linux/macOS/
-Windows). The v0.1.0 release still needs **one human step** before `uvx ctrlgrid`
-works: set up trusted publishing on PyPI (https://pypi.org/manage/account/publishing/)
-for `DocAtPrompt/ctrlgrid`, workflow `release.yml`, environment `pypi` — a
-pypi.org login, so a human, not the agent. The annotated tag **`v0.1.0` already
-exists locally** at the M9 commit and is deliberately **not pushed**: pushing it
-(`git push origin v0.1.0`) triggers
-[`.github/workflows/release.yml`](.github/workflows/release.yml) and publishes to
-PyPI, so it waits until trusted publishing is configured.
+**The remote is live and `main` is pushed** (public, CI green on Linux/macOS/
+Windows). Install today with `uvx --from git+https://github.com/DocAtPrompt/ctrlgrid.git
+ctrlgrid …` (README has the pip/clone forms) — that is verified working, font and
+presets included.
+
+**PyPI is deferred by the user's own choice** ("vorerst verzichten"), so `uvx
+ctrlgrid` (the bare PyPI form) does not work yet and that is intended, not a gap.
+When PyPI is wanted, two things: a human sets up trusted publishing
+(https://pypi.org/manage/account/publishing/ for `DocAtPrompt/ctrlgrid`, workflow
+`release.yml`, environment `pypi` — a pypi.org login), then a tag `v*` is pushed
+to trigger [`.github/workflows/release.yml`](.github/workflows/release.yml). An
+annotated **`v0.1.0` exists locally** but now sits at the M9 commit, ~15 commits
+behind HEAD — re-tag at the release commit before pushing. Do **not** run
+`git push --tags`/`--follow-tags` casually: it would push that tag and fire the
+release. Plain `git push origin main` is safe.
 
 ### Deferred features name their milestone
 
@@ -120,7 +136,7 @@ unbuilt, and `snap:` must never have been quietly ignored.
 ## Read this before writing anything
 
 **The specification is the source of truth, and it is unusually complete** —
-~2200 lines covering the architecture, all eleven generators, the page model,
+~2330 lines covering the architecture, all ten generators, the page model,
 validation, milestones and the decisions that were explicitly rejected and why.
 
 Most questions that come up while implementing are already answered there, with
@@ -156,10 +172,10 @@ and knows nothing about margins.
 
 | Module | Holds |
 |---|---|
-| `cli.py` | `typer` commands, flag→override map, writer choice by `-o` extension |
+| `cli.py` | `typer` commands, flag→override map, writer choice by `-o` extension, the no-args interactive browser (§ 11.2) |
 | `units.py` | `Length`/`Angle`; parsing to exact int µm via `Decimal` |
 | `errors.py` | `DefinitionError` with field path and source line |
-| `marks.py` | the six primitives, `Layer`, `Point`, `Area`, `translate`, `mirror_x` |
+| `marks.py` | the six primitives, `Layer`, `Point`, `Area`, `translate`, `mirror_x`, `mirror_y` (§ 8.5) |
 | `cycles.py` | `Cycle`, drift-free positions, effective period |
 | `axes.py` | `AxisPeriod` — what the handle needs from a blade for § 8.3/§ 8.5 |
 | `model.py` | pydantic sections; `Section` base with `extra="forbid"` + `deferred` |
@@ -171,7 +187,7 @@ and knows nothing about margins.
 | `media.py` | the media check: resolution and colour findings (§ 12.1) |
 | `impose.py` | N-up layout, the 100 % fit check, crop marks (§ 14) |
 | `fonts.py` | font files: `fsType` licence check, version, coverage (§ 10.3) |
-| `cover.py` | the cover sheet: calibration figures and settings summary (§ 8.8) |
+| `cover.py` | the cover sheet: calibration figures, the stroke-weight ladder, settings summary (§ 8.8) |
 | `generators/` | registry, `common.py` (cycle + dash fields), `polar_geometry.py` (shared by `polar` + `mandala`), and the ten blades |
 | `writers/` | seam 3 protocols, `pdf.py` (reportlab) and `png.py` (Pillow) |
 
@@ -240,24 +256,29 @@ the pre-flight, never while pages are being written (§ 12 point 13).
 
 ## Where to start
 
-The architecture has held through all eight milestones: `generate(cfg, area,
-page, q)` has never changed signature, and every feature that needed blade
-knowledge became a *query the handle asks* rather than geometry pushed into the
-blade. Keep that line. When a new feature tempts you to hand a blade the page,
-the margins, or the device, look first for the question the handle could ask
-instead — that is how `periodic_axes`, `check`, `sheets`, `supports_snap` and
-`capabilities` all came to be. M8's two blades held it too: `perspective` and
-`mandala` compute their own law (§ 5.3) yet added nothing to the seam.
+The architecture has held through all nine milestones and every post-M9 feature:
+`generate(cfg, area, page, q)` has never changed signature, and every feature
+that needed blade knowledge became a *query the handle asks* rather than geometry
+pushed into the blade. Keep that line. When a new feature tempts you to hand a
+blade the page, the margins, or the device, look first for the question the
+handle could ask instead — that is how `periodic_axes`, `check`, `sheets`,
+`supports_snap` and `capabilities` all came to be. The recent features held it
+too and are worth studying as the pattern: the relative measure resolves in the
+*loader's* validation context like `px` (no blade touched), and `pattern.align`
+reflects finished marks in `pages.py` with `mirror_y` (the blade never learns
+which corner it anchored to, § 3.3).
 
 **Nothing proper is left.** What remains is small, and each names its reason in
-*Not done* above: M5's empty `quirks` and the two unverified device figures. The
-relative measure (§ 8.11) and the clef decision (§ 15.3) — the two edges the
-handovers kept naming — are both built now. If you add a blade or option, the recipe is unchanged: a registry entry
-in `generators/__init__.py` with a `config_model` and the seam-2 methods, a
-failing test first, the *why* in the comment with its § number, one coherent
-commit, and a real rendered sheet read back — not just unit tests. M9 held that
-line too: a clef is a `Text` mark, no new primitive, and it read metrics through
-the same oracle the media check uses.
+*Not done* above: M5's empty `quirks` and the two unverified device figures, plus
+the deferred PyPI release (the user's choice). If you add a blade or option, the
+recipe is unchanged: for a blade, a registry entry in `generators/__init__.py`
+with a `config_model` and the seam-2 methods; for either, a failing test first
+(or, when a design is genuinely uncertain, validate on a real sheet then codify —
+`pattern.align` was built that way), the *why* in the comment with its § number,
+one coherent commit, and a real rendered sheet read back — not just unit tests.
+Update the spec and CLAUDE.md in the same breath, so the next instance inherits
+the truth; and note the **elements-of-style / verify-before-completion habits**
+this project runs on — claims are backed by a command's output, never asserted.
 
 ## Open questions
 
