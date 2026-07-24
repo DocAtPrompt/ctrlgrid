@@ -2252,7 +2252,14 @@ Bewusst noch offen:
    Latin-1 ab. Zeigt sich, dass Namen mit `ł`, `ğ` oder `ő` häufig genug sind,
    um Stufe 2 zur Pflicht zu machen, wäre eine mitgelieferte OFL-Schrift der
    bequemere Weg. Erst nach Erfahrung entscheiden, nicht auf Verdacht.
-3. **`reportlab`-Lizenz** am Repository gegenprüfen (BSD-3-Clause erwartet).
+3. ~~**`reportlab`-Lizenz** am Repository gegenprüfen (BSD-3-Clause erwartet).~~
+   **Geklärt (2026-07-24):** reportlab 5.0.0 steht unter **BSD-3-Clause** — der
+   Lizenztext (`reportlab-5.0.0.dist-info/licenses/LICENSE`) führt exakt die drei
+   Bedingungen (Copyright-Hinweis in Quell- und Binärform, keine Werbung mit dem
+   Firmennamen), ohne Advertising-Klausel. Belegt zusätzlich über die
+   Paket-Metadaten (`License :: OSI Approved :: BSD License`). Verträglich mit der
+   MIT-Lizenz von ctrlgrid; reportlab bleibt Laufzeitabhängigkeit, nicht
+   mitgeliefert — nichts weiter zu tun.
 4. **Weitere domänenspezifische Einheiten** — Federbreiten (Kalligraphie) und
    `lpi` (lines per inch). Dasselbe Muster wie `sp` bei den Notensystemen
    (§ 7.3): Die Domäne rechnet nicht in Millimetern. Billig, aber erst sinnvoll,
