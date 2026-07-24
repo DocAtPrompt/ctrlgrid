@@ -363,6 +363,12 @@ class PatternSpec(Section):
     """
 
     anchor: Literal["pattern_area"] = "pattern_area"
+    #: § 8.5. Which corner the pattern is anchored to: where its heavy origin
+    #: line sits, and opposite it, where an incomplete block from an uneven fit
+    #: falls. The default is the coordinate origin, bottom-left (§ 3.5);
+    #: `top-left` reflects the pattern so its fill and its cycle start at the
+    #: top, the way a notebook is written and the leftover lands at the bottom.
+    align: Literal["bottom-left", "top-left", "bottom-right", "top-right"] = "bottom-left"
     #: § 8.3. `none` by default, because snapping changes the geometry § 8.1
     #: computed: whoever writes a 10 mm margin and a header height would
     #: otherwise quietly get a smaller pattern area than that arithmetic gives.

@@ -23,7 +23,18 @@ from typing import TYPE_CHECKING
 from ctrlgrid.axes import AxisPeriod
 from ctrlgrid.errors import DefinitionError
 from ctrlgrid.impose import Imposition
-from ctrlgrid.marks import Arc, Area, Mark, Point, Polygon, Text, Um, mirror_x, translate
+from ctrlgrid.marks import (
+    Arc,
+    Area,
+    Mark,
+    Point,
+    Polygon,
+    Text,
+    Um,
+    mirror_x,
+    mirror_y,
+    translate,
+)
 from ctrlgrid.model import Band, Margin, PatternSpec
 from ctrlgrid.writers import DocumentMeta, Writer, WriterQuery
 
@@ -848,7 +859,17 @@ def _page_marks(
     # centre (the physical turning edge), and only the pattern layer so header
     # and footer stay readable on the back.
     mirrored = (context.index % plan.per_item) in plan.mirrored
+    # § 8.5: `pattern.align` reflects the pattern within its own area so its
+    # cycle counts from the chosen corner. Done here, in local coordinates,
+    # before the mark ever reaches sheet space — the blade stays unaware (§ 3.3).
+    align = document.pattern.align
+    flip_x = "right" in align
+    flip_y = "top" in align
     for mark in blade.generate(document.config, area=placed.area, page=context, q=q):
+        if flip_y:
+            mark = mirror_y(mark, about=placed.area.height)
+        if flip_x:
+            mark = mirror_x(mark, about=placed.area.width)
         placed_mark = translate(mark, dx=placed.origin.x, dy=placed.origin.y)
         if mirrored:
             placed_mark = mirror_x(placed_mark, about=document.sheet.width)

@@ -186,3 +186,38 @@ def mirror_x(mark: Mark, *, about: Um) -> Mark:
             flipped = {"left": "right", "right": "left", "center": "center"}[mark.align]
             return replace(mark, pos=flip(mark.pos), align=flipped)
     raise TypeError(f"not a mark: {mark!r}")  # pragma: no cover
+
+
+def mirror_y(mark: Mark, *, about: Um) -> Mark:
+    """Reflect a mark in the horizontal line at `about / 2` (§ 8.5).
+
+    The vertical counterpart of `mirror_x`. It exists so a pattern can anchor at
+    the top instead of the bottom: reflecting a grid about the middle of its area
+    swaps which edge its cycle counts from, so the heavy origin line — and with
+    it the incomplete block at the far end — moves from the bottom to the top.
+
+    Text is *not* turned over — upside-down writing is never wanted — only its
+    anchor moves. A label's horizontal alignment is unaffected, since the
+    reflection is vertical.
+    """
+    def flip(point: Point) -> Point:
+        return Point(point.x, about - point.y)
+
+    match mark:
+        case Segment():
+            return replace(mark, start=flip(mark.start), end=flip(mark.end))
+        case Arc():
+            return replace(
+                mark,
+                center=flip(mark.center),
+                start_angle=-mark.start_angle - mark.sweep,
+            )
+        case Polygon():
+            return replace(mark, points=tuple(flip(point) for point in mark.points))
+        case Dot():
+            return replace(mark, pos=flip(mark.pos))
+        case Image():
+            return replace(mark, pos=Point(mark.pos.x, about - mark.pos.y - mark.height))
+        case Text():
+            return replace(mark, pos=flip(mark.pos))
+    raise TypeError(f"not a mark: {mark!r}")  # pragma: no cover

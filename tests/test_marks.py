@@ -22,8 +22,31 @@ from ctrlgrid.marks import (
     Polygon,
     Segment,
     Text,
+    mirror_y,
     translate,
 )
+
+
+class TestMirrorY:
+    # § 8.5: the vertical counterpart of mirror_x, so a pattern can anchor at the
+    # top. Reflects positions about a horizontal line; text is never turned over.
+    def test_a_segment_flips_both_ends_in_y(self) -> None:
+        seg = Segment(start=Point(1000, 2000), end=Point(4000, 9000))
+        flipped = mirror_y(seg, about=10_000)
+        assert (flipped.start, flipped.end) == (Point(1000, 8000), Point(4000, 1000))
+
+    def test_text_keeps_its_alignment_and_is_not_turned_over(self) -> None:
+        # Upside-down writing is never wanted; only the anchor moves, and a
+        # vertical reflection leaves the horizontal alignment alone.
+        text = Text(pos=Point(3000, 2000), content="C", size=1000, align="right")
+        flipped = mirror_y(text, about=10_000)
+        assert flipped.pos == Point(3000, 8000) and flipped.align == "right"
+
+    def test_an_arc_reflects_its_centre_and_angles(self) -> None:
+        arc = Arc(center=Point(5000, 3000), radius=1000, start_angle=30.0, sweep=60.0)
+        flipped = mirror_y(arc, about=10_000)
+        assert flipped.center == Point(5000, 7000)
+        assert flipped.start_angle == -90.0 and flipped.sweep == 60.0
 
 
 class TestLayers:

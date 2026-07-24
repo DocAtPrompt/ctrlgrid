@@ -19,7 +19,7 @@ proportionally.
 
 | Preview | What it is |
 |---|---|
-| <img src="previews/01-lines-squared.png" width="220"> | **`lines`** — 5 mm squared paper filling the whole page: cells run to the edges and the last block of majors may be partial. `pattern.snap` is the switch — this one omits it (fill as much as fits).<br>[`01-lines-squared.yaml`](01-lines-squared.yaml) · [PDF](01-lines-squared.pdf) |
+| <img src="previews/01-lines-squared.png" width="220"> | **`lines`** — 5 mm squared paper filling the whole page from the top-left (`align: top-left`): heavy lines start top-left, cells run to the edges, and the incomplete block falls to the bottom.<br>[`01-lines-squared.yaml`](01-lines-squared.yaml) · [PDF](01-lines-squared.pdf) |
 | <img src="previews/01b-lines-squared-blocks.png" width="220"> | **`lines`** (complete blocks) — the same, but `snap: cycle` keeps only whole 25 mm blocks, so every edge is a heavy major line and the leftover stays blank margin.<br>[`01b-lines-squared-blocks.yaml`](01b-lines-squared-blocks.yaml) · [PDF](01b-lines-squared-blocks.pdf) |
 | <img src="previews/02-dots-grid.png" width="220"> | **`dots`** — a 5 mm dot grid, every fifth dot larger and darker.<br>[`02-dots-grid.yaml`](02-dots-grid.yaml) · [PDF](02-dots-grid.pdf) |
 | <img src="previews/03-grid-battleship.png" width="220"> | **`grid`** — a 12 × 12 labelled board (A…, 1…) with a checker fill.<br>[`03-grid-battleship.yaml`](03-grid-battleship.yaml) · [PDF](03-grid-battleship.pdf) |

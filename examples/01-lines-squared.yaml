@@ -1,12 +1,13 @@
-# lines — 5 mm squared paper filling the whole page. A4.
+# lines — 5 mm squared paper filling the whole page from the top-left. A4.
 #
 # This is the "as much as fits" convention: cells fill right up to the edges, so
-# the last block of major lines may be incomplete — a thick line that no longer
-# fits is simply left off. Only whole cells are ever drawn; the small leftover
-# under one cell stays blank margin, never a partial cell.
+# the last block of majors — at the BOTTOM — may be incomplete. `align: top-left`
+# anchors the heavy lines at the top-left (the way a notebook is written), and
+# `remainder: end` keeps the grid flush against the top and left edges, so the
+# leftover falls to the bottom-right. Only whole cells are ever drawn.
 #
 # For the other convention — only complete 25 mm blocks, every edge a heavy line
-# — see 01b-lines-squared-blocks.yaml, which sets `snap: cycle`.
+# — see 01b-lines-squared-blocks.yaml, which sets `snap: cycle` instead.
 # Regenerate:  ctrlgrid -d examples/01-lines-squared.yaml -o out.pdf
 version: 1
 
@@ -19,13 +20,12 @@ page:
   margin: 12mm
 
 pattern:
-  # Flush at the origin and let the small sub-cell leftover sit blank at the far
-  # edge, rather than centring it.
-  remainder: { x: end, y: end }
+  align: top-left                # heavy lines and the fill start at the top-left
+  remainder: { x: end, y: end }  # flush against those edges; leftover to the far edge
 
 generator: lines
 families:
-  # Accent first, so a heavy major line every fifth cell starts at the origin.
+  # Accent first, so a heavy major line every fifth cell starts at the anchor.
   - direction: horizontal
     base_spacing: 5mm
     base_weight: 0.15pt

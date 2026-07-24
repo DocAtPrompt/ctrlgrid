@@ -1323,6 +1323,19 @@ nicht.
 
 Eine Option „dehnen, bis es aufgeht" gibt es **nicht** (§ 8.2).
 
+**`pattern.align` — die Ecke, an der das Muster verankert ist.** `remainder`
+verschiebt den Sub-Zyklus-Rest, aber der *Zyklus selbst* zählt vom
+Koordinatenursprung (§ 3.5, links unten). Damit liegt die schwere Ursprungslinie
+unten-links und ein angeschnittener Block landet gegenüber, oben-rechts. Wer es
+umgekehrt will — schwerer Start oben-links, wie ein Notizbuch beschrieben wird,
+und der unvollständige Block **unten** — setzt `align: top-left` (Werte:
+`bottom-left` als Default, `top-left`, `bottom-right`, `top-right`). Der Griff
+**spiegelt** das fertige Muster in seinem eigenen Bereich an der gewählten
+Achse; für ein symmetrisches Raster ist das genau eine Umverankerung, und die
+Klinge erfährt davon nichts (§ 3.3). Text wird dabei nie auf den Kopf gestellt,
+nur seine Ablage wandert. Kombiniert mit `remainder: end` liegt das Raster
+bündig an den Ankerkanten.
+
 ### 8.6 Stempel
 
 Ganzseitig, diagonal, niedrige Deckkraft, **oberste Ebene**. „Draft" ist ein
