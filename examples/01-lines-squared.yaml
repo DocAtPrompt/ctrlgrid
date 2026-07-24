@@ -1,0 +1,24 @@
+# lines — 5 mm squared paper, every fifth line accented. A4.
+# Regenerate:  ctrlgrid -d examples/01-lines-squared.yaml -o out.pdf
+version: 1
+
+defs:
+  fine:   &fine   "#c9d4e0"
+  accent: &accent "#3f6fb0"
+
+page:
+  format: a4
+  margin: 12mm
+
+generator: lines
+families:
+  - direction: horizontal
+    base_spacing: 5mm
+    base_weight: 0.15pt
+    weight: [1, 1, 1, 1, 2]
+    color: [*fine, *fine, *fine, *fine, *accent]
+  - direction: vertical
+    base_spacing: 5mm
+    base_weight: 0.15pt
+    weight: [1, 1, 1, 1, 2]
+    color: [*fine, *fine, *fine, *fine, *accent]

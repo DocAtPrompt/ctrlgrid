@@ -1,0 +1,18 @@
+# grid — a 12 x 12 labelled board (columns A…, rows 1…) with a checker fill.
+# Regenerate:  ctrlgrid -d examples/03-grid-battleship.yaml -o out.pdf
+version: 1
+
+page:
+  format: a4
+  margin: 18mm
+
+generator: grid
+cells: { x: 12, y: 12 }
+labels:
+  columns: "A"      # A, B, C, … across the top
+  rows: "n"         # 1, 2, 3, … down the side
+weight: 0.3pt
+color: "#33475b"
+fill: checker
+fill_color: "#eef2f6"
+font: { size: 9pt }

@@ -1,0 +1,40 @@
+# mandala — a twelve-fold template to draw on: guide rings and spokes, a
+# flower-of-life rosette, an outer polygon and a woven {12/5} star. The radius
+# is a share of the shorter side (%s, § 8.11), so it fills any format. A4.
+# Regenerate:  ctrlgrid -d examples/10-mandala.yaml -o out.pdf
+version: 1
+
+defs:
+  guide: &guide "#c2c8d0"
+  petal: &petal "#8aa0b8"
+  star:  &star  "#2f5686"
+
+page:
+  format: a4
+  margin: 16mm
+
+generator: mandala
+sectors: 12
+outer_radius: 48%s
+rings:
+  count: 8
+  weight: 0.15pt
+  color: *guide
+spokes:
+  inner: 0.06
+  weight: 0.15pt
+  color: *guide
+rosette:
+  at: 0.5
+  radius: 0.28
+  mirror: true
+  weight: 0.2pt
+  color: *petal
+polygons:
+  - radius: 0.98
+    weight: 0.2pt
+    color: *star
+  - radius: 0.8
+    step: 5
+    weight: 0.2pt
+    color: *star

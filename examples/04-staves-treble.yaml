@@ -1,0 +1,17 @@
+# staves — treble-clef manuscript paper, ten systems. A4.
+# The clef is a glyph from a bundled music font (§ 15.3); try bass/alto/tenor.
+# Regenerate:  ctrlgrid -d examples/04-staves-treble.yaml -o out.pdf
+version: 1
+
+page:
+  format: a4
+  margin: 16mm
+
+generator: staves
+count: 10
+stave_space: 1.75mm
+system_gap: 6sp
+weight: 0.2pt
+color: "#1e2a36"
+clef: treble
+clef_indent: 3mm

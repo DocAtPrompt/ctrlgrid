@@ -1,0 +1,37 @@
+# Examples
+
+A taste of what Ctrl+Grid makes — one A4 example per generator, plus a
+multi-page document. Each is an ordinary definition file: open the `.yaml`,
+change it, regenerate. The `.pdf` is the real output (measured, to scale); the
+image is just a preview.
+
+Try one without installing anything:
+
+```bash
+uvx --from git+https://github.com/DocAtPrompt/ctrlgrid.git \
+  ctrlgrid -d examples/01-lines-squared.yaml -o out.pdf
+```
+
+Everything here is A4. Add `--format a5`, `--format letter` or a
+`--device remarkable-paper-pro` to the same command and it re-fits the new
+medium — the examples using `%w`/`%h`/`%s` (polar, mandala) fill it
+proportionally.
+
+| Preview | What it is |
+|---|---|
+| <img src="previews/01-lines-squared.png" width="220"> | **`lines`** — 5 mm squared paper, every fifth line accented.<br>[`01-lines-squared.yaml`](01-lines-squared.yaml) · [PDF](01-lines-squared.pdf) |
+| <img src="previews/02-dots-grid.png" width="220"> | **`dots`** — a 5 mm dot grid, every fifth dot larger and darker.<br>[`02-dots-grid.yaml`](02-dots-grid.yaml) · [PDF](02-dots-grid.pdf) |
+| <img src="previews/03-grid-battleship.png" width="220"> | **`grid`** — a 12 × 12 labelled board (A…, 1…) with a checker fill.<br>[`03-grid-battleship.yaml`](03-grid-battleship.yaml) · [PDF](03-grid-battleship.pdf) |
+| <img src="previews/04-staves-treble.png" width="220"> | **`staves`** — treble-clef manuscript paper; the clef is a glyph from the bundled music font.<br>[`04-staves-treble.yaml`](04-staves-treble.yaml) · [PDF](04-staves-treble.pdf) |
+| <img src="previews/05-maze-booklet.png" width="220"> | **`maze` — multi-page** — a booklet of three mazes, each with its solution on the next sheet: six sheets from one command.<br>[`05-maze-booklet.yaml`](05-maze-booklet.yaml) · [PDF](05-maze-booklet.pdf) |
+| <img src="previews/06-polar-target.png" width="220"> | **`polar`** — a concentric target whose radii are a share of the shorter side (`%s`), so it fills any format.<br>[`06-polar-target.yaml`](06-polar-target.yaml) · [PDF](06-polar-target.pdf) |
+| <img src="previews/07-tiling-hex.png" width="220"> | **`tiling`** — a flat-top hexagon honeycomb with a three-colour fill.<br>[`07-tiling-hex.yaml`](07-tiling-hex.yaml) · [PDF](07-tiling-hex.pdf) |
+| <img src="previews/08-form-weekly.png" width="220"> | **`form`** — a weekly planner: seven day rows with a done-box, then a notes block.<br>[`08-form-weekly.yaml`](08-form-weekly.yaml) · [PDF](08-form-weekly.pdf) |
+| <img src="previews/09-perspective-2pt.png" width="220"> | **`perspective`** — a two-point drawing grid: a horizon, two vanishing points off the sheet, and true verticals.<br>[`09-perspective-2pt.yaml`](09-perspective-2pt.yaml) · [PDF](09-perspective-2pt.pdf) |
+| <img src="previews/10-mandala.png" width="220"> | **`mandala`** — a twelve-fold template: guide rings and spokes, a flower-of-life rosette, an outer polygon and a woven {12/5} star.<br>[`10-mandala.yaml`](10-mandala.yaml) · [PDF](10-mandala.pdf) |
+
+The maze booklet uses a fixed seed for a reproducible set — regenerate it with:
+
+```bash
+ctrlgrid -d examples/05-maze-booklet.yaml --seed 4711 -o out.pdf
+```

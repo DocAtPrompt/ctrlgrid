@@ -1,0 +1,39 @@
+# form — a weekly planner: seven day rows with a writing area and a done-box,
+# then a notes block. Rows first, then columns; one level of nesting (§ 7.8). A4.
+# Regenerate:  ctrlgrid -d examples/08-form-weekly.yaml -o out.pdf
+version: 1
+
+page:
+  format: a4
+  margin: 16mm
+
+header:
+  height: 12mm
+  gap: 5mm
+  center: "Week Planner"
+  right: "Week ____"
+
+generator: form
+gap: 3mm
+weight: 0.4pt
+title:
+  font: { family: sans, size: 8pt }
+  position: above
+
+rows:
+  - height: 12%
+    columns: [{ title: "Monday", width: 85% }, { title: "Done", kind: check }]
+  - height: 12%
+    columns: [{ title: "Tuesday", width: 85% }, { title: "Done", kind: check }]
+  - height: 12%
+    columns: [{ title: "Wednesday", width: 85% }, { title: "Done", kind: check }]
+  - height: 12%
+    columns: [{ title: "Thursday", width: 85% }, { title: "Done", kind: check }]
+  - height: 12%
+    columns: [{ title: "Friday", width: 85% }, { title: "Done", kind: check }]
+  - height: 12%
+    columns: [{ title: "Saturday", width: 85% }, { title: "Done", kind: check }]
+  - height: 12%
+    columns: [{ title: "Sunday", width: 85% }, { title: "Done", kind: check }]
+  - height: rest
+    columns: [{ title: "Notes" }]

@@ -1,0 +1,16 @@
+# tiling — a hexagon honeycomb, edge net drawn once, three-colour fill. A4.
+# Regenerate:  ctrlgrid -d examples/07-tiling-hex.yaml -o out.pdf
+version: 1
+
+page:
+  format: a4
+  margin: 14mm
+
+generator: tiling
+shape: hex
+orientation: flat
+size: 12mm            # edge length, the same measure for every shape
+weight: 0.4pt
+color: "#3a4a5a"
+fill: cycle
+fill_colors: ["#eef3f7", "#dbe6ef", "#c7d8e8"]

@@ -1,0 +1,25 @@
+# maze — a MULTI-PAGE booklet: a different maze on every page, reproducibly,
+# each puzzle with its solution on the following sheet. One command, six sheets.
+# Regenerate:  ctrlgrid -d examples/05-maze-booklet.yaml --seed 4711 -o out.pdf
+version: 1
+
+page:
+  format: a4
+  margin: 14mm
+
+header:
+  height: 8mm
+  gap: 4mm
+  center: "Maze {page} of {page_count}"
+
+pages:
+  count: 3          # three puzzles; each solution page doubles that to six sheets
+
+generator: maze
+cells: { x: 22, y: 30 }
+algorithm: backtracker
+min_path_factor: 0.4
+wall_weight: 0.5pt
+color: "#20303f"
+solution: separate_page
+solution_color: "#cc3b3b"

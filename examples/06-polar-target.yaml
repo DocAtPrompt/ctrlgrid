@@ -1,0 +1,27 @@
+# polar — a concentric target that fills any medium: radii are written as a
+# share of the pattern area's shorter side (%s, § 8.11), so --format a5 or a
+# --device profile still fills the disc. A4.
+# Regenerate:  ctrlgrid -d examples/06-polar-target.yaml -o out.pdf
+version: 1
+
+defs:
+  ring:   &ring   "#8aa0b8"
+  accent: &accent "#2f5686"
+
+page:
+  format: a4
+  margin: 14mm
+
+generator: polar
+outer_radius: 48%s        # nearly fills the shorter side, on any format
+rings:
+  base_radius: 6%s        # eight rings out to the rim, every fourth accented
+  base_weight: 0.2pt
+  weight: [1, 1, 1, 2]
+  color: [*ring, *ring, *ring, *accent]
+spokes:
+  base_angle: 15deg
+  base_weight: 0.2pt
+  weight: [1, 1, 1, 1, 1, 2]
+  color: [*ring, *ring, *ring, *ring, *ring, *accent]
+  radial_extent: { start: 6%s }   # keep the very centre clear

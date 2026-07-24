@@ -44,6 +44,12 @@ e-ink tablets.
 >
 > **Not on PyPI yet** — install straight from this repository (see below).
 
+## Examples
+
+A gallery of A4 examples — one per generator, plus a multi-page maze booklet —
+is in [`examples/`](examples/README.md), each an ordinary definition file you
+can copy and bend.
+
 ## The one promise
 
 **What says 5 mm measures 5 mm on the printout.** No scaling, no "fit to page",

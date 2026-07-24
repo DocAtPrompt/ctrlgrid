@@ -15,3 +15,5 @@ build/
 # generated output while testing by hand
 *.pdf
 !docs/**/*.pdf
+# the example gallery ships its rendered PDFs on purpose
+!examples/**/*.pdf

@@ -1,0 +1,26 @@
+# dots — a 5 mm dot grid, every fifth dot a touch larger and darker. A4.
+# Regenerate:  ctrlgrid -d examples/02-dots-grid.yaml -o out.pdf
+version: 1
+
+defs:
+  dot:    &dot    "#aab7c6"
+  accent: &accent "#3f6fb0"
+
+page:
+  format: a4
+  margin: 12mm
+
+generator: dots
+
+grid:
+  x: { base_spacing: 5mm }
+  y: { base_spacing: 5mm }
+
+base_size: 0.4mm
+size_x: [1, 1, 1, 1, 1.8]
+size_y: [1, 1, 1, 1, 1.8]
+combine: max
+
+color:
+  axis: cross
+  cycle: [*dot, *dot, *dot, *dot, *accent]

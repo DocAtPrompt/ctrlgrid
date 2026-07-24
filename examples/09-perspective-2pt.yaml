@@ -1,0 +1,32 @@
+# perspective — a two-point drawing grid: a horizon, two vanishing points off
+# the sheet, and a family of true verticals. Rays converge on their own (§ 7.11).
+# Regenerate:  ctrlgrid -d examples/09-perspective-2pt.yaml -o out.pdf
+version: 1
+
+defs:
+  ray:     &ray     "#8aa0b8"
+  upright: &upright  "#c2ccd8"
+  line:    &line     "#2f5686"
+
+page:
+  format: a4
+  margin: 14mm
+
+generator: perspective
+horizon:
+  at: 0.55
+  weight: 0.3pt
+  color: *line
+vanishing_points:
+  - at: [-0.6, 0.55]
+    count: 16
+    weight: 0.15pt
+    color: *ray
+  - at: [1.6, 0.55]
+    count: 16
+    weight: 0.15pt
+    color: *ray
+verticals:
+  count: 18
+  weight: 0.12pt
+  color: *upright

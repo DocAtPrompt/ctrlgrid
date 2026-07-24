@@ -205,6 +205,15 @@ class TestPresets:
         for name in preset_names():
             load_preset(name)
 
+    def test_every_example_validates(self) -> None:
+        # The gallery in examples/ is the shop window (README links it), so it
+        # must not rot as the code moves. Every A4 example loads clean.
+        examples = Path(__file__).resolve().parent.parent / "examples"
+        files = sorted(examples.glob("*.yaml"))
+        assert len(files) >= 10, "an example per generator plus a multi-page one"
+        for path in files:
+            load(path)
+
     def test_an_unknown_preset_lists_the_known_ones(self) -> None:
         with pytest.raises(DefinitionError) as excinfo:
             load_preset("millimeter-a5")
