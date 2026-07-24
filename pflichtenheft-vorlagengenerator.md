@@ -1356,7 +1356,7 @@ kein Fehler, sondern der Normalfall — deshalb:
 
 ### 8.8 Deckblatt
 
-`--cover` erzeugt **eine zusätzliche erste Seite**, die zwei Dinge trägt:
+`--cover` erzeugt **eine zusätzliche erste Seite**, die drei Dinge trägt:
 
 **1. Kalibrierquadrat.** Ein beschriftetes Quadrat von exakt 50 mm Kantenlänge
 und eine 100-mm-Strecke, beide mit Sollmaß beschriftet. Der Nutzer legt ein
@@ -1364,7 +1364,17 @@ Lineal an; stimmt das Maß nicht, hat der Druckertreiber skaliert. Das ist die
 einzig mögliche Antwort auf ein Problem außerhalb unserer Kontrolle (§ 8.2):
 Wir können die Skalierung nicht verhindern, aber sichtbar machen.
 
-**2. Einstellungszusammenfassung.** Generator, Format, Ränder, Basiswerte,
+**2. Strichstärken-Leiter.** Kurze waagerechte Linien in einer festen,
+aufsteigenden Folge von Strichstärken (0,1 bis 1,0 pt), jede beschriftet. So
+sieht der Nutzer auf seinem *eigenen* Drucker oder E-Ink-Gerät, wie eine
+gegebene Stärke wirklich aussieht — die Medienprüfung (§ 12.1) sagt nur, *dass*
+eine Haarlinie zu dünn ist, die Leiter zeigt, *wie* dünn. Ist ein Gerät aktiv,
+trägt jede Beschriftung zusätzlich die Pixelbreite (`0,15pt · 0,48px`) und
+verbindet die Warnung mit dem, wovor sie warnt. Auf Papier nicht, weil ein
+`assumed_dpi` ein Maßstab und keine Auflösung ist (§ 8.3.1). Feste Zahlen wie
+Quadrat und Lineal, kein einstellbarer Wert.
+
+**3. Einstellungszusammenfassung.** Generator, Format, Ränder, Basiswerte,
 Zyklen, effektive Periode in Marken und Millimetern, Einrastmodus,
 Werkzeugversion und Name bzw. Prüfsumme der zugrunde liegenden Def. Damit ist
 ein gelungenes Blatt Jahre später reproduzierbar, ohne dass jemand die Def

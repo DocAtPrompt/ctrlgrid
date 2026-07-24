@@ -1,4 +1,4 @@
-"""The cover sheet (§ 8.8) — a calibration figure and a settings summary.
+"""The cover sheet (§ 8.8) — calibration figures, a weight ladder, a summary.
 
 It is one extra first page and it is unlike every other page in three ways, all
 of them from § 8.8: it is **not counted** in the numbering, it carries **no
@@ -40,6 +40,13 @@ if TYPE_CHECKING:
 SQUARE_SIDE = 50_000
 RULE_LENGTH = 100_000
 TICK = 3_000
+
+#: A fixed ladder of stroke weights (§ 8.8), fine at the thin end where a stroke
+#: can round to nothing on a coarse device (§ 12.1). A yardstick like the square
+#: and the rule — fixed numbers, not settings the user picks.
+WEIGHTS_PT = (0.1, 0.15, 0.2, 0.3, 0.5, 0.7, 1.0)
+SAMPLE_LENGTH = 45_000  # shorter than the 100 mm rule, so it adds no width bound
+PT_TO_MM = 25.4 / 72
 
 TITLE_SIZE = 4_233  # 12pt
 BODY_SIZE = 3_175  # 9pt
@@ -98,6 +105,9 @@ def cover_marks(document: Document, *, q: WriterQuery) -> list[Mark]:
     cursor -= GAP
     marks += _rule(left, cursor, q=q)
     cursor -= TICK + _text_height(q, size=BODY_SIZE) + GAP // 2
+
+    cursor -= GAP
+    cursor = _weight_ladder(marks, left, cursor, device=document.device, q=q)
 
     cursor -= GAP
     cursor = _summary_block(marks, document, left, cursor, width=right - left, q=q)
@@ -241,6 +251,59 @@ def _rule(left: Um, top: Um, *, q: WriterQuery) -> list[Mark]:
             layer=Layer.PATTERN,
         ),
     ]
+
+
+# ------------------------------------------------------------- the weight ladder
+
+
+def _weight_ladder(
+    marks: list[Mark], left: Um, top: Um, *, device: object, q: WriterQuery
+) -> Um:
+    """Sample lines at rising weights, each labelled (§ 8.8).
+
+    So a user can see on their own printer or e-ink screen what a given stroke
+    actually looks like: the media check (§ 12.1) says a hairline is too thin,
+    this shows *how* thin. On a device each label also carries the pixel width,
+    which ties the warning to the thing it warns about; on paper it does not,
+    because a format's `assumed_dpi` is a yardstick, not a resolution (§ 8.3.1).
+
+    The lines are shorter than the 100 mm rule, so they never add a width
+    constraint the rule has not already imposed.
+    """
+    cursor = _line_of_text(
+        marks, "line weights — how each renders on this medium",
+        left, top, size=BODY_SIZE, family="sans", q=q,
+    )
+    labels = [_weight_label(weight, device) for weight in WEIGHTS_PT]
+    label_width = max(q.text_width(label, family="mono", size=BODY_SIZE) for label in labels)
+    line_x = left + label_width + GAP
+    ascent, descent = q.text_metrics(family="mono", size=BODY_SIZE)
+    for weight, label in zip(WEIGHTS_PT, labels, strict=True):
+        baseline = cursor - ascent
+        marks.append(
+            Text(pos=Point(left, baseline), content=label, size=BODY_SIZE,
+                 family="mono", layer=Layer.PATTERN)
+        )
+        middle = baseline + ascent // 3  # the sample sits at the label's optical middle
+        marks.append(
+            Segment(
+                start=Point(line_x, middle),
+                end=Point(line_x + SAMPLE_LENGTH, middle),
+                weight=weight * PT_TO_MM,
+                layer=Layer.PATTERN,
+            )
+        )
+        cursor = baseline - descent
+    return cursor
+
+
+def _weight_label(weight: float, device: object) -> str:
+    """`0.15pt` on paper; `0.15pt  0.48px` on a device (§ 12.1)."""
+    text = f"{weight}pt"
+    density = getattr(device, "density", None)
+    if density is not None:
+        text += f"  {weight * density / 72:.2f}px"
+    return text
 
 
 # ------------------------------------------------------------------ the summary

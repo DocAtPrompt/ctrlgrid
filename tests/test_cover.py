@@ -17,7 +17,15 @@ from pathlib import Path
 
 import pytest
 
-from ctrlgrid.cover import RULE_LENGTH, SQUARE_SIDE, cover_marks, summary
+from ctrlgrid.cover import (
+    PT_TO_MM,
+    RULE_LENGTH,
+    SAMPLE_LENGTH,
+    SQUARE_SIDE,
+    WEIGHTS_PT,
+    cover_marks,
+    summary,
+)
 from ctrlgrid.errors import DefinitionError
 from ctrlgrid.loader import loads
 from ctrlgrid.marks import Layer, Polygon, Segment, Text
@@ -101,6 +109,49 @@ class TestHundredMillimetreRule:
         ]
         assert len(verticals) == 2
         assert abs(verticals[0].start.x - verticals[1].start.x) == RULE_LENGTH
+
+
+class TestLineWeightLadder:
+    """§ 8.8: a user sees how a stroke weight actually renders on their medium."""
+
+    def _samples(self, doc):
+        return [
+            m
+            for m in marks(doc)
+            if isinstance(m, Segment)
+            and m.start.y == m.end.y
+            and abs(m.end.x - m.start.x) == SAMPLE_LENGTH
+        ]
+
+    def test_it_samples_every_fixed_weight(self) -> None:
+        samples = self._samples(document())
+        assert len(samples) == len(WEIGHTS_PT)
+        got = sorted(round(s.weight, 6) for s in samples)
+        want = sorted(round(w * PT_TO_MM, 6) for w in WEIGHTS_PT)
+        assert got == want
+
+    def test_each_sample_is_labelled_in_points(self) -> None:
+        texts = " ".join(m.content for m in marks(document()) if isinstance(m, Text))
+        assert "0.15pt" in texts and "0.5pt" in texts
+
+    def test_on_paper_there_is_no_pixel_figure(self) -> None:
+        # A format's assumed_dpi is a yardstick, not a resolution (§ 8.3.1), so
+        # a pixel width on paper would be a made-up number.
+        texts = " ".join(m.content for m in marks(document()) if isinstance(m, Text))
+        assert "px" not in texts
+
+    def test_on_a_device_each_weight_carries_its_pixel_width(self) -> None:
+        # § 12.1 warns that a hairline is too thin; here the user sees how thin,
+        # in the device's own pixels. 0.15pt at 229 dpi is 0.48 px.
+        doc = loads(
+            "version: 1\n"
+            "page:\n  device: remarkable-paper-pro\n"
+            "generator: lines\n"
+            "families:\n  - direction: horizontal\n    base_spacing: 10mm\n",
+            source="test",
+        )
+        texts = " ".join(m.content for m in marks(doc) if isinstance(m, Text))
+        assert "px" in texts and "0.48px" in texts
 
 
 class TestSummary:
@@ -237,8 +288,9 @@ class TestOnTheSheet:
         path = tmp_path / "cover.pdf"
         build(document(blocks="pages:\n  cover: true\n"), PdfWriter(path))
         horizontals = [line for line in pdfread.lines_um(path, 0) if line.is_horizontal]
-        # Only the calibration rule, never a grid.
-        assert len(horizontals) == 1
+        # The calibration figures only — the 100 mm rule and the weight ladder —
+        # never the generator's grid (which would be dozens of full-width lines).
+        assert len(horizontals) == 1 + len(WEIGHTS_PT)
 
     def test_the_square_measures_fifty_millimetres_in_the_finished_pdf(
         self, tmp_path: Path
