@@ -35,7 +35,7 @@ from ctrlgrid.axes import AxisPeriod
 from ctrlgrid.errors import DefinitionError
 from ctrlgrid.generators.common import HAIRLINE
 from ctrlgrid.generators.polar_geometry import default_center, default_outer, polar_point
-from ctrlgrid.marks import Arc, Area, Layer, Mark, Point, Polygon, Segment, Um
+from ctrlgrid.marks import Arc, Area, Dot, Layer, Mark, Point, Polygon, Segment, Um
 from ctrlgrid.model import ColorField, LengthField, RelativeLengthField, Section
 from ctrlgrid.pages import PageContext
 from ctrlgrid.writers import WriterQuery
@@ -86,6 +86,52 @@ class Rosette(Section):
     color: ColorField = "#000000"
 
 
+class Petals(Section):
+    """A ring of N pointed leaves, each two arcs (§ 7.11). Only `Arc`.
+
+    A petal is a leaf whose base sits at `inner` of the outer radius and whose
+    tip reaches `outer`, both on the sector's own angle; `width` is the half-
+    width at the widest as a share of the outer radius — the bulge of the two
+    sides. `mirror` puts a second petal on every sector bisector, the same
+    "repeated *and* mirrored" the rosette does. One petal per sector.
+    """
+
+    inner: float = Field(default=0.30, gt=0.0, lt=1.0)
+    outer: float = Field(default=0.95, gt=0.0, le=1.0)
+    width: float = Field(default=0.12, gt=0.0)
+    mirror: bool = False
+    weight: LengthField = HAIRLINE
+    color: ColorField = "#000000"
+
+    @model_validator(mode="after")
+    def _base_below_tip(self) -> Petals:
+        # A degenerate petal (base at or past the tip) has no leaf to draw. § 12
+        # refuses it loudly rather than bending it into something.
+        if self.inner >= self.outer:
+            raise ValueError(
+                f"petals.inner ({self.inner}) must be less than petals.outer "
+                f"({self.outer}): the base sits below the tip (§ 7.11)"
+            )
+        return self
+
+
+class Beads(Section):
+    """Dots evenly spaced on a ring (§ 7.11). Introduces the `Dot` primitive.
+
+    `at` is the ring's share of the outer radius; `count` defaults to the sector
+    count (a whole multiple keeps the N-fold symmetry, but any count is allowed
+    — the user's call). `size` is the bead diameter, absolute (`0.8mm`) or
+    relative (`%s`). `rotate` offsets the ring by a few degrees where two rings
+    should interleave.
+    """
+
+    at: float = Field(gt=0.0)
+    count: int | None = Field(default=None, ge=1)
+    size: RelativeLengthField
+    rotate: float = 0.0
+    color: ColorField = "#000000"
+
+
 class PolygonSpec(Section):
     """An inscribed regular polygon or star polygon (§ 7.11).
 
@@ -114,20 +160,33 @@ class MandalaConfig(BaseModel):
     outer_radius: RelativeLengthField | Literal["auto"] = "auto"
     rings: Rings | None = None
     spokes: Spokes | None = None
-    rosette: Rosette | None = None
+    #: A motif ring given once or as a list — layered bands (§ 7.11). A single
+    #: mapping still validates, so older definitions are unchanged.
+    rosette: Rosette | tuple[Rosette, ...] | None = None
+    petals: Petals | tuple[Petals, ...] | None = None
+    beads: Beads | tuple[Beads, ...] | None = None
     polygons: tuple[PolygonSpec, ...] | None = None
+
+    @property
+    def rosettes(self) -> tuple[Rosette, ...]:
+        return _as_rings(self.rosette)
+
+    @property
+    def petal_rings(self) -> tuple[Petals, ...]:
+        return _as_rings(self.petals)
+
+    @property
+    def bead_rings(self) -> tuple[Beads, ...]:
+        return _as_rings(self.beads)
 
     @model_validator(mode="after")
     def _something_has_to_be_drawn(self) -> MandalaConfig:
-        if (
-            self.rings is None
-            and self.spokes is None
-            and self.rosette is None
-            and self.polygons is None
+        if not any(
+            (self.rings, self.spokes, self.rosette, self.petals, self.beads, self.polygons)
         ):
             raise ValueError(
-                "a mandala needs `rings`, `spokes`, a `rosette` or `polygons` — with none "
-                "there is only an empty disc (§ 7.11)"
+                "a mandala needs `rings`, `spokes`, a `rosette`, `petals`, `beads` or "
+                "`polygons` — with none there is only an empty disc (§ 7.11)"
             )
         return self
 
@@ -176,11 +235,15 @@ class MandalaGenerator:
             lines.append(f"rings: {cfg.rings.count}, evenly spaced")
         if cfg.spokes is not None:
             lines.append(f"spokes: {cfg.sectors}")
-        if cfg.rosette is not None:
-            count = cfg.sectors * (2 if cfg.rosette.mirror else 1)
-            lines.append(
-                f"rosette: {count} circles at {cfg.rosette.at:.2f} of the radius"
-            )
+        for rosette in cfg.rosettes:
+            count = cfg.sectors * (2 if rosette.mirror else 1)
+            lines.append(f"rosette: {count} circles at {rosette.at:.2f} of the radius")
+        for petals in cfg.petal_rings:
+            count = cfg.sectors * (2 if petals.mirror else 1)
+            lines.append(f"petals: {count}, tips at {petals.outer:.2f} of the radius")
+        for beads in cfg.bead_rings:
+            count = beads.count if beads.count is not None else cfg.sectors
+            lines.append(f"beads: {count} at {beads.at:.2f} of the radius")
         for index, spec in enumerate(cfg.polygons or ()):
             sides = spec.sides if spec.sides is not None else cfg.sectors
             shape = f"{{{sides}/{spec.step}}}" if spec.step > 1 else f"{sides}-gon"
@@ -222,12 +285,17 @@ class MandalaGenerator:
         q: WriterQuery,
     ) -> Iterator[Mark]:
         center, outer = _frame(cfg, area)
+        # Scaffold first, then the motif families, so guides sit under motifs.
         if cfg.rings is not None:
             yield from _rings(cfg.rings, center, outer)
         if cfg.spokes is not None:
             yield from _spokes(cfg.spokes, cfg.sectors, center, outer)
-        if cfg.rosette is not None:
-            yield from _rosette(cfg.rosette, cfg.sectors, center, outer)
+        for rosette in cfg.rosettes:
+            yield from _rosette(rosette, cfg.sectors, center, outer)
+        for petals in cfg.petal_rings:
+            yield from _petals(petals, cfg.sectors, center, outer)
+        for beads in cfg.bead_rings:
+            yield from _beads(beads, cfg.sectors, center, outer)
         for spec in cfg.polygons or ():
             yield _polygon(spec, cfg.sectors, center, outer)
 
@@ -270,6 +338,84 @@ def _spokes(spokes: Spokes, sectors: int, center: Point, outer: Um) -> Iterator[
             end=polar_point(center, outer, angle),
             weight=spokes.weight.mm,
             color=spokes.color or "#000000",
+            layer=Layer.PATTERN,
+        )
+
+
+def _as_rings(value: object) -> tuple:
+    """Normalise a single-or-list motif field to a tuple (§ 7.11).
+
+    `None` is no ring, a single mapping is one, a list is itself — so a blade
+    method iterates one shape whether the definition wrote one ring or several.
+    """
+    if value is None:
+        return ()
+    if isinstance(value, tuple):
+        return value
+    return (value,)
+
+
+def _petals(petals: Petals, sectors: int, center: Point, outer: Um) -> Iterator[Arc]:
+    """A ring of leaves, each two arcs from base to tip (§ 7.11)."""
+    inner = round(petals.inner * outer)
+    tip = round(petals.outer * outer)
+    sagitta = round(petals.width * outer)
+    # On the spokes; and, mirrored, on the bisectors half a sector round.
+    offsets = [0.0, 0.5] if petals.mirror else [0.0]
+    for offset in offsets:
+        for i in range(sectors):
+            angle = UP + (i + offset) * 360.0 / sectors
+            base = polar_point(center, inner, angle)
+            apex = polar_point(center, tip, angle)
+            for side in (1.0, -1.0):
+                o, radius, start, sweep = _arc_geometry(base, apex, sagitta, side)
+                yield Arc(
+                    center=o,
+                    radius=radius,
+                    start_angle=start,
+                    sweep=sweep,
+                    weight=petals.weight.mm,
+                    color=petals.color or "#000000",
+                    layer=Layer.PATTERN,
+                )
+
+
+def _arc_geometry(b: Point, t: Point, sagitta: Um, side: float) -> tuple[Point, Um, float, float]:
+    """A circular arc through `b` and `t` bulging `sagitta` to one side.
+
+    The chord `b→t` is radial; the arc deviates tangentially by `sagitta` at its
+    middle. From the chord length `c`, `r = sagitta/2 + c²/(8·sagitta)`, and the
+    centre sits `r − sagitta` back along the perpendicular. The start/sweep are
+    read off the rounded centre so the drawn arc lands on `b` and `t` (§ 8.2).
+    Two of these, `side = ±1`, make the two sides of one petal.
+    """
+    mx, my = (b.x + t.x) / 2, (b.y + t.y) / 2
+    dx, dy = t.x - b.x, t.y - b.y
+    chord = math.hypot(dx, dy)
+    ux, uy = -dy / chord * side, dx / chord * side
+    r = sagitta / 2 + chord * chord / (8 * sagitta)
+    o = Point(round(mx - (r - sagitta) * ux), round(my - (r - sagitta) * uy))
+    start = math.degrees(math.atan2(b.y - o.y, b.x - o.x))
+    end = math.degrees(math.atan2(t.y - o.y, t.x - o.x))
+    sweep = end - start
+    # The minor arc: the leaf side, not the long way round the circle.
+    while sweep <= -180.0:
+        sweep += 360.0
+    while sweep > 180.0:
+        sweep -= 360.0
+    return o, round(r), start, sweep
+
+
+def _beads(beads: Beads, sectors: int, center: Point, outer: Um) -> Iterator[Dot]:
+    """Dots evenly spaced on a ring (§ 7.11)."""
+    count = beads.count if beads.count is not None else sectors
+    at = round(beads.at * outer)
+    for i in range(count):
+        angle = UP + beads.rotate + i * 360.0 / count
+        yield Dot(
+            pos=polar_point(center, at, angle),
+            diameter=beads.size.mm,
+            color=beads.color or "#000000",
             layer=Layer.PATTERN,
         )
 
@@ -323,8 +469,15 @@ def _max_reach(cfg: MandalaConfig, outer: Um) -> tuple[Um, str]:
     reaches: list[tuple[Um, str]] = []
     if cfg.rings is not None or cfg.spokes is not None:
         reaches.append((outer, "outer radius"))
-    if cfg.rosette is not None:
-        reaches.append((round((cfg.rosette.at + cfg.rosette.radius) * outer), "rosette"))
+    for rosette in cfg.rosettes:
+        reaches.append((round((rosette.at + rosette.radius) * outer), "rosette"))
+    for petals in cfg.petal_rings:
+        # The tip reaches `outer`; a wide petal's sides can reach a touch farther
+        # out at their bulge, so the lateral term guards the rare fat leaf.
+        share = max(petals.outer, math.hypot((petals.inner + petals.outer) / 2, petals.width))
+        reaches.append((round(share * outer), "petals"))
+    for beads in cfg.bead_rings:
+        reaches.append((round(beads.at * outer) + round(beads.size.um / 2), "beads"))
     for index, spec in enumerate(cfg.polygons or ()):
         reaches.append((round(spec.radius * outer), f"polygons.{index}"))
     return max(reaches, key=lambda item: item[0])

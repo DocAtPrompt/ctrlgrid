@@ -1089,8 +1089,28 @@ Horizontkreis ggf. `Arc`.
 
 **`mandala`** — rotationssymmetrische Motive um einen Mittelpunkt. Baut auf
 derselben Polargeometrie wie § 7.6 auf: Ring- und Speichenfamilien als Gerüst,
-darüber ein Motiv, das um N Sektoren wiederholt und gespiegelt wird. Marken:
-`Arc`, `Segment`, `Polygon`. Die Arbeit an `polar` in M3 ist hierfür Vorarbeit.
+darüber Motive, die um N Sektoren wiederholt und gespiegelt werden. Marken:
+`Arc`, `Segment`, `Polygon` **und `Dot`** (für Perlenringe, siehe unten). Die
+Arbeit an `polar` in M3 ist hierfür Vorarbeit.
+
+Die Motivfamilien (jede optional):
+
+- **`rings`** — konzentrische Führungskreise, gleichmäßig verteilt.
+- **`spokes`** — N Radialstrahlen, innen optional freigelassen.
+- **`rosette`** — N Kreise auf den Speichen, optional auf die
+  Winkelhalbierenden gespiegelt.
+- **`petals`** — ein Kranz aus N spitzen Blättern, jedes aus **zwei Bögen**
+  (Basis bei `inner`, Spitze bei `outer`, Wölbung `width`, alles als Anteil des
+  Außenradius); nur `Arc`, kein neues Primitiv.
+- **`beads`** — Punkte gleichmäßig auf einem Ring (`at`, `count`, `size`,
+  `rotate`); führt `Dot` ein. `Dot` ist ein reguläres Primitiv (§ 6), also kein
+  neues Vokabular, nur eine bisher ungenutzte Marke.
+- **`polygons`** — einbeschriebene reguläre oder Sternpolygone.
+
+**Motivring einzeln oder als Liste.** `rosette`, `petals` und `beads` nehmen
+entweder eine einzelne Angabe **oder** eine Liste — gestapelte Bänder in
+verschiedenen Radien. Eine einzelne Map bleibt gültig, ältere Defs laufen
+unverändert. (`polygons` ist wie bisher stets eine Liste.)
 
 Beide sind bewusst **nicht** in v1. Sie stehen hier, damit die Architektur sie
 nicht ausschließt — insbesondere `Arc` und `Polygon` im Vokabular (§ 6) und die

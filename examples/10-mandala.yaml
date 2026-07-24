@@ -1,6 +1,7 @@
 # mandala — a twelve-fold template to draw on: guide rings and spokes, a
-# flower-of-life rosette, an outer polygon and a woven {12/5} star. The radius
-# is a share of the shorter side (%s, § 8.11), so it fills any format. A4.
+# flower-of-life rosette in the middle, a double ring of lotus petals, two bead
+# rings and an outer frame. Radii are a share of the shorter side (%s, § 8.11),
+# so it fills any format. A4.
 # Regenerate:  ctrlgrid -d examples/10-mandala.yaml -o out.pdf
 version: 1
 
@@ -16,25 +17,44 @@ page:
 generator: mandala
 sectors: 12
 outer_radius: 48%s
+
+# The scaffold: evenly spaced guide rings and twelve spokes, left faint.
 rings:
-  count: 8
+  count: 5
   weight: 0.15pt
   color: *guide
 spokes:
-  inner: 0.06
+  inner: 0.05
   weight: 0.15pt
   color: *guide
+
+# A flower-of-life rosette in the centre — one ring of circles, mirrored onto
+# the sector bisectors so the petals of the flower interlock.
 rosette:
   at: 0.5
-  radius: 0.28
+  radius: 0.16
   mirror: true
   weight: 0.2pt
   color: *petal
+
+# The motif: pointed lotus petals, one per sector and mirrored onto the
+# bisectors — twenty-four leaves, each two arcs from base to tip (§ 7.11).
+petals:
+  inner: 0.34
+  outer: 0.94
+  width: 0.12
+  mirror: true
+  weight: 0.25pt
+  color: *star
+
+# Bead rings — dots on a circle. A dense rim of thirty-six, and an inner ring
+# of twelve on the spokes.
+beads:
+  - {at: 0.99, count: 36, size: 0.9mm, color: *star}
+  - {at: 0.20, count: 12, size: 1.1mm, color: *petal}
+
+# A faint twelve-sided frame at the rim.
 polygons:
-  - radius: 0.98
+  - radius: 0.99
     weight: 0.2pt
-    color: *star
-  - radius: 0.8
-    step: 5
-    weight: 0.2pt
-    color: *star
+    color: *guide

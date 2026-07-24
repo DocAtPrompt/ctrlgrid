@@ -630,6 +630,36 @@ no extension — a preset name like `millimeter-a4` is not a filename until it d
 
 ---
 
+## 41. Mandala's new motif families: single-or-list, Dot, and a two-arc petal
+
+**§ 7.11.** Making `mandala` more varied added three families (`petals`,
+`beads`, and a widened `rosette`). Three calls were made where § 7.11 was silent:
+
+- **A motif ring is single *or* a list.** `rosette`, `petals` and `beads` each
+  accept one mapping or a list of them (`Rosette | tuple[Rosette, ...]`), so a
+  band can be stacked at several radii. A single mapping still validates, so the
+  old example and preset are untouched — backward compatibility over a second
+  plural key. `polygons` stays a plain list, as it already was. A `_as_rings`
+  helper normalises to a tuple so `generate`/`check`/`describe`/`_max_reach`
+  iterate one shape.
+- **A petal is two arcs, not a new primitive.** § 6 fixes six primitives and
+  § 15.2 forbids free paths. A pointed leaf is two circular arcs meeting at a
+  base and a tip: `_arc_geometry` turns two endpoints and a sagitta into a
+  centre + radius + start + sweep for our existing `Arc`. So the most iconic
+  mandala element is added with no seventh primitive — the same discipline that
+  settled the clef (§ 15.3).
+- **`beads` introduces `Dot` to the blade, noted honestly.** § 7.11 listed the
+  mandala marks as Arc/Segment/Polygon. `Dot` is a core primitive (§ 6), so a
+  bead ring is not new vocabulary, only a mark the blade had not used; the
+  spec's § 7.11 mark line is extended to say so rather than adding it silently.
+
+The area check follows the existing rule (§ 8.2, § 12 point 13): each ring
+reports its reach — petal tip (`outer`, with a lateral term for a fat leaf),
+bead ring (`at + size/2`) — so a motif past the pattern area is refused before
+page one, named, never clipped.
+
+---
+
 ## Smaller calls, for completeness
 
 - **Rounding is ties-away-from-zero**, not Python's banker's rounding, and runs

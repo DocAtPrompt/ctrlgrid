@@ -20,8 +20,10 @@ things landed on the handle side, each small and each in the spec: the
 `%w`/`%h`/`%s` (§ 8.11), the cover sheet's **stroke-weight ladder** (§ 8.8), and
 **`pattern.align`** — anchor the grid at a chosen corner (§ 8.5). Since then,
 `--embed-def` — **the PDF carries its own source** as a file attachment (§ 8.8,
-was § 15 open question 5) — and open question 3 closed (reportlab is BSD-3-Clause,
-verified). Only M5's two device edges are left (see *Not done*).
+was § 15 open question 5) — open question 3 closed (reportlab is BSD-3-Clause,
+verified), and **`mandala` grew three motif families** — `petals`, `beads` and a
+single-or-list `rosette` (§ 7.11). Only M5's two device edges are left (see *Not
+done*).
 0.1.0 is the version in the code; nothing has been released, because releasing
 needs a human *and* the user has chosen to defer PyPI for now (see *Not done*).
 
@@ -29,7 +31,7 @@ needs a human *and* the user has chosen to defer PyPI for now (see *Not done*).
 uv sync --extra dev && uv run pytest && uv run ruff check .
 ```
 
-816 tests, all green, ruff clean. Forty-odd commits on `main`, linear history,
+834 tests, all green, ruff clean. Forty-odd commits on `main`, linear history,
 pushed to **[github.com/DocAtPrompt/ctrlgrid](https://github.com/DocAtPrompt/ctrlgrid)**
 (public); CI runs green there on Linux (3.11–3.13), macOS and Windows. Eight
 presets (one each for `lines`, `dots`, `polar`, `form`, `maze`, `perspective`,
@@ -67,6 +69,7 @@ and a PNG preview, guarded by `test_every_example_validates`.
 | **M7** PNG writer | raster at exact device resolution, one file per page, text via caps (§ 10.4) |
 | **M8** `perspective` | horizon + 1–3 vanishing-point fans, equal base division, Liang–Barsky clip, `verticals` (§ 7.11) |
 | **M8** `mandala` | sectors/rings scaffold, rosette of circles (`mirror`), inscribed regular / star polygons, on shared `polar_geometry` (§ 7.11) |
+| post-M9 `mandala` motifs | three more families: `petals` (a leaf = two arcs, `Arc` only), `beads` (dots on a ring — introduces `Dot` to the blade, § 7.11 mark line extended), and `rosette` widened to **single-or-list**; `petals`/`beads` take single-or-list too (layered bands). `check`/`_max_reach`/`describe` iterate the rings; the example gallery shows them (§ 7.11) |
 | **M9** `staves` clefs | `treble/bass/alto/tenor` as `Text` in a bundled, subset music font (Bravura, OFL→TrueType), SMuFL placement, 5-line only (§ 15.3) |
 | **M5** relative measure | `%w`/`%h`/`%s` as a fraction of the pattern area, resolved in seam 1 like `px`, `RelativeLengthField` opt-in across the blades (§ 8.11) |
 | post-M9 interactive | `ctrlgrid` with no args → preset browser (preset → pages → output), TTY-guarded, help otherwise (§ 11.2) |
@@ -156,7 +159,7 @@ work around it.
 
 **Where the specification was genuinely silent**, the resolution is recorded in
 [`docs/implementation-decisions.md`](docs/implementation-decisions.md) —
-forty of them so far, each with the section it belongs to and the
+forty-one of them so far, each with the section it belongs to and the
 reasoning. Read it before changing a default; several look arbitrary and are not.
 
 ## Language split

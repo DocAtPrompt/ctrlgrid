@@ -29,7 +29,7 @@ proportionally.
 | <img src="previews/07-tiling-hex.png" width="220"> | **`tiling`** — a flat-top hexagon honeycomb with a three-colour fill.<br>[`07-tiling-hex.yaml`](07-tiling-hex.yaml) · [PDF](07-tiling-hex.pdf) |
 | <img src="previews/08-form-weekly.png" width="220"> | **`form`** — a weekly planner: seven day rows with a done-box, then a notes block.<br>[`08-form-weekly.yaml`](08-form-weekly.yaml) · [PDF](08-form-weekly.pdf) |
 | <img src="previews/09-perspective-2pt.png" width="220"> | **`perspective`** — a two-point drawing grid: a horizon, two vanishing points off the sheet, and true verticals.<br>[`09-perspective-2pt.yaml`](09-perspective-2pt.yaml) · [PDF](09-perspective-2pt.pdf) |
-| <img src="previews/10-mandala.png" width="220"> | **`mandala`** — a twelve-fold template: guide rings and spokes, a flower-of-life rosette, an outer polygon and a woven {12/5} star.<br>[`10-mandala.yaml`](10-mandala.yaml) · [PDF](10-mandala.pdf) |
+| <img src="previews/10-mandala.png" width="220"> | **`mandala`** — a twelve-fold template: guide rings and spokes, a flower-of-life rosette, a double ring of lotus petals, two bead rings and a twelve-sided frame.<br>[`10-mandala.yaml`](10-mandala.yaml) · [PDF](10-mandala.pdf) |
 | <img src="previews/11-cover-calibration.png" width="220"> | **`--cover`** — the calibration cover sheet (§ 8.8): a 50 mm square and 100 mm rule to catch a scaling print driver, a ladder of stroke weights so you see how each one prints, and a settings summary. The preview is the cover; the grid it precedes is page two.<br>[`11-cover-calibration.yaml`](11-cover-calibration.yaml) · [PDF](11-cover-calibration.pdf) |
 
 The maze booklet uses a fixed seed for a reproducible set — regenerate it with:
