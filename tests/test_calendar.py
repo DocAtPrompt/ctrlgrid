@@ -112,22 +112,28 @@ class TestValidation:
 class TestPageEnumeration:
     def test_the_pages_and_their_order(self) -> None:
         d = dests(cfg(notes={"count": 20}))
-        # index, year, 12 months, 365 days, notes-index, 20 notes
-        assert d[0] == "index"
-        assert d[1] == "year"
-        assert d[2] == "month-01" and d[13] == "month-12"
-        assert d[14] == "day-2026-01-01" and d[14 + 364] == "day-2026-12-31"
+        # contents, full-year overview, 2 half-years, 12 months, 365 days,
+        # notes-index, 20 notes
+        assert d[0] == "index"   # the contents page
+        assert d[1] == "year"    # the full-year overview
+        assert d[2] == "half-1" and d[3] == "half-2"
+        assert d[4] == "month-01" and d[15] == "month-12"
+        assert d[16] == "day-2026-01-01" and d[16 + 364] == "day-2026-12-31"
         assert "notes-index" in d
         assert d[-1] == "note-20" and "note-01" in d
-        assert len(d) == 1 + 1 + 12 + 365 + 1 + 20
+        assert len(d) == 1 + 1 + 2 + 12 + 365 + 1 + 20
 
     def test_a_leap_year_has_one_more_day_page(self) -> None:
-        assert len(dests(CalendarConfig.model_validate({"year": 2028}))) == 1 + 1 + 12 + 366
+        assert len(dests(CalendarConfig.model_validate({"year": 2028}))) == 1 + 1 + 2 + 12 + 366
 
     def test_without_notes_there_is_no_notes_section(self) -> None:
         d = dests(cfg())
         assert not any(x.startswith("note") for x in d)
-        assert len(d) == 1 + 1 + 12 + 365
+        assert len(d) == 1 + 1 + 2 + 12 + 365
+
+    def test_a_title_page_leads_when_set(self) -> None:
+        d = dests(cfg(title_page={"title": "2026"}))
+        assert d[0] == "title" and d[1] == "index"
 
 
 def _graph(c: CalendarConfig):
@@ -145,11 +151,11 @@ class TestLinks:
         dangling = sorted(target for _src, target in edges if target not in dests)
         assert dangling == []
 
-    def test_the_index_links_to_year_months_and_notes(self) -> None:
+    def test_the_contents_links_to_the_overviews_months_and_notes(self) -> None:
         pages, _dests, _edges = _graph(cfg(notes={"count": 5}))
-        index = next(p for p in pages if p.dest == "index")
-        targets = {link.target for link in index.links}
-        assert {"year", "month-01", "month-12", "notes-index"} <= targets
+        contents = next(p for p in pages if p.dest == "index")
+        targets = {link.target for link in contents.links}
+        assert {"year", "half-1", "half-2", "month-01", "month-12", "notes-index"} <= targets
 
     def test_a_month_links_every_date_to_its_day(self) -> None:
         pages, _dests, _edges = _graph(cfg())
@@ -174,16 +180,12 @@ class TestLinks:
             assert "index" in targets and "year" in targets
 
 
-class TestQuarterAndWeek:
-    ALL = {"quarter_view": {}, "week_view": {}, "notes": {"count": 40}}
+class TestOverviewHalvesTitleAndWeek:
+    ALL = {"title_page": {"title": "T"}, "week_view": {}, "notes": {"count": 40}}
 
-    def test_they_are_off_by_default(self) -> None:
+    def test_weeks_are_off_by_default(self) -> None:
         _pages, dests, _edges = _graph(cfg())
-        assert not any(d.startswith("quarter") or d.startswith("week") for d in dests)
-
-    def test_quarter_pages_appear_when_enabled(self) -> None:
-        _pages, dests, _edges = _graph(cfg(quarter_view={}))
-        assert {"quarter-1", "quarter-2", "quarter-3", "quarter-4"} <= dests
+        assert not any(d.startswith("week") for d in dests)
 
     def test_week_pages_cover_the_year(self) -> None:
         _pages, dests, _edges = _graph(cfg(week_view={}))
@@ -194,25 +196,39 @@ class TestQuarterAndWeek:
         _pages, dests, edges = _graph(cfg(**self.ALL))
         assert sorted(t for _s, t in edges if t not in dests) == []
 
-    def test_a_quarter_links_its_months_and_days(self) -> None:
-        pages, _dests, _edges = _graph(cfg(quarter_view={}))
-        q1 = next(p for p in pages if p.dest == "quarter-1")
-        targets = {link.target for link in q1.links}
-        assert {"month-01", "month-02", "month-03", "day-2026-01-01"} <= targets
+    def test_the_year_overview_links_days_and_months(self) -> None:
+        pages, _dests, _edges = _graph(cfg())
+        overview = next(p for p in pages if p.dest == "year")
+        targets = {link.target for link in overview.links}
+        assert {"day-2026-01-01", "month-01", "month-12"} <= targets
+
+    def test_the_overview_links_weeks_only_when_weeks_are_on(self) -> None:
+        off = next(p for p in _graph(cfg())[0] if p.dest == "year")
+        on = next(p for p in _graph(cfg(week_view={}))[0] if p.dest == "year")
+        assert not any(link.target.startswith("week-") for link in off.links)
+        assert any(link.target == "week-01" for link in on.links)
+
+    def test_a_half_year_links_its_months_and_days(self) -> None:
+        h1 = next(p for p in _graph(cfg())[0] if p.dest == "half-1")
+        targets = {link.target for link in h1.links}
+        assert {"month-01", "month-06", "day-2026-01-01"} <= targets
 
     def test_a_week_links_only_its_in_year_days(self) -> None:
-        pages, _dests, _edges = _graph(cfg(week_view={}))
-        week1 = next(p for p in pages if p.dest == "week-01")   # 29 Dec 2025 – 4 Jan 2026
-        targets = {link.target for link in week1.links}
-        assert "day-2026-01-01" in targets       # in the year
-        assert "day-2025-12-29" not in targets    # before the year — shown, not linked
+        week1 = next(p for p in _graph(cfg(week_view={}))[0] if p.dest == "week-01")
+        targets = {link.target for link in week1.links}   # 29 Dec 2025 – 4 Jan 2026
+        assert "day-2026-01-01" in targets        # in the year
+        assert "day-2025-12-29" not in targets     # before the year — shown, not linked
 
-    def test_the_nav_strip_gains_quarter_and_week(self) -> None:
-        pages, _dests, _edges = _graph(cfg(**self.ALL))
-        day = next(p for p in pages if p.dest == "day-2026-06-15")
-        targets = {link.target for link in day.links}
-        assert any(t.startswith("quarter-") for t in targets)
-        assert any(t.startswith("week-") for t in targets)
+    def test_the_nav_gains_week_when_enabled(self) -> None:
+        day = next(p for p in _graph(cfg(week_view={}))[0] if p.dest == "day-2026-06-15")
+        assert any(link.target.startswith("week-") for link in day.links)
+
+    def test_the_title_page_is_a_plain_coloured_cover(self) -> None:
+        title = next(
+            p for p in _graph(cfg(title_page={"title": "2026", "subtitle": "sub"}))[0]
+            if p.dest == "title"
+        )
+        assert title.plain and title.background is not None and title.links == ()
 
 
 class TestPageCount:
@@ -223,8 +239,8 @@ class TestPageCount:
         variants = (
             {},
             {"notes": {"count": 200}},
-            {"quarter_view": {}, "week_view": {}},
-            {"quarter_view": {}, "week_view": {}, "notes": {"count": 40}},
+            {"week_view": {}},
+            {"title_page": {"title": "T"}, "week_view": {}, "notes": {"count": 40}},
         )
         for extra in variants:
             c = cfg(**extra)
@@ -262,8 +278,8 @@ class TestItValidatesAndBuilds:
     def test_it_builds_all_the_pages(self, tmp_path: Path) -> None:
         path = tmp_path / "cal.pdf"
         build(loads(self.DEF, source="test"), PdfWriter(path))
-        # 1 index + 1 year + 12 months + 365 days + 1 notes-index + 10 notes
-        assert len(PdfReader(str(path)).pages) == 1 + 1 + 12 + 365 + 1 + 10
+        # contents + overview + 2 half-years + 12 months + 365 days + notes-index + 10 notes
+        assert len(PdfReader(str(path)).pages) == 1 + 1 + 2 + 12 + 365 + 1 + 10
 
     def test_two_runs_produce_identical_bytes(self, tmp_path: Path) -> None:
         # § 10.1: dates come from the year, never the wall-clock, so a calendar

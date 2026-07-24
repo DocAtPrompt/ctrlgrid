@@ -48,14 +48,20 @@ holidays:
   - { date: 2026-01-01, label: New Year }
   - { date: 2026-12-25, label: Christmas }
 
-# The year overview: two half-year tables; a day cell jumps to its day page.
+# A cover: a full-page colour with a centred title and subtitle. Drop it for no
+# title page.
+title_page:
+  title: "2026"
+  subtitle: "your name"
+  background: "#2f3a48"
+  text_color: "#ffffff"
+
+# The half-year tables (Jan–Jun, Jul–Dec); a day cell jumps to its day page.
 year_view: { weekend_shade: "#f0f2f5", cell_link: day }
 # The month view: a list of every day; the writing surface next to each date.
 month_view: { weekend_shade: "#f0f2f5", surface: lines }
-# Quarter and week are opt-in — drop either section to leave those pages out.
-# Quarter: four pages of three mini-months. Week: one page per week (~53), seven
-# day sections in week_start order plus a tasks/notes column.
-quarter_view: { cell_link: day }
+# The week view is opt-in — drop it to leave the ~53 week pages out. Each is one
+# page: seven day sections in week_start order plus a tasks/notes column.
 week_view: { surface: lines, tasks: true }
 
 # The day page — an ordered list of blocks. Reorder, resize, drop or repeat.

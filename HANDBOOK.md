@@ -807,10 +807,10 @@ months:   [January, …]      # 12 names; English if omitted
 weekdays: [Mon, Tue, …]     # 7 names; English if omitted
 holidays:
   - { date: 2026-12-25, label: Christmas }
-year_view:  { weekend_shade: "#f0f2f5", cell_link: day }   # day | month | none
+title_page: { title: "2026", subtitle: "your name", background: "#2f3a48" }  # opt-in cover
+year_view:  { weekend_shade: "#f0f2f5", cell_link: day }   # the half-year tables
 month_view: { weekend_shade: "#f0f2f5", surface: lines }
-quarter_view: { cell_link: day }          # opt-in: 4 pages of 3 mini-months
-week_view:    { surface: lines, tasks: true }   # opt-in: one page per week
+week_view:  { surface: lines, tasks: true }   # opt-in: one page per week
 day:
   blocks:                   # an ordered list — reorder, resize, repeat
     - { type: schedule, from: 7, to: 22, height: 55%, surface: lines }
@@ -822,15 +822,19 @@ notes: { count: 20, surface: dots }        # blank | lines | dots | grid
 The page types, each **exactly one page** (if a view is small, use the device's
 zoom — nothing scrolls or scales):
 
-- **Index** — a hub of links: the year, the twelve months, the notes.
-- **Year** — two half-year tables; a month header jumps to its month, a day cell
-  to its day.
+- **Title** (opt-in via `title_page`) — a cover: a full-page colour with a
+  centred title and subtitle.
+- **Contents** — the table of contents: links to the overviews, the months and
+  the note indices.
+- **Full-year overview** — the whole year on one page as underlined numbers
+  only (no boxes): a day number jumps to its day, a week number to its week, a
+  month name to its month.
+- **Half-year 1 & 2** — two month-column × day-row tables (Jan–Jun, Jul–Dec); a
+  month header jumps to its month, a day cell to its day.
 - **Month** — a list of every day; the date links to its day page, holidays are
   labelled, weekends shaded.
 - **Day** — your ordered `blocks` (a timed `schedule`, a `todo` list, `notes`),
   each with a writing `surface` (`blank` / `lines` / `dots` / `grid`).
-- **Quarter** (opt-in via `quarter_view`) — four pages, each three mini-months;
-  a month name jumps to its month, a day cell to its day.
 - **Week** (opt-in via `week_view`) — one page per week (~53), seven day
   sections in `week_start` order with a writing surface and a tasks column; each
   date jumps to its day page. Weeks that straddle the year edge show the

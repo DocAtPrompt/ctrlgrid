@@ -701,12 +701,20 @@ bend the blade model, four calls were made:
   threaded through `resolve_placeholders`/`layout_band` as an `extra` map so
   blades are unaffected.
 
-The Quarter and Week views were the second pass on the same architecture, and
-built: separately opt-in (`quarter_view` / `week_view`), weeks aligned to
-`week_start` (not ISO, which assumes Monday), out-of-year edge days shown without
-a link. The one thing still deferred is holidays from a *file* — inline lists
-work; a file needs a def-relative path resolved in the blade's own validation,
-unlike the handle's images.
+The view set was reshaped after use: the Quarter view (three mini-months × four
+pages) read as too heavy and was dropped for a single-page **full-year overview**
+— numbers only, each an underlined link (day → day, week → week, month → month),
+no boxes or shading, everything on one page (the reader zooms). The old two-table
+year page split into two full-page **half-year** tables, and a **title** page
+(full-sheet colour) and **contents** page lead the document. Weeks stayed
+opt-in, aligned to `week_start` (not ISO, which assumes Monday), with out-of-year
+edge days shown without a link. The title page needed the handle to paint a
+full-sheet colour a document generator cannot reach itself (§ 3.3), so
+`DocumentPage` gained `background` (the colour) and `plain` (no header) — the
+generator names them, the handle does the sheet geometry. The one thing still
+deferred is holidays from a *file* — inline lists work; a file needs a
+def-relative path resolved in the blade's own validation, unlike the handle's
+images.
 
 ---
 

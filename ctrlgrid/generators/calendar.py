@@ -100,11 +100,14 @@ class MonthView(Section):
     surface: Surface = "lines"
 
 
-class QuarterView(Section):
-    """The quarter pages: three mini-months each (§ 7, opt-in)."""
+class TitlePage(Section):
+    """A cover page: a full-sheet colour with a centred title and subtitle
+    (§ 7, opt-in)."""
 
-    weekend_shade: ColorField = "#f0f2f5"
-    cell_link: Literal["day", "month", "none"] = "day"
+    title: str
+    subtitle: str | None = None
+    background: ColorField = "#2f3a48"
+    text_color: ColorField = "#ffffff"
 
 
 class WeekView(Section):
@@ -132,9 +135,9 @@ class CalendarConfig(BaseModel):
     months: tuple[str, ...] | None = None
     weekdays: tuple[str, ...] | None = None
     holidays: tuple[Holiday, ...] = ()
+    title_page: TitlePage | None = None
     year_view: YearView = YearView()
     month_view: MonthView = MonthView()
-    quarter_view: QuarterView | None = None
     week_view: WeekView | None = None
     day: DaySpec | None = None
     notes: NotesSpec | None = None
@@ -282,14 +285,15 @@ class CalendarGenerator:
     def page_count(self, cfg: CalendarConfig, *, area: Area) -> int:
         """The total number of pages, without drawing any (§ 11.3 reports it).
 
-        Index + year + 12 months + every day; and, when there are notes, the
-        numbered index paginated over the area plus one page per note.
+        Contents + full-year overview + two half-years + 12 months + every day;
+        an optional title page; the week pages when weeks are on; and the notes'
+        paginated index plus one page per note.
         """
         from ctrlgrid.generators import calendar_layout as layout
 
-        total = 1 + 1 + 12 + day_count(cfg.year)
-        if cfg.quarter_view is not None:
-            total += 4
+        total = 1 + 1 + 2 + 12 + day_count(cfg.year)
+        if cfg.title_page is not None:
+            total += 1
         if cfg.week_view is not None:
             total += len(weeks_of_year(cfg.year, cfg.week_start))
         if cfg.notes is not None:
@@ -297,6 +301,18 @@ class CalendarGenerator:
             index_pages = -(-cfg.notes.count // capacity)  # ceil
             total += index_pages + cfg.notes.count
         return total
+
+    def _notes_index_toc(self, cfg, layout, area) -> list[tuple[str, str]]:
+        """The contents page's links to the (paginated) notes index."""
+        if cfg.notes is None:
+            return []
+        total = -(-cfg.notes.count // layout.notes_capacity(area.height))
+        if total == 1:
+            return [("Notes", "notes-index")]
+        return [
+            (f"Notes {k}", "notes-index" if k == 1 else f"notes-index-{k}")
+            for k in range(1, total + 1)
+        ]
 
     # ------------------------------------------------------------------- pages
 
@@ -307,7 +323,6 @@ class CalendarGenerator:
         months = cfg.month_names()
         weekdays = cfg.weekday_names()
         has_notes = cfg.notes is not None
-        has_quarter = cfg.quarter_view is not None
         has_week = cfg.week_view is not None
         holidays = {h.date: h.label for h in cfg.holidays}
         all_days = list(days_of_year(cfg.year))
@@ -321,24 +336,20 @@ class CalendarGenerator:
 
         def nav(month: int = 1, week_no: int = 1) -> layout.Nav:
             return layout.Nav(
-                month=f"month-{month:02d}", quarter=f"quarter-{(month - 1) // 3 + 1}",
-                week=f"week-{week_no:02d}",
-                has_quarter=has_quarter, has_week=has_week, has_notes=has_notes,
+                month=f"month-{month:02d}", week=f"week-{week_no:02d}",
+                has_week=has_week, has_notes=has_notes,
             )
 
         def wk(date: datetime.date) -> int:
             return week_of(date, cfg.year, cfg.week_start)
 
-        yield layout.index_page(make(), cfg, nav(), months)
-        yield layout.year_page(make(), cfg, nav(), months)
-
-        if has_quarter:
-            for quarter in range(1, 5):
-                prev = f"quarter-{quarter - 1}" if quarter > 1 else None
-                nxt = f"quarter-{quarter + 1}" if quarter < 4 else None
-                first = (quarter - 1) * 3 + 1
-                n = nav(first, wk(datetime.date(cfg.year, first, 1)))
-                yield layout.quarter_page(make(), cfg, n, months, weekdays, quarter, prev, nxt)
+        if cfg.title_page is not None:
+            yield layout.title_page(make(), cfg)
+        toc = self._notes_index_toc(cfg, layout, area)
+        yield layout.contents_page(make(), cfg, nav(), months, toc)
+        yield layout.year_overview_page(make(), cfg, nav(), months, weekdays)
+        yield layout.half_year_page(make(), cfg, nav(1), months, 1)
+        yield layout.half_year_page(make(), cfg, nav(7), months, 2)
 
         for month in range(1, 13):
             prev = f"month-{month - 1:02d}" if month > 1 else None

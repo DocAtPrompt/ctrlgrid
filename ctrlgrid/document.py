@@ -63,6 +63,12 @@ class DocumentPage:
     marks: tuple[Mark, ...]
     links: tuple[Link, ...] = ()
     title: str | None = None
+    background: str | None = None
+    """A full-sheet fill painted under everything — the title page's colour
+    (§ 7). The handle paints it, because only it knows the sheet; the generator
+    just names the colour (§ 3.3)."""
+    plain: bool = False
+    """No header/footer on this page — for the title page, which is a cover."""
 
 
 @runtime_checkable

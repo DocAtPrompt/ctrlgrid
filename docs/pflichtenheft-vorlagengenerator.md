@@ -1155,10 +1155,12 @@ ein dokumentgelieferter Kopf-Platzhalter (§ 8.10), durch `extra` an
 `resolve_placeholders`/`layout_band` gereicht, ohne Klingen zu berühren.
 Vollständiger Entwurf in
 [`docs/superpowers/specs/2026-07-24-calendar-generator-design.md`](superpowers/specs/2026-07-24-calendar-generator-design.md).
-Alle fünf Ansichten gebaut: Index/Jahr/Monat/Tag/Notizen immer, **Quartal**
-(vier Seiten, je drei Mini-Monate) und **Woche** (eine Seite je Woche, sieben
-Tagesabschnitte in `week_start`-Reihenfolge plus Aufgabenspalte) **getrennt
-schaltbar** über `quarter_view:` / `week_view:`. Offen bleibt nur der
+Seiten: optionales **Titelblatt** (Vollflächenfarbe über ein neues
+`DocumentPage.background`/`plain`, vom Griff gezeichnet), **Inhaltsverzeichnis**
+(Nabe), eine minimale **Ganzjahresübersicht** (nur Zahlen als unterstrichene
+Links, keine Boxen, alles auf einer Seite), **Halbjahr 1 & 2** als Tabellen,
+Monate, Tage, optional **Wochen** (an `week_start` ausgerichtet, nicht ISO) und
+Notizen. `{year}` als Kopf-Platzhalter. Offen bleibt nur der
 Feiertags-**Datei**import (Inline-Liste funktioniert).
 
 ---

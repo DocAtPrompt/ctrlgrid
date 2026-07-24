@@ -137,12 +137,10 @@ class Page:
 @dataclass
 class Nav:
     """The nav strip's context for one page: which views exist and where the
-    contextual Quarter/Month/Week links jump to (§ 7)."""
+    contextual Month/Week links jump to (§ 7)."""
 
     month: str
-    quarter: str
     week: str
-    has_quarter: bool = False
     has_week: bool = False
     has_notes: bool = False
 
@@ -150,15 +148,12 @@ class Nav:
 def nav(page: Page, n: Nav) -> None:
     """The persistent strip of underlined links at the very top (§ 7).
 
-    Index and Year are always there; Quarter, Week and Notes appear only when
-    those views exist. Quarter/Month/Week are contextual — the current page's
-    quarter, month and week.
+    Index (the contents) and Year (the full-year overview) are always there;
+    Week and Notes appear only when those views exist. Month/Week are contextual
+    — the current page's month and week.
     """
     size = pt(9)
-    entries = [("Index", "index"), ("Year", "year")]
-    if n.has_quarter:
-        entries.append(("Quarter", n.quarter))
-    entries.append(("Month", n.month))
+    entries = [("Index", "index"), ("Year", "year"), ("Month", n.month)]
     if n.has_week:
         entries.append(("Week", n.week))
     if n.has_notes:
@@ -187,36 +182,91 @@ def crumb(page: Page, *, title, prev, nxt, up=None):
 # -------------------------------------------------------------------- the pages
 
 
-def index_page(page: Page, cfg, n: Nav, months) -> DocumentPage:
+def title_page(page: Page, cfg) -> DocumentPage:
+    """The cover: a full-sheet colour (painted by the handle) with a centred
+    title and subtitle. No nav, no header — `plain` (§ 7)."""
+    tp = cfg.title_page
+    page.text(page.W / 2, page.H / 2 - pt(26), tp.title, pt(40), tp.text_color, "center")
+    if tp.subtitle:
+        page.text(page.W / 2, page.H / 2 + pt(22), tp.subtitle, pt(16), tp.text_color, "center")
+    return DocumentPage(
+        dest="title", kind="title", marks=tuple(page.marks), links=(),
+        title=tp.title, background=tp.background, plain=True,
+    )
+
+
+def contents_page(page: Page, cfg, n: Nav, months, notes_index) -> DocumentPage:
+    """The table of contents: links to the overviews, months and note indices."""
     nav(page, n)
     top = pt(20)
-    page.text(0, top, str(cfg.year), pt(24), INK)
-    top += pt(34)
-    entries = [("Year", "year")]
-    if n.has_quarter:
-        entries += [(f"Q{q}", f"quarter-{q}") for q in range(1, 5)]
+    page.text(0, top, "Contents", pt(20), INK)
+    top += pt(30)
+    entries = [
+        ("Full-year overview", "year"),
+        (f"Half-year 1 · {months[0][:3]}–{months[5][:3]}", "half-1"),
+        (f"Half-year 2 · {months[6][:3]}–{months[11][:3]}", "half-2"),
+    ]
     entries += [(months[i], f"month-{i + 1:02d}") for i in range(12)]
-    if n.has_week:
-        entries.append(("Weeks", "week-01"))
-    if n.has_notes:
-        entries.append(("Notes", "notes-index"))
-    col_w = page.W / 3
+    entries += list(notes_index)
+    per_col = -(-len(entries) // 2)  # two columns
+    col_w = page.W / 2
     for i, (label, target) in enumerate(entries):
-        r, c = divmod(i, 3)
-        page.link_text(round(c * col_w), top + r * pt(24), label, target, pt(13))
-    return page.done("index", "index", "Index")
+        c, r = divmod(i, per_col)
+        page.link_text(round(c * col_w), top + r * pt(22), label, target, pt(12))
+    return page.done("index", "index", "Contents")
 
 
-def year_page(page: Page, cfg, n: Nav, months) -> DocumentPage:
+def year_overview_page(page: Page, cfg, n: Nav, months, weekdays) -> DocumentPage:
+    """A single-page whole-year view: numbers only, each an underlined link —
+    day → day, week number → week, month → month. No boxes, no shading; it fits
+    one page and the reader zooms (§ 7, § 8.2)."""
     nav(page, n)
-    top = pt(18)
-    page.text(0, top, str(cfg.year), pt(20), INK)
-    top += pt(28)
-    gap = pt(12)
-    table_h = (page.H - top - gap) / 2
-    _half_table(page, cfg, months, top, table_h, first_month=1)
-    _half_table(page, cfg, months, top + table_h + gap, table_h, first_month=7)
-    return page.done("year", "year", str(cfg.year))
+    top = pt(16)
+    page.text(0, top, f"{cfg.year} · full year", pt(15), INK)
+    top += pt(22)
+    start = _start_weekday(cfg.week_start)
+    jan1 = datetime.date(cfg.year, 1, 1)
+    dec31 = datetime.date(cfg.year, 12, 31)
+    first = jan1 - datetime.timedelta(days=(jan1.weekday() - start) % 7)
+    n_weeks = (dec31 - first).days // 7 + 1
+    grid_x = mm(17)
+    day_w = (page.W - grid_x) / 7
+    for c in range(7):
+        page.text(round(grid_x + c * day_w + day_w / 2), round(top),
+                  weekdays[(start + c) % 7][:2], pt(6), GUIDE, "center")
+    top += pt(8)
+    row_h = (page.H - top - pt(2)) / n_weeks
+    for w in range(n_weeks):
+        rtop = top + w * row_h
+        yy = round(rtop + row_h / 2 - pt(3))
+        if n.has_week:
+            page.link_text(mm(9), yy, str(w + 1), f"week-{w + 1:02d}", pt(7))
+        else:
+            page.text(mm(9), yy, str(w + 1), pt(7), GUIDE)
+        for c in range(7):
+            date = first + datetime.timedelta(days=w * 7 + c)
+            if date.year != cfg.year:
+                continue
+            if date.day == 1:
+                page.link_text(pt(1), yy, months[date.month - 1][:3],
+                               f"month-{date.month:02d}", pt(7))
+            page.link_text(round(grid_x + c * day_w + pt(1)), yy, str(date.day),
+                           f"day-{date.isoformat()}", pt(7))
+    return page.done("year", "year", f"{cfg.year} full year")
+
+
+def half_year_page(page: Page, cfg, n: Nav, months, half: int) -> DocumentPage:
+    """One half-year as a month-column × day-row table (the old year page, now a
+    full page each). Keeps the table style — the year *overview* is the minimal
+    one (§ 7)."""
+    nav(page, n)
+    first_month = 1 if half == 1 else 7
+    span = f"{months[first_month - 1][:3]}–{months[first_month + 4][:3]}"
+    prev = "half-1" if half == 2 else None
+    nxt = "half-2" if half == 1 else None
+    top = crumb(page, title=f"Half-year {half} · {span}", prev=prev, nxt=nxt, up="year")
+    _half_table(page, cfg, months, top, page.H - top - pt(2), first_month=first_month)
+    return page.done(f"half-{half}", "half", f"Half-year {half}")
 
 
 def _half_table(page: Page, cfg, months, top, h, *, first_month: int) -> None:
@@ -315,47 +365,8 @@ def note_page(page: Page, cfg, n: Nav, *, num, prev, nxt) -> DocumentPage:
     return page.done(f"note-{num:0{width}d}", "notes", f"Note {num}")
 
 
-def quarter_page(page: Page, cfg, n: Nav, months, weekdays, quarter, prev, nxt) -> DocumentPage:
-    nav(page, n)
-    top = crumb(page, title=f"Q{quarter} · {cfg.year}", prev=prev, nxt=nxt, up="year")
-    col_w = (page.W - mm(8)) / 3
-    for i in range(3):
-        month = (quarter - 1) * 3 + i + 1
-        _mini_month(page, cfg, months, weekdays, month, i * (col_w + mm(4)), top, col_w)
-    return page.done(f"quarter-{quarter}", "quarter", f"Q{quarter} · {cfg.year}")
-
-
 def _start_weekday(week_start: str) -> int:
     return 0 if week_start == "monday" else 6
-
-
-def _mini_month(page: Page, cfg, months, weekdays, month, x, top, w) -> None:
-    start = _start_weekday(cfg.week_start)
-    shade = cfg.quarter_view.weekend_shade
-    page.link_text(round(x), round(top), months[month - 1], f"month-{month:02d}", pt(10))
-    cw = w / 7
-    hy = top + pt(14)
-    for c in range(7):
-        page.text(round(x + c * cw + cw / 2), round(hy), weekdays[(start + c) % 7][:2], pt(6),
-                  GUIDE, "center")
-    row_h = mm(6)
-    grid_top = hy + pt(8)
-    ndays = _month_length(cfg.year, month)
-    for day in range(1, ndays + 1):
-        date = datetime.date(cfg.year, month, day)
-        col = (date.weekday() - start) % 7
-        row = (day - 1 + (datetime.date(cfg.year, month, 1).weekday() - start) % 7) // 7
-        cx = x + col * cw
-        cy = grid_top + row * row_h
-        if date.weekday() >= 5 and shade:
-            page.box(cx, cy, cw, row_h, 0.0, shade, shade)
-        page.box(cx, cy, cw, row_h, 0.3, GUIDE)
-        page.text(round(cx + pt(1)), round(cy + pt(1)), str(day), pt(6), INK)
-        if cfg.quarter_view.cell_link == "day":
-            page.links.append(
-                Link(Point(round(cx), page._y(cy + row_h)), Point(round(cx + cw), page._y(cy)),
-                     f"day-{date.isoformat()}")
-            )
 
 
 def week_page(page: Page, cfg, n: Nav, months, weekdays, *, week_no, start_date, prev, nxt):

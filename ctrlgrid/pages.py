@@ -929,8 +929,19 @@ def _build_document(
     for index, page in enumerate(blade.pages(document.config, area=geometry.area, q=writer)):
         writer.begin_page(document.sheet.width, document.sheet.height)
         writer.define_dest(page.dest)
-        for mark in frame_marks:
-            writer.draw(mark)
+        # A full-sheet fill, painted under everything (§ 7 — the title page).
+        if page.background:
+            writer.draw(Polygon(
+                points=(
+                    Point(0, 0), Point(document.sheet.width, 0),
+                    Point(document.sheet.width, document.sheet.height),
+                    Point(0, document.sheet.height),
+                ),
+                closed=True, weight=0.0, fill_color=page.background,
+            ))
+        if not page.plain:
+            for mark in frame_marks:
+                writer.draw(mark)
         for mark in page.marks:
             writer.draw(translate(mark, dx=ox, dy=oy))
         for link in page.links:
