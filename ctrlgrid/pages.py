@@ -681,7 +681,8 @@ def _refuse_mirroring_that_cannot_line_up(document: Document, plan: SheetPlan) -
 #: Every capability a mark can call for (§ 10.2). A writer holding all of them
 #: renders anything, so the check below can skip the sampling entirely.
 _ALL_CAPABILITIES = {
-    "vector", "color", "opacity", "arc", "polygon", "image_png", "text", "attachment",
+    "vector", "color", "opacity", "arc", "polygon", "image_png", "text",
+    "attachment", "link",
 }
 
 

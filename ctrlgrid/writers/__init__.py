@@ -17,7 +17,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Protocol, runtime_checkable
 
-from ctrlgrid.marks import Mark, Mm, Um
+from ctrlgrid.marks import Mark, Mm, Point, Um
 
 
 @runtime_checkable
@@ -81,6 +81,19 @@ class Writer(WriterQuery, Protocol):
         `index` rather than a generated key, so the reference is derived from
         the page and the file stays byte-identical between runs.
         """
+        ...
+
+    def define_dest(self, key: str) -> None:
+        """Mark the current page as a named link destination (§ 10.2).
+
+        A navigation aid outside the six primitives (§ 6), like `outline`. A
+        writer that cannot link (PNG) declares no `link` capability, so a run
+        that needs links is refused before it reaches this method.
+        """
+        ...
+
+    def link(self, lower_left: Point, upper_right: Point, target: str) -> None:
+        """A link rectangle jumping to a named destination (§ 10.2)."""
         ...
 
     def end_page(self) -> None: ...

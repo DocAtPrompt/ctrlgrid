@@ -102,6 +102,13 @@ class PngWriter:
     def outline(self, title: str, *, index: int) -> None:
         """PNG has no bookmarks; a data-driven run just gets numbered files."""
 
+    def define_dest(self, key: str) -> None:
+        """PNG has no destinations; it declares no `link` capability, so a run
+        that needs links is refused before this is reached (§ 10.2)."""
+
+    def link(self, lower_left, upper_right, target: str) -> None:
+        """PNG has no link annotations — see `define_dest`."""
+
     def end_page(self) -> None:
         assert self._image is not None
         self._index += 1

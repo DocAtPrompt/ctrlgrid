@@ -67,7 +67,7 @@ class PdfWriter:
         """
         return {
             "vector", "color", "text", "opacity", "arc", "polygon", "image_png",
-            "attachment",
+            "attachment", "link",
         }
 
     def text_width(self, content: str, *, family: str, size: Um) -> Um:
@@ -194,6 +194,34 @@ class PdfWriter:
         key = f"page{index}"
         pdf.bookmarkPage(key)
         pdf.addOutlineEntry(title, key)
+
+    def define_dest(self, key: str) -> None:
+        """Mark the current page as a named link destination (§ 10.2).
+
+        The key comes from the document (a page's own dest), never a counter or
+        a random value, so links stay byte-identical between runs (§ 10.1).
+        """
+        self._pdf.bookmarkPage(key)
+
+    def link(self, lower_left: Point, upper_right: Point, target: str) -> None:
+        """A link rectangle `lower_left`→`upper_right` jumping to `target`.
+
+        reportlab resolves `target` to the page that `define_dest(target)`
+        marked. No border, no tooltip: the *visible* part of a link is drawn as
+        an ordinary `Text` mark plus a `Segment` underline by the generator, so
+        this adds only the tap behaviour — the six primitives still draw
+        everything one sees (§ 6), and the bytes stay minimal.
+        """
+        self._pdf.linkAbsolute(
+            "",
+            target,
+            Rect=(
+                _to_pt(lower_left.x),
+                _to_pt(lower_left.y),
+                _to_pt(upper_right.x),
+                _to_pt(upper_right.y),
+            ),
+        )
 
     def end_page(self) -> None:
         self._pdf.showPage()
