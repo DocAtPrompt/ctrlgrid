@@ -702,9 +702,13 @@ bend the blade model, four calls were made:
   blades are unaffected.
 
 The view set was reshaped after use: the Quarter view (three mini-months × four
-pages) read as too heavy and was dropped for a single-page **full-year overview**
-— numbers only, each an underlined link (day → day, week → week, month → month),
-no boxes or shading, everything on one page (the reader zooms). The old two-table
+pages) was dropped for a single-page **full-year overview**. A first attempt (a
+linear 53-week grid) read as scattered, so the overview is twelve mini-months,
+three across — numbers only as links (day → day, month name → month), no cell
+boxes, everything on one page (the reader zooms). The title page grew an optional
+**logo**, resolved relative to the definition via a new `base_dir` in the blade
+config context (the same anchor the handle gives band images), validated at load
+time so a missing file is refused before page one. The old two-table
 year page split into two full-page **half-year** tables, and a **title** page
 (full-sheet colour) and **contents** page lead the document. Weeks stayed
 opt-in, aligned to `week_start` (not ISO, which assumes Monday), with out-of-year

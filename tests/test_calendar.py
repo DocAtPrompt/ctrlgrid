@@ -230,6 +230,20 @@ class TestOverviewHalvesTitleAndWeek:
         )
         assert title.plain and title.background is not None and title.links == ()
 
+    def test_a_cover_logo_renders_as_an_image(self, tmp_path: Path) -> None:
+        from PIL import Image as PILImage
+
+        from ctrlgrid.marks import Image
+        logo = tmp_path / "logo.png"
+        PILImage.new("RGBA", (200, 100), (0, 0, 0, 0)).save(logo)
+        c = cfg(title_page={"title": "2026", "logo": str(logo)})
+        title = next(p for p in CalendarGenerator().pages(c, area=AREA, q=Q) if p.dest == "title")
+        assert any(isinstance(m, Image) for m in title.marks)
+
+    def test_a_missing_cover_logo_is_refused(self) -> None:
+        with pytest.raises((DefinitionError, ValidationError)):
+            cfg(title_page={"title": "T", "logo": "/no/such/file.png"})
+
 
 class TestPageCount:
     def test_it_matches_the_enumeration(self) -> None:

@@ -55,6 +55,7 @@ title_page:
   subtitle: "your name"
   background: "#2f3a48"
   text_color: "#ffffff"
+  # logo: logo.png     # optional PNG above the title (path relative to this file)
 
 # The half-year tables (Jan–Jun, Jul–Dec); a day cell jumps to its day page.
 year_view: { weekend_shade: "#f0f2f5", cell_link: day }

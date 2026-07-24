@@ -807,7 +807,7 @@ months:   [January, …]      # 12 names; English if omitted
 weekdays: [Mon, Tue, …]     # 7 names; English if omitted
 holidays:
   - { date: 2026-12-25, label: Christmas }
-title_page: { title: "2026", subtitle: "your name", background: "#2f3a48" }  # opt-in cover
+title_page: { title: "2026", subtitle: "your name", background: "#2f3a48" }  # opt-in; +logo
 year_view:  { weekend_shade: "#f0f2f5", cell_link: day }   # the half-year tables
 month_view: { weekend_shade: "#f0f2f5", surface: lines }
 week_view:  { surface: lines, tasks: true }   # opt-in: one page per week
@@ -823,14 +823,16 @@ The page types, each **exactly one page** (if a view is small, use the device's
 zoom — nothing scrolls or scales):
 
 - **Title** (opt-in via `title_page`) — a cover: a full-page colour with a
-  centred title and subtitle.
+  centred title and subtitle, and an optional `logo` (a PNG above the title;
+  the path is relative to the definition file).
 - **Contents** — the table of contents: links to the overviews, the months and
   the note indices.
-- **Full-year overview** — the whole year on one page as underlined numbers
-  only (no boxes): a day number jumps to its day, a week number to its week, a
-  month name to its month.
+- **Full-year overview** — the whole year on one page as twelve mini-months,
+  three across, numbers only: a day number jumps to its day, a month name to its
+  month.
 - **Half-year 1 & 2** — two month-column × day-row tables (Jan–Jun, Jul–Dec); a
-  month header jumps to its month, a day cell to its day.
+  month header jumps to its month, a day cell to its day. Short months' columns
+  simply end — no empty cells.
 - **Month** — a list of every day; the date links to its day page, holidays are
   labelled, weekends shaded.
 - **Day** — your ordered `blocks` (a timed `schedule`, a `todo` list, `notes`),

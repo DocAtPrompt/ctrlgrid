@@ -242,7 +242,13 @@ def loads(text: str, overrides: Mapping[str, Any] | None = None, *, source: str)
     # context, so `%w` resolves in seam 1 exactly as `px` does, and nothing
     # downstream ever sees a relative unit (§ 3.6).
     sheet = resolve_sheet(page, profile)
-    config_context = {**(context or {}), "area": raw_extent(sheet, header, footer)}
+    # The definition's own directory, so a blade can anchor a file path to the
+    # def rather than the working directory — the calendar's cover logo (§ 7),
+    # exactly as the handle anchors band images (§ 5.2).
+    base_dir = Path(source).parent if Path(source).is_file() else Path.cwd()
+    config_context = {
+        **(context or {}), "area": raw_extent(sheet, header, footer), "base_dir": base_dir,
+    }
     config = _section(blade.config_model, data, raw, None, config_context)
     pages, names, notices = _resolve_names(pages, overrides)
     notices += _hole_mark_notices(page)

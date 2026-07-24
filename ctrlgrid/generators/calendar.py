@@ -101,13 +101,32 @@ class MonthView(Section):
 
 
 class TitlePage(Section):
-    """A cover page: a full-sheet colour with a centred title and subtitle
-    (§ 7, opt-in)."""
+    """A cover page: a full-sheet colour with a centred title and subtitle, and
+    an optional logo above them (§ 7, opt-in)."""
 
     title: str
     subtitle: str | None = None
     background: ColorField = "#2f3a48"
     text_color: ColorField = "#ffffff"
+    logo: str | None = None
+
+    @field_validator("logo")
+    @classmethod
+    def _resolve_logo(cls, value: str | None, info) -> str | None:
+        """Anchor the logo path to the definition (§ 5.2) and check it loads —
+        here, so a missing or unreadable image is refused before page one (§ 12)."""
+        if value is None:
+            return None
+        from pathlib import Path
+
+        from ctrlgrid.images import load_image
+
+        base = (info.context or {}).get("base_dir")
+        path = Path(value)
+        if base is not None and not path.is_absolute():
+            path = Path(base) / path
+        load_image(str(path), field="title_page.logo")
+        return str(path)
 
 
 class WeekView(Section):

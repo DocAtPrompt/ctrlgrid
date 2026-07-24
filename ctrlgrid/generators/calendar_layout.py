@@ -19,7 +19,7 @@ import datetime
 from dataclasses import dataclass
 
 from ctrlgrid.document import DocumentPage, Link
-from ctrlgrid.marks import Area, Mark, Point, Polygon, Segment, Text
+from ctrlgrid.marks import Area, Image, Mark, Point, Polygon, Segment, Text
 
 PT = 25400 / 72
 
@@ -166,26 +166,36 @@ def nav(page: Page, n: Nav) -> None:
 
 def crumb(page: Page, *, title, prev, nxt, up=None):
     """A page's own header: an optional up-link title, and ‹ › prev/next."""
-    top = pt(15)
-    size = pt(15)
+    top = pt(13)
+    size = pt(14)
     if up is not None:
         page.link_text(0, top, title, up, size)
     else:
         page.text(0, top, title, size, INK)
     if prev is not None:
-        page.link_text(page.W - pt(36), top + pt(1), "‹", prev, pt(14))
+        page.link_text(page.W - pt(34), top + pt(1), "‹", prev, pt(13))
     if nxt is not None:
-        page.link_text(page.W - pt(12), top + pt(1), "›", nxt, pt(14))
-    return top + pt(20)   # where the body may start
+        page.link_text(page.W - pt(11), top + pt(1), "›", nxt, pt(13))
+    return top + pt(16)   # where the body may start — kept tight (whitespace)
 
 
 # -------------------------------------------------------------------- the pages
 
 
 def title_page(page: Page, cfg) -> DocumentPage:
-    """The cover: a full-sheet colour (painted by the handle) with a centred
-    title and subtitle. No nav, no header — `plain` (§ 7)."""
+    """The cover: a full-sheet colour (painted by the handle) with an optional
+    logo, a centred title and subtitle. No nav, no header — `plain` (§ 7)."""
     tp = cfg.title_page
+    if tp.logo:
+        from ctrlgrid.images import load_image
+        logo = load_image(tp.logo)
+        lh = mm(28)
+        lw = round(lh * logo.aspect)
+        lower = page.H / 2 - pt(64)  # the logo sits above the title
+        page.marks.append(Image(
+            pos=Point(round((page.W - lw) / 2), page._y(lower)),
+            width=lw, height=lh, source=str(logo.path),
+        ))
     page.text(page.W / 2, page.H / 2 - pt(26), tp.title, pt(40), tp.text_color, "center")
     if tp.subtitle:
         page.text(page.W / 2, page.H / 2 + pt(22), tp.subtitle, pt(16), tp.text_color, "center")
@@ -217,42 +227,42 @@ def contents_page(page: Page, cfg, n: Nav, months, notes_index) -> DocumentPage:
 
 
 def year_overview_page(page: Page, cfg, n: Nav, months, weekdays) -> DocumentPage:
-    """A single-page whole-year view: numbers only, each an underlined link —
-    day → day, week number → week, month → month. No boxes, no shading; it fits
-    one page and the reader zooms (§ 7, § 8.2)."""
+    """A single-page whole year: twelve mini-months, three across (§ 7). Only
+    numbers as links — the month name → its month, a day number → its day. No
+    cell boxes; it fits one page and the reader zooms (§ 8.2)."""
     nav(page, n)
     top = pt(16)
     page.text(0, top, f"{cfg.year} · full year", pt(15), INK)
     top += pt(22)
-    start = _start_weekday(cfg.week_start)
-    jan1 = datetime.date(cfg.year, 1, 1)
-    dec31 = datetime.date(cfg.year, 12, 31)
-    first = jan1 - datetime.timedelta(days=(jan1.weekday() - start) % 7)
-    n_weeks = (dec31 - first).days // 7 + 1
-    grid_x = mm(17)
-    day_w = (page.W - grid_x) / 7
-    for c in range(7):
-        page.text(round(grid_x + c * day_w + day_w / 2), round(top),
-                  weekdays[(start + c) % 7][:2], pt(6), GUIDE, "center")
-    top += pt(8)
-    row_h = (page.H - top - pt(2)) / n_weeks
-    for w in range(n_weeks):
-        rtop = top + w * row_h
-        yy = round(rtop + row_h / 2 - pt(3))
-        if n.has_week:
-            page.link_text(mm(9), yy, str(w + 1), f"week-{w + 1:02d}", pt(7))
-        else:
-            page.text(mm(9), yy, str(w + 1), pt(7), GUIDE)
-        for c in range(7):
-            date = first + datetime.timedelta(days=w * 7 + c)
-            if date.year != cfg.year:
-                continue
-            if date.day == 1:
-                page.link_text(pt(1), yy, months[date.month - 1][:3],
-                               f"month-{date.month:02d}", pt(7))
-            page.link_text(round(grid_x + c * day_w + pt(1)), yy, str(date.day),
-                           f"day-{date.isoformat()}", pt(7))
+    cols, rows = 3, 4
+    gutter = mm(4)
+    cell_w = (page.W - (cols - 1) * gutter) / cols
+    cell_h = (page.H - top - pt(2) - (rows - 1) * gutter) / rows
+    for m in range(12):
+        r, c = divmod(m, cols)
+        _mini_month(page, cfg, months, weekdays, m + 1,
+                    c * (cell_w + gutter), top + r * (cell_h + gutter), cell_w, cell_h)
     return page.done("year", "year", f"{cfg.year} full year")
+
+
+def _mini_month(page: Page, cfg, months, weekdays, month, x, top, w, h) -> None:
+    start = _start_weekday(cfg.week_start)
+    page.link_text(round(x), round(top), months[month - 1], f"month-{month:02d}", pt(9))
+    col_w = w / 7
+    header = top + pt(13)
+    for c in range(7):
+        page.text(round(x + c * col_w + col_w / 2), round(header),
+                  weekdays[(start + c) % 7][:1], pt(6), GUIDE, "center")
+    grid_top = header + pt(6)
+    row_h = (h - (grid_top - top)) / 6
+    ndays = _month_length(cfg.year, month)
+    lead = (datetime.date(cfg.year, month, 1).weekday() - start) % 7
+    for d in range(1, ndays + 1):
+        idx = lead + d - 1
+        cx = x + (idx % 7) * col_w
+        cy = grid_top + (idx // 7) * row_h
+        page.link_text(round(cx + pt(1)), round(cy), str(d),
+                       f"day-{cfg.year:04d}-{month:02d}-{d:02d}", pt(6.5))
 
 
 def half_year_page(page: Page, cfg, n: Nav, months, half: int) -> DocumentPage:
@@ -270,40 +280,33 @@ def half_year_page(page: Page, cfg, n: Nav, months, half: int) -> DocumentPage:
 
 
 def _half_table(page: Page, cfg, months, top, h, *, first_month: int) -> None:
+    """A month-column × day-row table. Cells are drawn per existing day, so a
+    short month's column simply ends — no empty boxes for the missing days
+    (§ 7). Weekends shaded, the month header and day cells link."""
     day_col = mm(7)
     col_w = (page.W - day_col) / 6
     row_h = h / 32  # one header row + 31 day rows
     shade = cfg.year_view.weekend_shade
-    # weekend / non-existent shading, drawn under the grid
+    # left reference column of day numbers 1..31
+    for d in range(1, 32):
+        page.text(pt(1), round(top + row_h * d + pt(1)), str(d), pt(6.5), INK)
     for c in range(6):
         month = first_month + c
         cx = day_col + c * col_w
-        for d in range(1, 32):
+        page.link_text(round(cx + pt(2)), round(top + pt(1)),
+                       months[month - 1][:3], f"month-{month:02d}", pt(9))
+        ndays = _month_length(cfg.year, month)
+        for d in range(1, ndays + 1):
             rtop = top + row_h * d
-            try:
-                date = datetime.date(cfg.year, month, d)
-            except ValueError:
-                page.box(cx, rtop, col_w, row_h, 0.0, FAINT, FAINT)
-                continue
+            date = datetime.date(cfg.year, month, d)
             if date.weekday() >= 5 and shade:
                 page.box(cx, rtop, col_w, row_h, 0.0, shade, shade)
+            page.box(cx, rtop, col_w, row_h, 0.2, GUIDE)  # only existing days get a cell
             if cfg.year_view.cell_link == "day":
                 page.links.append(
                     Link(Point(round(cx), page._y(rtop + row_h)),
                          Point(round(cx + col_w), page._y(rtop)), f"day-{date.isoformat()}")
                 )
-    # the grid
-    for r in range(33):
-        page.hline(0, page.W, top + r * row_h, 0.2, GUIDE)
-    for c in range(8):
-        page.vline(day_col + (c - 1) * col_w if c else 0, top, top + 32 * row_h, 0.2, GUIDE)
-    # month headers (links) and day numbers
-    for c in range(6):
-        month = first_month + c
-        page.link_text(round(day_col + c * col_w + pt(2)), round(top + pt(1)),
-                       months[month - 1][:3], f"month-{month:02d}", pt(9))
-    for d in range(1, 32):
-        page.text(pt(1), round(top + row_h * d + pt(1)), str(d), pt(6.5), INK)
 
 
 def month_page(page: Page, cfg, n: Nav, months, weekdays, month, holidays, prev, nxt):
@@ -420,23 +423,23 @@ def _draw_blocks(page: Page, blocks, top) -> None:
 
 def _draw_block(page: Page, b, top, h) -> None:
     page.hline(0, page.W, top, 0.35, GUIDE)
-    inner = top + pt(4)
+    inner = top + pt(2)
     if b.type == "schedule":
         hours = b.end_hour - b.start_hour
-        rh = (h - pt(4)) / max(1, hours)
+        rh = (h - pt(2)) / max(1, hours)
         for i in range(hours):
             ry = inner + i * rh
             page.text(pt(1), round(ry), f"{b.start_hour + i:>2}", pt(7), INK)
             page.hline(mm(9), page.W, ry + rh - pt(1), 0.2, FAINT)
     elif b.type == "todo":
-        rows = b.rows or max(1, int((h - pt(4)) // mm(8)))
-        rh = (h - pt(4)) / rows
+        rows = b.rows or max(1, int((h - pt(2)) // mm(8)))
+        rh = (h - pt(2)) / rows
         for i in range(rows):
             ry = inner + i * rh
             page.box(pt(1), round(ry), mm(4), mm(4), 0.35, GUIDE)
             page.hline(mm(7), page.W, round(ry + mm(4)), 0.2, FAINT)
     else:  # notes
-        page.surface(0, inner, page.W, h - pt(6), b.surface)
+        page.surface(0, inner, page.W, h - pt(4), b.surface)
 
 
 def _month_length(year: int, month: int) -> int:
