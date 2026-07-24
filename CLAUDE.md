@@ -23,8 +23,9 @@ releasing needs a human (see *Not done*).
 uv sync --extra dev && uv run pytest && uv run ruff check .
 ```
 
-771 tests, all green, ruff clean. Thirty-odd commits on `main`, linear history, **no
-remote configured — nothing has ever been pushed.** Eight presets (one each for
+771 tests, all green, ruff clean. Thirty-odd commits on `main`, linear history,
+pushed to **[github.com/DocAtPrompt/ctrlgrid](https://github.com/DocAtPrompt/ctrlgrid)**
+(public); CI runs green there on Linux (3.11–3.13), macOS and Windows. Eight presets (one each for
 `lines`, `dots`, `polar`, `form`, `maze`, `perspective`, `mandala`, `staves`);
 `grid` and `tiling` have none yet, though every blade is documented here and in
 the specification.
@@ -97,11 +98,15 @@ still there to reuse for any new blade: `labels.py` (§ 7.10) is what `grid` and
 every family needs, and `check()` is where a blade refuses what only the pattern
 area can disprove.
 
-**Two things only a human can do**, both needed before `uvx ctrlgrid` works:
-configure a git remote and push; set up trusted publishing on PyPI plus a
-`pypi` environment, then tag `v0.1.0` to trigger
-[`.github/workflows/release.yml`](.github/workflows/release.yml). CI has
-therefore **never actually run** — it is green locally on macOS only.
+**The remote is set up and `main` is pushed** (public, CI green on Linux/macOS/
+Windows). The v0.1.0 release still needs **one human step** before `uvx ctrlgrid`
+works: set up trusted publishing on PyPI (https://pypi.org/manage/account/publishing/)
+for `DocAtPrompt/ctrlgrid`, workflow `release.yml`, environment `pypi` — a
+pypi.org login, so a human, not the agent. The annotated tag **`v0.1.0` already
+exists locally** at the M9 commit and is deliberately **not pushed**: pushing it
+(`git push origin v0.1.0`) triggers
+[`.github/workflows/release.yml`](.github/workflows/release.yml) and publishes to
+PyPI, so it waits until trusted publishing is configured.
 
 ### Deferred features name their milestone
 
