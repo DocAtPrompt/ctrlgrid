@@ -40,6 +40,8 @@ devices:
     color: grayscale
     margin: 0mm
     quirks: []
-    source: "UNVERIFIED — consistent across secondary sources, not checked on a device"
+    source: "manufacturer-specified — reMarkable official comparison page (remarkable.com, 2026): 10.3in monochrome, 1872x1404 px at 226 ppi. Matches these figures exactly and internally consistent, but not owner-checked on a device"
     verified: 2026-07
-    # Do not treat as settled. If you own one, verify and replace `source`.
+    # A primary source now (reMarkable's own page), not just secondary
+    # consensus — but still not an on-device check the way the Paper Pro is
+    # (§ 9.2). An owner-verified upgrade is still welcome.

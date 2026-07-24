@@ -87,10 +87,13 @@ and a PNG preview, guarded by `test_every_example_validates`.
   dead-row example, but no shipped profile is a Boox and inventing a dead-row
   pattern for a device nobody here can test is the guessed number § 9.2 warns
   against. Modelled and carried, waiting for a verified contribution.
-- One § 15 device figure is still unverified — the **rM2 numbers**, which are
-  only source-consistent — and § 9.2 is explicit that a wrong number there is
-  worse than no profile at all. (The Paper Pro is now fully settled: dimensions
-  *and* colour owner-confirmed, `color: color` since 2026-07.)
+- The **rM2 numbers** now cite reMarkable's own comparison page (1872×1404 px,
+  226 ppi, monochrome) and match it exactly — a primary source, no longer a
+  guess — but the device is still not owner-checked the way the Paper Pro is
+  (§ 9.2), so its profile says `manufacturer-specified`, not `owner-verified`.
+  (The Paper Pro is fully settled: dimensions *and* colour owner-confirmed,
+  `color: color` since 2026-07.) The only device gap left is an on-device rM2
+  check and the empty `quirks`.
 
 The **general relative measure** (§ 8.11) — the other M5 edge the handovers kept
 naming — is now **built**: `%w`/`%h`/`%s` (width, height, shorter side of the
@@ -297,10 +300,12 @@ embeds the def as a PDF attachment (§ 8.8); only the original *suspicion* it
 carried (how viewers and sync services treat attachments) is left, and that is
 for practice to answer, not the code.
 
-One of the rest still needs a device or a source rather than a decision — the
-reMarkable 2 figures. (The Paper Pro colour question is now resolved: owner-
-confirmed a colour device, § 9.2.) If you are tempted to guess at a number,
-don't — that is exactly the failure mode `source`/`verified` exists to prevent. The seventh — the `staves` clef — is answered in § 15.3
+The reMarkable 2 figures are now backed by reMarkable's official comparison page
+(primary source, matching exactly) — only an on-device check is still missing,
+the way the Paper Pro has one. (The Paper Pro colour question is resolved too:
+owner-confirmed a colour device, § 9.2.) If you are tempted to guess at a
+number, don't — that is exactly the failure mode `source`/`verified` exists to
+prevent. The seventh — the `staves` clef — is answered in § 15.3
 (embedded music font, built in M9), and it settled part of open question 2: for
 the music case, a font *is* shipped. What remains are genuine
 *decide-after-experience* calls, not gaps: whether a font must be shipped for

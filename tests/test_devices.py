@@ -139,10 +139,14 @@ class TestTheShippedProfiles:
         pro = next(d for d in devices() if d["id"] == "remarkable-paper-pro")
         assert "owner-verified" in pro["source"]
 
-    def test_the_rm2_is_marked_unverified(self) -> None:
-        # § 15 item 1: its numbers are only source-consistent, not checked.
+    def test_the_rm2_is_manufacturer_sourced_not_owner_verified(self) -> None:
+        # § 15 item 1: the rM2 numbers now cite reMarkable's own comparison page
+        # (a primary source) and match it exactly, but the device is still not
+        # owner-checked — only the Paper Pro is (§ 9.2). The profile must say so
+        # rather than borrow the Paper Pro's stronger claim.
         rm2 = next(d for d in devices() if d["id"] == "remarkable-2")
-        assert "UNVERIFIED" in rm2["source"].upper()
+        assert "owner-verified" not in rm2["source"]
+        assert "manufacturer" in rm2["source"].lower()
 
 
 class TestOnTheSheet:

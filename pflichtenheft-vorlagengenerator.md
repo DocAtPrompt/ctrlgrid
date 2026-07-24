@@ -1638,7 +1638,7 @@ devices:
     color: grayscale
     margin: 0mm
     quirks: []
-    source: "<URL — noch zu belegen>"
+    source: "manufacturer-specified — reMarkable-Vergleichsseite (2026): 1872×1404 px, 226 ppi, monochrom; nicht am Gerät geprüft"
     verified: 2026-07
 ```
 
@@ -1671,8 +1671,10 @@ Geräteprofile brauchen Platz für solche Fälle, nicht nur für Maße.
 > ist falsch.
 >
 > Das ist zugleich der Belegtyp, den § 9.2 anstrebt: **ein am Gerät geprüftes
-> Profil schlägt jede Herstellerseite.** Die rM2-Zahlen sind demgegenüber
-> weiterhin nur quellenkonsistent und entsprechend markiert.
+> Profil schlägt jede Herstellerseite.** Die rM2-Zahlen stützen sich nun auf die
+> **offizielle reMarkable-Vergleichsseite** (Primärquelle statt Sekundär­konsens)
+> und stimmen mit ihr exakt überein — 1872 × 1404 px bei 226 ppi, monochrom —,
+> sind aber weiterhin **nicht am Gerät geprüft** und entsprechend markiert.
 >
 > **Zum Umfang:** Ein **PDF** wird als Dokument synchronisiert und beschrieben
 > (kein Entwicklermodus nötig) — dafür ist das mehrseitige PDF exakt das richtige
@@ -2284,8 +2286,11 @@ Bewusst noch offen:
 
 1. **reMarkable:** Paper Pro ist vollständig geklärt — 1620 × 2160 px, 229 dpi,
    und **als Farbgerät geführt** (beides am Gerät bestätigt, 2026-07, § 9.2).
-   Offen bleiben nur noch die **rM2-Zahlen**, die weiterhin nur
-   quellenkonsistent und entsprechend markiert sind (§ 9.2).
+   Die **rM2-Zahlen** stützen sich jetzt auf die **offizielle
+   reMarkable-Vergleichsseite** (1872 × 1404 px, 226 ppi, monochrom) und stimmen
+   mit ihr exakt überein — Primärquelle statt Sekundärkonsens. Offen bleibt nur
+   noch die On-Device-Prüfung, wie sie der Paper Pro hat; die Zahlen selbst sind
+   kein Rateposten mehr (§ 9.2).
 2. **Ob doch eine Schrift mitgeliefert werden muss.** Stufe 1 (§ 10.3) deckt nur
    Latin-1 ab. Zeigt sich, dass Namen mit `ł`, `ğ` oder `ő` häufig genug sind,
    um Stufe 2 zur Pflicht zu machen, wäre eine mitgelieferte OFL-Schrift der
