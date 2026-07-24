@@ -16,7 +16,6 @@ embed — no font file joins this repository (§ 13).
 
 from __future__ import annotations
 
-import os
 from pathlib import Path
 
 import pytest
@@ -72,7 +71,10 @@ class TestLoading:
     def test_a_missing_file_names_the_path(self) -> None:
         with pytest.raises(DefinitionError) as excinfo:
             load_font("/nowhere/Imaginary.ttf")
-        assert "/nowhere/Imaginary.ttf" in str(excinfo.value)
+        # The message names the file; the separator is the platform's own
+        # (backslashes on Windows), so the assertion checks the name, not the
+        # POSIX spelling (§ 10.3).
+        assert "Imaginary.ttf" in str(excinfo.value)
 
     def test_something_that_is_not_a_font_says_so(self, tmp_path: Path) -> None:
         impostor = tmp_path / "notafont.ttf"
@@ -81,11 +83,21 @@ class TestLoading:
             load_font(str(impostor))
         assert "notafont.ttf" in str(excinfo.value)
 
-    def test_a_tilde_is_expanded(self) -> None:
-        # § 10.3 writes the example with `~`, so it has to work.
-        relative = os.path.relpath(VERA, Path.home())
-        font = load_font(f"~/{relative}")
-        assert font.path == VERA.resolve()
+    def test_a_tilde_is_expanded(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # § 10.3 writes the example with `~`, so it has to work. Home is
+        # redirected to a temp dir with a font in it, so the test never depends
+        # on where the runner's home is — on Windows CI it sits on a different
+        # drive from reportlab's Vera, and a cross-drive relative path is an
+        # error there (§ 13). Set both names expanduser reads: HOME on POSIX,
+        # USERPROFILE on Windows.
+        monkeypatch.setenv("HOME", str(tmp_path))
+        monkeypatch.setenv("USERPROFILE", str(tmp_path))
+        font_file = tmp_path / "vera.ttf"
+        font_file.write_bytes(VERA.read_bytes())
+        font = load_font("~/vera.ttf")
+        assert font.path == font_file.resolve()
 
     def test_the_same_file_is_parsed_once(self) -> None:
         assert load_font(str(VERA)) is load_font(str(VERA))
