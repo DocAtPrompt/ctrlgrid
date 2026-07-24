@@ -1,0 +1,66 @@
+# calendar — a linked, write-on year planner for the reMarkable (or paper). A4.
+#
+# The preset is the documentation for `calendar` (§ 7, § 9.3): copy it with
+# `ctrlgrid show calendar-a4 > mine.yaml` and bend it. It builds one PDF of ~400
+# linked pages — tap a date with the pen and land on that day, tap a note number
+# and land on that note. Every page is exactly one page: if a view is too small,
+# use the device's zoom. Change `year` and the names to your language.
+#
+# The links are internal PDF GoTo links (they work on the reMarkable); the whole
+# thing is deterministic, so the same definition always gives the same PDF.
+version: 1
+
+page:
+  format: a4
+  margin: 12mm
+
+# Optional, constant on every page — the year and a personalization, no page
+# numbers (they are meaningless in a linked document). `{year}` is filled in.
+header:
+  height: 7mm
+  gap: 3mm
+  font: { size: 9pt }
+  center: "{year}"
+  right: "your name"
+
+generator: calendar
+year: 2026
+week_start: monday        # or sunday
+
+# Names come from here — English by default. List your own for another language.
+months:
+  - January
+  - February
+  - March
+  - April
+  - May
+  - June
+  - July
+  - August
+  - September
+  - October
+  - November
+  - December
+weekdays: [Mon, Tue, Wed, Thu, Fri, Sat, Sun]
+
+# A list of holidays: each marks its day cell and shows on the month and day.
+holidays:
+  - { date: 2026-01-01, label: New Year }
+  - { date: 2026-12-25, label: Christmas }
+
+# The year overview: two half-year tables; a day cell jumps to its day page.
+year_view: { weekend_shade: "#f0f2f5", cell_link: day }
+# The month view: a list of every day; the writing surface next to each date.
+month_view: { weekend_shade: "#f0f2f5", surface: lines }
+
+# The day page — an ordered list of blocks. Reorder, resize, drop or repeat.
+day:
+  blocks:
+    - { type: schedule, from: 7, to: 22, height: 55%, surface: lines }
+    - { type: todo,     rows: 8,          height: 20% }
+    - { type: notes,    height: rest,     surface: grid }
+
+# Note pages and their numbered index; the index paginates if `count` is large.
+notes:
+  count: 20
+  surface: dots           # blank | lines | dots | grid

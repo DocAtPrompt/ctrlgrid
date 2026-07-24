@@ -1122,6 +1122,42 @@ Beide sind bewusst **nicht** in v1. Sie stehen hier, damit die Architektur sie
 nicht ausschließt — insbesondere `Arc` und `Polygon` im Vokabular (§ 6) und die
 Freiheit eines Generators, eigene Gesetze zu rechnen (§ 5.3).
 
+### 7.12 `calendar` — verlinkter Kalender (Dokument-Generator)
+
+Der erste Generator, der **keine Klinge** ist. Eine Klinge füllt *einen*
+Musterbereich und weiß nichts von Seiten (§ 3.3). Ein Kalender **besitzt** Seiten
+und deren Verlinkung. Deshalb ist er ein neuer Generator-Typ, ein
+**Dokument-Generator**: statt `generate(cfg, area, page, q) -> Marken` bietet er
+`pages(cfg, area, q) -> Folge typisierter Seiten` — Index, Jahr (zwei
+Halbjahres-Tabellen), Monat (Liste aller Tage), Tag (konfigurierbare Blockliste),
+Notizen-Index (nummeriert, paginiert) und Notizen. Der Griff erkennt ihn am
+`pages`-Verfahren und fährt einen eigenen Schreibpfad (kein Deckblatt, kein
+Ausschießen, kein Zyklus); bestehende Klingen bleiben unangetastet, `generate`
+ändert sich nie.
+
+**Links als Fähigkeit, kein siebtes Primitiv.** Ein Link ist eine PDF-Annotation,
+keine Zeichenmarke — genau wie das Lesezeichen (`outline`, § 10.1) *außerhalb* der
+sechs Primitive (§ 6) lebt. Der Schreiber bekommt `define_dest`/`link` und die
+Capability `"link"` (PDF ja, PNG nein → ein Kalender auf PNG wird benannt
+abgelehnt, § 10.2). Das **Sichtbare** eines Links ist ein `Text` mit einem
+`Segment`-Unterstrich, den die Seite ohnehin zeichnet — § 6 bleibt ein Vertrag
+über sechs, und Platz wie Bytes bleiben minimal.
+
+**Eine Seite je Ansicht, nie scrollen, nie skalieren.** Jede Ansicht füllt ihre
+Seite; passt sie bei lesbarer Mindesthöhe nicht, wird der Lauf abgelehnt (§ 8.2),
+nicht verkleinert — Detail holt der Nutzer per Geräte-Zoom. Die einzige unbegrenzte
+Menge, die Notizen, **paginiert** ihren nummerierten Index über mehrere
+Ein-Seiten-Blätter, statt Zeilen zu stauchen.
+
+**Namen aus der Def, Englisch als Default** (§ 7.8 — keine mitgelieferte
+Übersetzung); Daten aus `year` gerechnet, ohne Wall-Clock (§ 10.1). `{year}` ist
+ein dokumentgelieferter Kopf-Platzhalter (§ 8.10), durch `extra` an
+`resolve_placeholders`/`layout_band` gereicht, ohne Klingen zu berühren.
+Vollständiger Entwurf in
+[`docs/superpowers/specs/2026-07-24-calendar-generator-design.md`](superpowers/specs/2026-07-24-calendar-generator-design.md).
+Kern (Index/Jahr/Monat/Tag/Notizen) gebaut; Feiertags-**Datei**import, Quartals-
+und Wochenansicht folgen.
+
 ---
 
 ## 8. Geometrie

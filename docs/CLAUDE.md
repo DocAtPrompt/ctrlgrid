@@ -4,7 +4,8 @@
 
 A CLI tool that generates **dimensionally accurate PDF templates**: grid paper,
 ruled paper, dot grids, staff paper, mazes, polar targets, tilings, fillable
-forms, perspective grids and mandalas — for paper formats and for e-ink devices.
+forms, perspective grids, mandalas — and a **linked, write-on calendar** — for
+paper formats and for e-ink devices.
 
 **The one promise:** what says 5 mm measures 5 mm on the printout. No scaling,
 no "fit to page", no stretching a grid so it comes out even.
@@ -31,11 +32,12 @@ needs a human *and* the user has chosen to defer PyPI for now (see *Not done*).
 uv sync --extra dev && uv run pytest && uv run ruff check .
 ```
 
-847 tests, all green, ruff clean. Fifty-odd commits on `main`, linear history,
+889 tests, all green, ruff clean. Sixty-odd commits on `main`, linear history,
 pushed to **[github.com/DocAtPrompt/ctrlgrid](https://github.com/DocAtPrompt/ctrlgrid)**
-(public); CI runs green there on Linux (3.11–3.13), macOS and Windows. Ten
-presets — one for every generator: `lines`, `dots`, `polar`, `form`, `maze`,
-`perspective`, `mandala`, `staves`, `grid` and `tiling` — and a rendered
+(public); CI runs green there on Linux (3.11–3.13), macOS and Windows. Eleven
+presets — one per generator (`lines`, `dots`, `polar`, `form`, `maze`,
+`perspective`, `mandala`, `staves`, `grid`, `tiling`) plus `calendar-a4` — and a
+rendered
 **example gallery** in [`examples/`](../examples/) — one A4 sheet per generator plus
 a multi-page maze booklet and a cover sheet, each an ordinary definition, its PDF
 and a PNG preview, guarded by `test_every_example_validates`.
@@ -77,6 +79,7 @@ and a PNG preview, guarded by `test_every_example_validates`.
 | post-M9 `pattern.align` | anchor at `bottom-left` (default) / `top-left` / … — a `mirror_y` reflection re-anchors the cycle so the incomplete block moves corners (§ 8.5) |
 | post-M9 `--embed-def` | the PDF carries its own source: the def's exact bytes as an `EmbeddedFile` in the catalog's `/Names /EmbeddedFiles` tree, built by hand (reportlab has no filespec support), deterministic, PDF-only — PNG refuses it by name via the `attachment` capability (§ 8.8, § 10.2) |
 | post-M9 examples | rendered gallery in `examples/`, one per generator + multi-page + cover, `test_every_example_validates` guards it |
+| post-M9 `calendar` | a linked, write-on planner PDF (§ 7) — the first **document generator**: it owns heterogeneous, cross-linked pages (Index, Year two-table, Month day-list, configurable Day blocks, paginated Notes-index, Notes) instead of one pattern area. Two new mechanisms modelled on `outline`: a **`link` capability** (writer method + capability, PDF-only, PNG refused; links drawn as underlined Text) and a **document-mode page loop** in `pages.py`. Dates deterministic from the year, names from the def (English default), one-page-per-view fit-or-refuse. Core done (Index/Year/Month/Day/Notes); Quarter/Week are a later pass |
 | pulled forward into M1 | format table, presets, `check`, overwrite protection, placeholders — the M1 acceptance criteria needed them |
 
 ### Not done
@@ -163,7 +166,7 @@ work around it.
 
 **Where the specification was genuinely silent**, the resolution is recorded in
 [`implementation-decisions.md`](implementation-decisions.md) —
-forty-one of them so far, each with the section it belongs to and the
+forty-two of them so far, each with the section it belongs to and the
 reasoning. Read it before changing a default; several look arbitrary and are not.
 
 ## Language split
@@ -198,7 +201,8 @@ and knows nothing about margins.
 | `impose.py` | N-up layout, the 100 % fit check, crop marks (§ 14) |
 | `fonts.py` | font files: `fsType` licence check, version, coverage (§ 10.3) |
 | `cover.py` | the cover sheet: calibration figures, the stroke-weight ladder, settings summary (§ 8.8) |
-| `generators/` | registry, `common.py` (cycle + dash fields), `polar_geometry.py` (shared by `polar` + `mandala`), and the ten blades |
+| `generators/` | registry, `common.py` (cycle + dash fields), `polar_geometry.py` (shared by `polar` + `mandala`), the ten blades, and the `calendar` document generator (`calendar.py` + `calendar_layout.py`) |
+| `document.py` | the document-generator seam (§ 7): `DocumentPage`, `Link`, the `DocumentGenerator` protocol — a generator that owns pages, not one pattern area |
 | `writers/` | seam 3 protocols, `pdf.py` (reportlab) and `png.py` (Pillow) |
 
 ### The three seams (§ 3.6)

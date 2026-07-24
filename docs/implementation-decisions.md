@@ -668,6 +668,45 @@ page one, named, never clipped.
 
 ---
 
+## 42. The calendar: a document generator, not a blade; links like bookmarks
+
+**§ 7.** A calendar is the first generator that is not a *blade* (one pattern
+area, no knowledge of pages, § 3.3). It owns pages and their links. Rather than
+bend the blade model, four calls were made:
+
+- **A second seam, not a warped first one.** A *document generator* offers
+  `pages(cfg, area, q) -> Iterator[DocumentPage]` instead of `generate`. The
+  handle detects it by the `pages` method and takes a separate write path (no
+  cover, frames-as-cycle, imposition, or snap). Existing blades are untouched;
+  `generate` never changed. Rejected: a blade asking for 380 pages via
+  `sheets()` (it would need its page index and type, breaking § 3.3), and
+  emitting many sub-definitions to stitch (heavy indirection, a global link
+  pass).
+- **Links are a capability outside the six primitives, like `outline`.** A link
+  is a PDF annotation, not ink. A bookmark already lives outside the six
+  primitives as a writer method; a link follows suit — `define_dest`/`link` on
+  the writer, a `"link"` capability (PDF yes, PNG no, so a calendar to PNG is
+  refused by name). The *visible* part of a link is an ordinary `Text` plus a
+  `Segment` underline the page also emits, so § 6 stays a contract of six and
+  the bytes stay minimal. No seventh primitive.
+- **One page per view; paginate, do not shrink.** Every view fills its page and
+  refuses (not scales) when it cannot fit at a readable minimum — the same
+  discipline as the cover (§ 8.2). The one unbounded set, the notes, paginates
+  its numbered index over as many one-page sheets as the count needs rather than
+  shrinking rows.
+- **Names from the definition, English default.** Month and weekday names are
+  taken from the def (§ 7.8's language-neutrality), never a shipped locale
+  table; dates are computed from the year with the standard library, no
+  wall-clock (§ 10.1). `{year}` is a document-supplied header placeholder,
+  threaded through `resolve_placeholders`/`layout_band` as an `extra` map so
+  blades are unaffected.
+
+Deferred, and each cheap: holidays from a *file* (inline lists work; a file
+needs a def-relative path in the blade's own validation, unlike the handle's
+images), and the Quarter and Week views (a second pass on the same architecture).
+
+---
+
 ## Smaller calls, for completeness
 
 - **Rounding is ties-away-from-zero**, not Python's banker's rounding, and runs

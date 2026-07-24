@@ -791,6 +791,60 @@ Examples: [`10-mandala.yaml`](examples/10-mandala.yaml) and
 [`10b-mandala-scallops.yaml`](examples/10b-mandala-scallops.yaml). Preset:
 `mandala-a4`.
 
+### `calendar` — a linked, write-on planner
+
+Unlike every generator above, `calendar` does not fill one page — it produces a
+whole **linked document**: one PDF of about 400 pages you navigate with the pen.
+Tap a date and land on that day; tap a note number and land on that note. Built
+for the reMarkable (the links are internal PDF links, which it follows), but it
+prints on paper too.
+
+```yaml
+generator: calendar
+year: 2026
+week_start: monday          # or sunday
+months:   [January, …]      # 12 names; English if omitted
+weekdays: [Mon, Tue, …]     # 7 names; English if omitted
+holidays:
+  - { date: 2026-12-25, label: Christmas }
+year_view:  { weekend_shade: "#f0f2f5", cell_link: day }   # day | month | none
+month_view: { weekend_shade: "#f0f2f5", surface: lines }
+day:
+  blocks:                   # an ordered list — reorder, resize, repeat
+    - { type: schedule, from: 7, to: 22, height: 55%, surface: lines }
+    - { type: todo,     rows: 8,          height: 20% }
+    - { type: notes,    height: rest,     surface: grid }
+notes: { count: 20, surface: dots }        # blank | lines | dots | grid
+```
+
+The page types, each **exactly one page** (if a view is small, use the device's
+zoom — nothing scrolls or scales):
+
+- **Index** — a hub of links: the year, the twelve months, the notes.
+- **Year** — two half-year tables; a month header jumps to its month, a day cell
+  to its day.
+- **Month** — a list of every day; the date links to its day page, holidays are
+  labelled, weekends shaded.
+- **Day** — your ordered `blocks` (a timed `schedule`, a `todo` list, `notes`),
+  each with a writing `surface` (`blank` / `lines` / `dots` / `grid`).
+- **Notes** — a numbered index that links to note pages, and the note pages
+  themselves. A large `count` paginates the index over several sheets.
+
+Every page carries a small nav strip (Index · Year · Month · Notes) as
+underlined text — a link is just underlined text plus its tap box, to save space
+and bytes.
+
+Names come from your definition (English by default), so the calendar adds no
+language of its own. Dates are computed from `year`, so the same definition
+always gives the same PDF. The optional header is constant on every page — set
+`header: { center: "{year}", right: "your name" }` for the year and a
+personalization (no page numbers). It is **PDF only**: on PNG the run is refused,
+because links and text cannot live in a PNG.
+
+Preset: `calendar-a4` (`ctrlgrid show calendar-a4`). Currently inline holidays
+only, and the Year/Month/Day/Notes core; a holiday *file* import and Quarter and
+Week views are planned.
+
 ---
 
 ## 13. E-ink and devices
@@ -999,3 +1053,4 @@ definition.
 | `staves` | music staves, guitar tab, clefs | `count` |
 | `perspective` | 1–3 point vanishing-point grids | — (horizon/points) |
 | `mandala` | rotationally symmetric templates | `sectors` |
+| `calendar` | a linked, write-on planner PDF (many pages) | `year` |

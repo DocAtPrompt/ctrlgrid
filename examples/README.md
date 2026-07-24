@@ -32,6 +32,7 @@ proportionally.
 | <img src="previews/10-mandala.png" width="220"> | **`mandala`** — a twelve-fold template: guide rings and spokes, a flower-of-life rosette, a double ring of lotus petals, two bead rings and a twelve-sided frame.<br>[`10-mandala.yaml`](10-mandala.yaml) · [PDF](10-mandala.pdf) |
 | <img src="previews/10b-mandala-scallops.png" width="220"> | **`mandala`** (variant) — the same blade, a different character: a scalloped outer border, a pinwheel of tilted squares, an inward-turned scalloped ring and a flower-of-life centre.<br>[`10b-mandala-scallops.yaml`](10b-mandala-scallops.yaml) · [PDF](10b-mandala-scallops.pdf) |
 | <img src="previews/11-cover-calibration.png" width="220"> | **`--cover`** — the calibration cover sheet (§ 8.8): a 50 mm square and 100 mm rule to catch a scaling print driver, a ladder of stroke weights so you see how each one prints, and a settings summary. The preview is the cover; the grid it precedes is page two.<br>[`11-cover-calibration.yaml`](11-cover-calibration.yaml) · [PDF](11-cover-calibration.pdf) |
+| <img src="previews/12-calendar.png" width="220"> | **`calendar`** — a linked, write-on year planner (~400 pages, so it lives as a preset rather than a committed PDF). The preview is one month page: every date links to its day page. Build it with `ctrlgrid calendar-a4 -o cal.pdf`; see the preset [`calendar-a4.yaml`](../ctrlgrid/data/presets/calendar-a4.yaml). |
 
 The maze booklet uses a fixed seed for a reproducible set — regenerate it with:
 
