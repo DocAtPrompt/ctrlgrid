@@ -1,0 +1,20 @@
+# tiling — a clean pointy-top hexagon grid to write and draw in. A4.
+#
+# The preset is the documentation for `tiling` (§ 7.7, § 9.3): copy it with
+# `ctrlgrid show tiling-hex-a4 > mine.yaml` and bend it. `shape` also takes
+# `tri`, `square`, `rhombus` and `octagon_square`; `size` is the edge length,
+# the same measure for every shape; `orientation` flips `pointy`/`flat`; and
+# `fill: cycle` with `fill_colors` colours the tiles in a repeating sequence.
+
+version: 1
+
+page:
+  format: a4
+  margin: 12mm
+
+generator: tiling
+shape: hex
+orientation: pointy
+size: 10mm            # edge length
+weight: 0.3pt
+color: "#3a4a5a"

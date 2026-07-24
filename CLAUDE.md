@@ -31,11 +31,11 @@ needs a human *and* the user has chosen to defer PyPI for now (see *Not done*).
 uv sync --extra dev && uv run pytest && uv run ruff check .
 ```
 
-834 tests, all green, ruff clean. Forty-odd commits on `main`, linear history,
+847 tests, all green, ruff clean. Fifty-odd commits on `main`, linear history,
 pushed to **[github.com/DocAtPrompt/ctrlgrid](https://github.com/DocAtPrompt/ctrlgrid)**
-(public); CI runs green there on Linux (3.11–3.13), macOS and Windows. Eight
-presets (one each for `lines`, `dots`, `polar`, `form`, `maze`, `perspective`,
-`mandala`, `staves`; `grid` and `tiling` have none yet), and a rendered
+(public); CI runs green there on Linux (3.11–3.13), macOS and Windows. Ten
+presets — one for every generator: `lines`, `dots`, `polar`, `form`, `maze`,
+`perspective`, `mandala`, `staves`, `grid` and `tiling` — and a rendered
 **example gallery** in [`examples/`](examples/) — one A4 sheet per generator plus
 a multi-page maze booklet and a cover sheet, each an ordinary definition, its PDF
 and a PNG preview, guarded by `test_every_example_validates`.

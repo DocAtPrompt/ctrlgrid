@@ -1,0 +1,26 @@
+# grid — a labelled A4 planning grid: columns A…, rows 1…, light zebra striping.
+#
+# The preset is the documentation for `grid` (§ 7.4, § 9.3): copy it with
+# `ctrlgrid show grid-a4 > mine.yaml` and bend it. Good for seating charts,
+# inventories, habit trackers or bingo — anything that wants labelled cells.
+#
+# Cells are square (§ 7.4). `fill: rows` stripes alternate rows so the eye holds
+# its line across a wide sheet; `fill:` also takes `checker` and `columns`.
+# `labels` count with the § 7.10 patterns: `A` → A, B, C…, `n` → 1, 2, 3….
+
+version: 1
+
+page:
+  format: a4
+  margin: 16mm
+
+generator: grid
+cells: { x: 10, y: 16 }
+labels:
+  columns: "A"      # A, B, C, … across the top
+  rows: "n"         # 1, 2, 3, … down the side
+weight: 0.25pt
+color: "#33475b"
+fill: rows
+fill_color: "#eef2f6"
+font: { size: 9pt }
