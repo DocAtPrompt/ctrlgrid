@@ -910,3 +910,41 @@ would miss it — and on a grayscale screen that fill is exactly what goes flat.
 The findings are real, not theoretical: a calendar on a landscape reMarkable 2
 now says that its link blue `#2f5686` and a birthday's `#cc4488` are 21 grey
 levels apart and will read as one tone. Nothing said that before.
+
+
+## 50. The notebook composes blades, and the handle is what calls them (§ 7.13)
+
+A blade produces marks for one pattern area; a document generator produces
+pages. A notebook needs both, and the question was who calls the blade.
+
+**The notebook never does.** `DocumentPage` may carry a `Fill` — a generator's
+name and its already-validated config — instead of its own marks, and
+`pages.document_page_marks` calls that blade on the handle's side. One function
+answers "what is on this page", and the writer, the capability pre-flight and
+the media check all use it; three answers would drift the first time a page kind
+changed.
+
+Rejected, and worth recording because it is the smaller-looking option: the
+notebook importing the registry and calling `generate` itself. It adds no
+mechanism, but a generator would be doing handle work — and the moment a section
+wanted `snap` or a leftover placed, the notebook would have to rebuild the
+geometry machinery the handle already has. Also rejected: no generator at all,
+with `sections:` as a handle key beside `pages:`; the page plan really is handle
+territory, but a linked contents page never has been.
+
+Three consequences fell out of it, each small and each deliberate:
+
+- **A section is a definition in miniature** — `generator:` plus that
+  generator's own keys. A before-validator moves the blade's keys out and hands
+  them to its `config_model` *with the loader's validation context*, so `px` and
+  `%w` resolve in a section exactly as they do anywhere else and seam 1 stays
+  one seam.
+- **A document's bands are laid out per page** (see the commit before this one).
+  `{page}` counts, and `{section}` is a per-page placeholder the page itself
+  carries, because only the generator knows which section a page belongs to.
+  Every page of a notebook answers `{section}` — including the title and the
+  contents — since an unknown placeholder is an error and must stay one.
+- **`page_layout.Page` is shared**, extracted from `calendar_layout` when the
+  notebook needed the same builder, the way `polar_geometry` is shared by
+  `polar` and `mandala`. The calendar's tests passed untouched, which is what
+  made it an extraction rather than a rewrite.

@@ -1230,6 +1230,65 @@ auf dem Inhaltsverzeichnis, wird mitgezählt, wenn geprüft wird, ob die Seite
 passt, und bleibt leer, wenn keine angegeben ist — der Kalender erfindet keine
 Bedeutungen. Damit ist § 7.12 vollständig.
 
+### 7.13 `notebook` — verlinktes Notizbuch aus Abschnitten (Dokument-Generator)
+
+Ein PDF, das mehrere Papiere trägt: vierzig gepunktete Seiten zum Journalen,
+zwanzig karierte zum Rechnen, zehn Notenseiten — und ein Inhaltsverzeichnis, das
+auf jede verlinkt. Für ein E-Ink-Gerät ist das der fehlende Baustein: **ein**
+Notizbuch auf dem Gerät statt zwölf PDFs.
+
+```yaml
+generator: notebook
+title_page: { title: "Notebook", subtitle: "2026" }   # optional
+sections:
+  - label: "Bullet journal"
+    pages: 40
+    divider: true               # Trennblatt mit dem Namen davor
+    generator: dots
+    grid: { x: { base_spacing: 5mm }, y: { base_spacing: 5mm } }
+    base_size: 0.4mm
+```
+
+**Ein Abschnitt ist eine Definition im Kleinen:** `generator:` und danach die
+eigenen Schlüssel dieses Generators, genau wie am Kopf einer Datei. Validiert
+werden sie vom `config_model` der genannten Klinge — mit demselben
+Validierungskontext, sodass `px` und `%w`/`%h`/`%s` in einem Abschnitt auflösen
+wie überall (§ 8.3.1, § 8.11). Ein Tippfehler im Abschnitt ist damit ein Fehler
+in den Worten der Klinge und nennt den Abschnitt (`sections.2`), nicht bloß
+„unbekannter Schlüssel" (§ 5.1).
+
+**Die Seite beschreibt, der Griff füllt** (festgelegt beim Bau, 2026-07). Eine
+`DocumentPage` darf statt eigener Marken eine *Beschreibung* tragen — Generator
+plus dessen fertig validierte Konfiguration —, und der **Griff** ruft die Klinge,
+wie er es auf dem gewöhnlichen Seitenweg tut. Das Notizbuch fasst nie eine
+Klinge an. Verworfen wurde, dass der Generator `generate` selbst aufruft: er
+täte damit Griffarbeit und müsste Seitenkontext und Geometrie nachbauen, sobald
+ein Abschnitt sie braucht (§ 3.3).
+
+Seitenfolge: optionale **Titelseite**, **Inhaltsverzeichnis**, dann je Abschnitt
+sein **Trennblatt** (falls verlangt) und seine Seiten. Das Verzeichnis nennt zu
+jedem Abschnitt die Seitenzahl, auf der er beginnt — ein Notizbuch ist auch ein
+Ding aus Papier, und dort ist der Link nur unterstrichener Text.
+
+**Bänder werden seitenweise gesetzt** (§ 8.10). Ein Notizbuch wird geblättert,
+also zählt `{page}`, und `{section}` nennt den Abschnitt der Seite: Nur der
+Generator weiß, zu welchem Abschnitt eine Seite gehört, nur der Griff kennt ihre
+Nummer — deshalb trägt die Seite ihre eigenen Platzhalter und der Griff die
+seinen. Jede Seite eines Notizbuchs beantwortet `{section}`, auch Titel und
+Inhalt, denn ein unbekannter Platzhalter ist ein Fehler und bleibt es.
+
+**Abgelehnt wird, vor Seite eins:** ein unbekannter Generator (mit Liste der
+bekannten), ein **Dokument**generator in einem Abschnitt — Notizbücher schachteln
+nicht, ein Abschnitt *ist* Seiten —, `pages: 0`, eine leere `sections`-Liste,
+alles, was das `check` der jeweiligen Klinge gegen den Musterbereich verweigert,
+und ein Inhaltsverzeichnis, das nicht auf seine Seite passt (mit der nötigen
+Höhe).
+
+**Bewusst nicht in dieser Fassung**, damit es niemand für vergessen hält: kein
+`snap`, `remainder` oder `align` je Abschnitt (das ist Griffgeometrie für das
+ganze Dokument, ein Abschnitt nimmt den Musterbereich, wie er ist), kein eigenes
+Format je Abschnitt, keine verschachtelten Notizbücher.
+
 ---
 
 ## 8. Geometrie

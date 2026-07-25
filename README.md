@@ -7,7 +7,8 @@
 Generate **dimensionally accurate** PDF templates from a small definition file:
 grid paper, ruled paper, dot grids, staff paper, mazes, polar targets, tilings,
 fillable forms, perspective grids and mandalas — plus a **linked, write-on
-calendar** — for paper formats **and** for e-ink tablets.
+calendar** and a **notebook** that binds any of them into one document — for
+paper formats **and** for e-ink tablets.
 
 > **Status: M1–M9 complete (M5 core), plus the calendar.** All ten generators of
 > the table
@@ -132,8 +133,22 @@ planned.
 | `perspective` | one-, two- and three-point vanishing-point grids |
 | `mandala` | rotationally symmetric templates: rings, rosettes, star polygons |
 
-Each of those fills **one page**, as many times as you ask for. `calendar` is the
-exception — it produces a whole linked document, and has its own section below.
+Each of those fills **one page**, as many times as you ask for. Two *document*
+generators are the exception, producing whole linked documents instead:
+`calendar`, which has its own section below, and `notebook` — sections of pages,
+each filled by one of the ten above, with a contents page that links to them:
+
+```yaml
+generator: notebook
+sections:
+  - { label: "Bullet journal", pages: 40, divider: true, generator: dots,
+      grid: { x: { base_spacing: 5mm }, y: { base_spacing: 5mm } } }
+  - { label: "Music", pages: 10, generator: staves, count: 10,
+      stave_space: 1.8mm, clef: treble }
+```
+
+One PDF on an e-ink device instead of twelve — `ctrlgrid notebook-a4 -o
+notebook.pdf`, or see [`examples/15-notebook.yaml`](examples/15-notebook.yaml).
 
 The interesting part is the **cycle model**: spacing, stroke weight, size, dash
 pattern and colour each follow their own repeating list, and the lists may have

@@ -141,7 +141,15 @@ Design note: the clipping is the interesting part. `perspective` already clips
 rays to the pattern area with Liang–Barsky (`ctrlgrid/generators/perspective.py`)
 — reuse that, do not write a second clipper.
 
-### 1c. International presets (cheapest reach)
+### 1c. International presets (cheapest reach) — **built, 2026-07-25**
+
+> Done: `seyes-a4`, `mizige-a4` (米字格, whose diagonals 1b made exact) and
+> `knitting-chart-a4`. **Genkō yōshi was dropped with its reason** — its
+> furigana strip and binding gutter need rules that stop and start again, and
+> § 2 rules out a drawing language. A new guard came with it: every shipped
+> preset must produce no media findings on its own medium.
+
+
 
 Pure preset work, no code:
 - **Genkō yōshi** — Japanese manuscript paper, 20×20 squares with a centre gutter.
@@ -152,7 +160,17 @@ Pure preset work, no code:
 Each is a `.yaml` in `ctrlgrid/data/presets/` plus a line in the preset list.
 Presets are documentation (§ 9.3), so comment them the way the shipped ones are.
 
-### 1d. A `notebook` document generator (the big one)
+### 1d. A `notebook` document generator (the big one) — **built, 2026-07-25**
+
+> Done, and the architectural question below was answered the way this file
+> guessed it should be: the notebook does **not** reach into blades. A
+> `DocumentPage` may carry a `Fill` — a generator name and its validated config
+> — and the handle calls the blade. § 7.13, decision 50, preset `notebook-a4`,
+> example `15-notebook`. The note-pad reuse this file suggested turned out
+> unnecessary: sections are simpler than pads, and the contents page is its own
+> small layout.
+
+
 
 The calendar built the document-generator seam (`ctrlgrid/document.py`,
 `DocumentPage`, the `link` capability, the document page loop in `pages.py`) and

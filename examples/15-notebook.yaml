@@ -1,0 +1,70 @@
+# notebook — several papers in one linked document (§ 7.13).
+#
+# The second document generator, and the first that composes blades: each
+# section is filled by an ordinary generator, and the contents page links to
+# them so a pen finds them on an e-ink device. One PDF on the device instead of
+# twelve.
+#
+# A section is a definition in miniature — `generator:` and then that
+# generator's own keys, exactly as at the top of this file. Anything a blade can
+# do, a section can do.
+#
+# Eleven pages here so the example stays small; the `notebook-a4` preset is the
+# real thing at 106.
+version: 1
+
+page:
+  format: a4
+  margin: 15mm
+
+# A notebook is flipped through, so the bands earn their keep: the header names
+# the section a page belongs to, the footer counts the pages.
+header:
+  height: 8mm
+  gap: 3mm
+  font: { size: 9pt }
+  left: "{section}"
+
+footer:
+  height: 8mm
+  gap: 3mm
+  font: { size: 9pt }
+  right: "{page} / {page_count}"
+
+generator: notebook
+
+title_page:
+  title: "Notebook"
+  subtitle: "three papers, one document"
+  background: "#2f3a48"
+  text_color: "#ffffff"
+
+sections:
+  - label: "Bullet journal"
+    pages: 3
+    divider: true
+    generator: dots
+    grid:
+      x: { base_spacing: 5mm }
+      y: { base_spacing: 5mm }
+    base_size: 0.4mm
+    color: "#8a94a0"
+
+  - label: "Sums"
+    pages: 2
+    divider: true
+    generator: lines
+    families:
+      - { direction: horizontal, base_spacing: 5mm, base_weight: 0.12pt,
+          color: ["#c8ced6"] }
+      - { direction: vertical,   base_spacing: 5mm, base_weight: 0.12pt,
+          color: ["#c8ced6"] }
+
+  - label: "Music"
+    pages: 2
+    divider: true
+    generator: staves
+    count: 10
+    stave_space: 1.8mm
+    clef: treble
+    color: "#5b6b7d"

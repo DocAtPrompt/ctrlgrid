@@ -2,7 +2,8 @@
 
 A taste of what Ctrl+Grid makes — one A4 example per generator, plus a
 multi-page document, the calibration cover sheet, a whole linked calendar, a
-calligraphy guide and a sheet with a printed ruler along its edges.
+notebook of sections, a calligraphy guide and a sheet with a printed ruler along
+its edges.
 Each is an ordinary definition file: open the `.yaml`, change it, regenerate.
 The `.pdf` is the real output (measured, to scale); the image is just a preview.
 Only the calendar ships without its PDF — 405 pages is too much to carry in a
@@ -37,6 +38,7 @@ proportionally.
 | <img src="previews/11-cover-calibration.png" width="220"> | **`--cover`** — the calibration cover sheet (§ 8.8): a 50 mm square and 100 mm rule to catch a scaling print driver, a ladder of stroke weights so you see how each one prints, and a settings summary. The preview is the cover; the grid it precedes is page two.<br>[`11-cover-calibration.yaml`](11-cover-calibration.yaml) · [PDF](11-cover-calibration.pdf) |
 | <img src="previews/14-calligraphy-italic.png" width="220"> | **`lines`** (slanted) — an italic calligraphy guide: a ruled cycle of ascender, body, descender and air, crossed by a family at 55°. A slanted family is spaced *perpendicular* and clipped to the pattern area (§ 7.1).<br>[`14-calligraphy-italic.yaml`](14-calligraphy-italic.yaml) · [PDF](14-calligraphy-italic.pdf) |
 | <img src="previews/12-calendar-day.png" width="150"> <img src="previews/12-calendar-month.png" width="150"> | **`calendar` — a whole document** — a linked, write-on year planner: a cover, the year on one sheet, two half-year tables, twelve months, every day and three note pads, all cross-linked — tap a date and land on that day. The previews are a day page (schedule with half hours, tick boxes, squared notes) and January. 405 pages and ~1.6 MB, so this one ships without its PDF: `ctrlgrid -d examples/12-calendar-year.yaml -o calendar.pdf` builds it in about a second.<br>[`12-calendar-year.yaml`](12-calendar-year.yaml) · preset [`calendar-a4`](../ctrlgrid/data/presets/calendar-a4.yaml) |
+| <img src="previews/15-notebook.png" width="220"> | **`notebook`** — several papers in one linked document: a cover, a contents page that links to each section, dividers, and sections filled by `dots`, `lines` and `staves`. The header names the section, the footer counts the pages. The previews are the contents and a journal page.<br>[`15-notebook.yaml`](15-notebook.yaml) · [PDF](15-notebook.pdf) · preset [`notebook-a4`](../ctrlgrid/data/presets/notebook-a4.yaml) |
 | <img src="previews/13-ruler-edge.png" width="220"> | **`ruler`** — the promise, on the sheet: a centimetre scale along the bottom and left edges, zeroed on the pattern area so the numbers agree with the grid. Print at 100 % and lay a real ruler against it.<br>[`13-ruler-edge.yaml`](13-ruler-edge.yaml) · [PDF](13-ruler-edge.pdf) |
 
 The maze booklet uses a fixed seed for a reproducible set — regenerate it with:

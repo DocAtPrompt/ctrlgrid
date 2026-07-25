@@ -1,0 +1,80 @@
+# notebook — one linked notebook of sections, each filled by a blade (§ 7.13).
+#
+# The point: one PDF on the e-ink device instead of twelve. Pages to journal on,
+# pages to reckon on, pages to write music on — and a contents page that links
+# to each, so the pen finds them.
+#
+# A section is an ordinary definition in miniature: `generator:` and then that
+# generator's own keys, exactly as at the top of any file. So everything the
+# blades can do, a section can do — copy any preset's keys in here.
+#
+#   ctrlgrid show notebook-a4 > mine.yaml
+#
+# The header names the section a page belongs to and the footer counts the
+# pages, because a notebook is flipped through rather than tapped.
+version: 1
+
+page:
+  format: a4
+  margin: 15mm
+
+header:
+  height: 8mm
+  gap: 3mm
+  font: { size: 9pt }
+  left: "{section}"
+
+footer:
+  height: 8mm
+  gap: 3mm
+  font: { size: 9pt }
+  right: "{page} / {page_count}"
+
+generator: notebook
+
+# A cover. Drop it for no title page.
+title_page:
+  title: "Notebook"
+  subtitle: "your name"
+  background: "#2f3a48"
+  text_color: "#ffffff"
+
+# `divider: true` puts a sheet with the section's name before it — a place to
+# write a subtitle, and something to find while flipping.
+sections:
+  - label: "Bullet journal"
+    pages: 40
+    divider: true
+    generator: dots
+    grid:
+      x: { base_spacing: 5mm }
+      y: { base_spacing: 5mm }
+    base_size: 0.4mm
+    color: "#8a94a0"
+
+  - label: "Sums"
+    pages: 20
+    divider: true
+    generator: lines
+    families:
+      - { direction: horizontal, base_spacing: 5mm, base_weight: 0.12pt,
+          color: ["#c8ced6"] }
+      - { direction: vertical,   base_spacing: 5mm, base_weight: 0.12pt,
+          color: ["#c8ced6"] }
+
+  - label: "Music"
+    pages: 10
+    divider: true
+    generator: staves
+    count: 10
+    stave_space: 1.8mm
+    clef: treble
+    color: "#5b6b7d"
+
+  - label: "Notes"
+    pages: 30
+    divider: true
+    generator: lines
+    families:
+      - { direction: horizontal, base_spacing: 7mm, base_weight: 0.15pt,
+          color: ["#c8ced6"] }

@@ -994,6 +994,60 @@ Preset: `calendar-a4` (`ctrlgrid show calendar-a4`), which turns on every view;
 worked example: [`12-calendar-year.yaml`](examples/12-calendar-year.yaml) — 405
 pages, and the one example that ships without its PDF.
 
+### `notebook` — several papers in one linked document
+
+The other document generator, and the one that composes the rest: sections, each
+filled by an ordinary generator, with a contents page that links to them. One
+PDF on an e-ink device instead of twelve.
+
+```yaml
+generator: notebook
+title_page: { title: "Notebook", subtitle: "your name" }   # optional
+sections:
+  - label: "Bullet journal"
+    pages: 40
+    divider: true          # a sheet with the section's name before it
+    generator: dots
+    grid: { x: { base_spacing: 5mm }, y: { base_spacing: 5mm } }
+    base_size: 0.4mm
+  - label: "Music"
+    pages: 10
+    generator: staves
+    count: 10
+    stave_space: 1.8mm
+    clef: treble
+```
+
+**A section is a definition in miniature:** `generator:` and then that
+generator's own keys, exactly as at the top of a file. Anything a blade can do,
+a section can do — copy the keys out of any preset. A typo inside a section is
+reported by that blade, naming the section (`sections.2`).
+
+The pages come in this order: the optional title, the contents, then each
+section — its divider if it asked for one, then its pages. The contents names
+each section, links to it, and prints the page it starts on, because a notebook
+is a paper object too and there a link is only underlined text.
+
+Bands are worth setting here: `{section}` names the section a page belongs to
+and `{page}` counts, both filled per page.
+
+```yaml
+header: { height: 8mm, gap: 3mm, left: "{section}" }
+footer: { height: 8mm, gap: 3mm, right: "{page} / {page_count}" }
+```
+
+What is refused, before the first page: an unknown generator (with the list of
+known ones), a *document* generator inside a section — notebooks do not nest —
+`pages: 0`, an empty `sections:`, anything a section's own generator refuses for
+the page size, and a contents page too long for its sheet.
+
+Not in this version, and named rather than forgotten: no per-section `snap`,
+`remainder` or `align` (those are page geometry for the whole document), no
+per-section paper size.
+
+Preset: `notebook-a4` (106 pages). Example:
+[`15-notebook.yaml`](examples/15-notebook.yaml).
+
 ---
 
 ## 13. E-ink and devices
@@ -1103,7 +1157,7 @@ the documentation. There is one for every generator:
 ```
 dots-5mm            grid-a4             mandala-a4          maze-medium
 millimeter-a4       perspective-2pt-a4  phone-log-a5        polar-a4
-staves-treble-a4    tiling-hex-a4       calendar-a4
+staves-treble-a4    tiling-hex-a4       calendar-a4         notebook-a4
 ```
 
 And five that are papers rather than generators — each one is `lines` with a
