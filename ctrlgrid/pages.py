@@ -628,6 +628,21 @@ def preflight(
     # answer: does the circle fit, and do the segment labels fit (§ 7.6).
     blade.check(document.config, area=geometry.area, q=probe)
 
+    # § 8.12: the ruler is measured against the geometry the pattern got, and
+    # refused before page one rather than while pages are written (§ 12 point
+    # 13). Under duplex the margins swap, so both sides are asked.
+    from ctrlgrid.frame import check_rulers
+
+    for is_even in ((False, True) if document.page.duplex else (False,)):
+        check_rulers(
+            document.ruler,
+            geometry.for_page(
+                is_even=is_even, sheet=document.sheet, duplex=document.page.duplex
+            ),
+            document,
+            q=probe,
+        )
+
     # § 10.2: what the writer cannot render is refused here, before a page is
     # written, naming the missing feature — the PNG writer's lack of text is
     # the first case this has ever caught.
@@ -795,6 +810,8 @@ def _refuse_marks_the_writer_cannot_render(
         needed.add("text")  # the cover carries the calibration labels (§ 8.8)
     if document.pages.embed_def:
         needed.add("attachment")  # the def rides along as a file (§ 8.8)
+    if document.ruler is not None:
+        needed.add("text")  # the ruler's numbers are Text marks (§ 8.12)
 
     missing = needed - caps
     if not missing:
@@ -1074,7 +1091,13 @@ def _page_marks(
     then lands on its own sheet or in a cell of a larger one is a separate,
     later decision that only translates it.
     """
-    from ctrlgrid.frame import background_mark, border_mark, hole_marks, stamp_mark
+    from ctrlgrid.frame import (
+        background_mark,
+        border_mark,
+        hole_marks,
+        ruler_marks,
+        stamp_mark,
+    )
 
     placed = geometry.for_page(
         is_even=context.is_even, sheet=document.sheet, duplex=document.page.duplex
@@ -1111,6 +1134,9 @@ def _page_marks(
     if border is not None:
         yield border
     yield from hole_marks(document.page, document.sheet, is_even=context.is_even)
+    # `placed` and not `geometry`: the scale measures the area *this* page got,
+    # and under duplex that area sits on the other side of the sheet (§ 8.12).
+    yield from ruler_marks(document.ruler, placed, q=q)
     yield from frame
 
     stamp = stamp_mark(document.stamp, document.sheet, q=q)

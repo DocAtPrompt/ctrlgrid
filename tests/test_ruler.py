@@ -12,7 +12,7 @@ from __future__ import annotations
 import pytest
 from pydantic import ValidationError
 
-from ctrlgrid.errors import DefinitionError
+from ctrlgrid.errors import CtrlGridError, DefinitionError
 from ctrlgrid.frame import check_rulers, ruler_marks
 from ctrlgrid.loader import loads
 from ctrlgrid.marks import Layer, Point, Segment, Text
@@ -293,3 +293,76 @@ class TestTheRefusals:
 
     def test_no_ruler_raises_nothing(self) -> None:
         check_rulers(None, geometry(document()), document(), q=Q)
+
+
+def render(tmp_path, definition: str, name: str = "out.pdf", **overrides):
+    """Build a definition into a real file, the way the CLI does."""
+    from ctrlgrid.cli import _writer_for
+    from ctrlgrid.pages import build
+
+    doc = loads(definition, overrides or None, source="test")
+    path = tmp_path / name
+    build(doc, _writer_for(path, doc))
+    return path
+
+
+RULED = (
+    "version: 1\n"
+    "page:\n  format: a4\n  margin: 20mm\n"
+    "generator: lines\n"
+    "families:\n  - {direction: horizontal, base_spacing: 10mm}\n"
+)
+
+
+class TestTheRun:
+    def test_a_ruler_does_not_move_the_pattern(self, tmp_path) -> None:
+        # § 8.1's rule, restated for the ruler: switching it on moves no
+        # pattern mark at all.
+        def pattern_marks(text: str):
+            from ctrlgrid import generators
+            from ctrlgrid.pages import _page_marks, preflight, sheet_plan
+
+            doc = loads(text, None, source="test")
+            geo, contexts, bands, _cover = preflight(doc, Q)
+            marks = _page_marks(
+                doc, geo, generators.get(doc.generator), sheet_plan(doc),
+                contexts[0], bands[0], Q,
+            )
+            return [mark for mark in marks if mark.layer == Layer.PATTERN]
+
+        assert pattern_marks(RULED) == pattern_marks(
+            RULED + "ruler:\n  edges: [bottom, left]\n"
+        )
+
+    def test_the_same_definition_gives_the_same_bytes(self, tmp_path) -> None:
+        text = RULED + "ruler:\n  edges: [bottom]\n"
+        first = render(tmp_path, text, name="a.pdf")
+        second = render(tmp_path, text, name="b.pdf")
+        assert first.read_bytes() == second.read_bytes()
+
+    def test_a_ruler_that_does_not_fit_is_refused_by_the_run(self, tmp_path) -> None:
+        text = (
+            "version: 1\npage:\n  format: a4\n  margin: 3mm\n"
+            "generator: lines\nfamilies:\n  - {direction: vertical, base_spacing: 10mm}\n"
+            "ruler:\n  edges: [bottom]\n"
+        )
+        with pytest.raises(DefinitionError) as excinfo:
+            render(tmp_path, text)
+        assert "bottom" in str(excinfo.value)
+
+    def test_png_output_is_refused_naming_text(self, tmp_path) -> None:
+        # The numbers are Text marks, and the PNG writer has no font file
+        # (§ 10.2, § 10.4) — the capability pre-flight catches it by itself.
+        text = (
+            "version: 1\npage:\n  device: remarkable-paper-pro\n  margin: 10mm\n"
+            "generator: dots\ngrid:\n  x: {base_spacing: 5mm}\n  y: {base_spacing: 5mm}\n"
+            "base_size: 0.5mm\n"
+            "ruler:\n  edges: [bottom]\n"
+        )
+        with pytest.raises((DefinitionError, CtrlGridError)) as excinfo:
+            render(tmp_path, text, name="out.png")
+        assert "text" in str(excinfo.value).lower()
+
+    def test_an_unknown_ruler_key_is_refused_by_the_loader(self) -> None:
+        with pytest.raises(DefinitionError):
+            loads(RULED + "ruler:\n  edges: [bottom]\n  every: 2mm\n", None, source="test")

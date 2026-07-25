@@ -43,6 +43,7 @@ from ctrlgrid.model import (
     PageSpec,
     PagesSpec,
     PatternSpec,
+    RulerSpec,
     StampSpec,
 )
 from ctrlgrid.pages import Sheet, raw_extent
@@ -57,7 +58,7 @@ SUPPORTED_VERSION = 1
 #: belongs to the blade and is validated by its own config model.
 HANDLE_KEYS = {
     "version", "defs", "generator",
-    "page", "header", "footer", "border", "stamp", "pattern", "pages",
+    "page", "header", "footer", "border", "ruler", "stamp", "pattern", "pages",
 }
 
 #: Keys the specification defines on the top level and this milestone does not
@@ -121,6 +122,10 @@ class Document:
     header: Band | None
     footer: Band | None
     border: BorderSpec | None
+    ruler: RulerSpec | None
+    """The edge scale (§ 8.12). Optional, like the border, and like the border
+    it never changes the pattern area."""
+
     stamp: StampSpec | None
     pattern: PatternSpec
     pages: PagesSpec
@@ -224,7 +229,9 @@ def loads(text: str, overrides: Mapping[str, Any] | None = None, *, source: str)
 
     def section(model: type[BaseModel], key: str, default: Any = None) -> Any:
         value = handle.get(key)
-        if value is None and default is None and key in ("header", "footer", "border", "stamp"):
+        if value is None and default is None and key in (
+            "header", "footer", "border", "ruler", "stamp",
+        ):
             return None
         return _section(model, value or (default or {}), raw, key, context)
 
@@ -232,6 +239,7 @@ def loads(text: str, overrides: Mapping[str, Any] | None = None, *, source: str)
     header = section(Band, "header")
     footer = section(Band, "footer")
     border = section(BorderSpec, "border")
+    ruler = section(RulerSpec, "ruler")
     stamp = section(StampSpec, "stamp")
     pattern = section(PatternSpec, "pattern", {})
     pages = section(PagesSpec, "pages", {})
@@ -262,6 +270,7 @@ def loads(text: str, overrides: Mapping[str, Any] | None = None, *, source: str)
         header=header,
         footer=footer,
         border=border,
+        ruler=ruler,
         stamp=stamp,
         pattern=pattern,
         pages=pages,
