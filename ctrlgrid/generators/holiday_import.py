@@ -98,6 +98,86 @@ def _parse_yaml(text: str, path: Path) -> tuple[list[dict], str]:
     return entries, path.name
 
 
+def _unfold(text: str) -> list[str]:
+    """RFC 5545 line unfolding: a line beginning with a space or tab continues
+    the previous logical line."""
+    lines: list[str] = []
+    for raw in text.split("\n"):
+        raw = raw.rstrip("\r")
+        if raw[:1] in (" ", "\t") and lines:
+            lines[-1] += raw[1:]
+        else:
+            lines.append(raw)
+    return lines
+
+
+def _unescape(value: str) -> str:
+    """RFC 5545 TEXT unescaping: \\n / \\N → newline, \\, \\; \\\\ literal."""
+    out: list[str] = []
+    index = 0
+    while index < len(value):
+        char = value[index]
+        if char == "\\" and index + 1 < len(value):
+            nxt = value[index + 1]
+            out.append({"n": "\n", "N": "\n", ",": ",", ";": ";", "\\": "\\"}.get(nxt, nxt))
+            index += 2
+        else:
+            out.append(char)
+            index += 1
+    return "".join(out)
+
+
+def _split_line(line: str) -> tuple[str, dict[str, str], str]:
+    """`NAME;PARAM=VAL:value` → (NAME upper, {PARAM: VAL}, value)."""
+    head, _, value = line.partition(":")
+    parts = head.split(";")
+    name = parts[0].strip().upper()
+    params = {}
+    for part in parts[1:]:
+        key, _, val = part.partition("=")
+        params[key.strip().upper()] = val.strip()
+    return name, params, value
+
+
+def _parse_ics(text: str) -> tuple[list[dict], int, str | None]:
+    entries: list[dict] = []
+    skipped = 0
+    prodid: str | None = None
+    calname: str | None = None
+
+    in_event = False
+    date: datetime.date | None = None
+    summary = ""
+    unusable = False  # timed DTSTART or an RRULE — not representable
+
+    for line in _unfold(text):
+        name, params, value = _split_line(line)
+        if name == "BEGIN" and value.strip().upper() == "VEVENT":
+            in_event, date, summary, unusable = True, None, "", False
+        elif name == "END" and value.strip().upper() == "VEVENT":
+            in_event = False
+            if unusable:
+                skipped += 1
+            elif date is not None:
+                entries.append({"date": date, "label": summary})
+        elif name == "PRODID" and prodid is None:
+            prodid = value.strip()
+        elif name == "X-WR-CALNAME" and calname is None:
+            calname = value.strip()
+        elif in_event and name == "DTSTART":
+            if "T" in value or params.get("VALUE") == "DATE-TIME":
+                unusable = True
+            else:
+                digits = value.strip()[:8]
+                date = datetime.date(int(digits[:4]), int(digits[4:6]), int(digits[6:8]))
+        elif in_event and name == "RRULE":
+            unusable = True
+        elif in_event and name == "SUMMARY":
+            summary = _unescape(value)
+
+    return entries, skipped, calname or prodid
+
+
 def read_holiday_file(path: Path, year: int) -> HolidayImport:
     """Read a holiday file, filter to `year`, and report the counts + origin."""
     try:
@@ -109,7 +189,10 @@ def read_holiday_file(path: Path, year: int) -> HolidayImport:
     text = _decode(raw, path)
 
     suffix = path.suffix.lower()
-    if suffix in (".yaml", ".yml"):
+    if suffix == ".ics":
+        entries, skipped, origin = _parse_ics(text)
+        origin = origin or path.name
+    elif suffix in (".yaml", ".yml"):
         entries, origin = _parse_yaml(text, path)
         skipped = 0
     else:
