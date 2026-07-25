@@ -12,12 +12,15 @@ from types import SimpleNamespace
 import pytest
 from PIL import Image as PILImage
 from pydantic import ValidationError
+from pypdf import PdfReader
 
 from ctrlgrid.document import DocumentPage
 from ctrlgrid.errors import DefinitionError
 from ctrlgrid.generators.calendar import TitlePage
+from ctrlgrid.loader import loads
 from ctrlgrid.marks import Area, Image, Point, Text
-from ctrlgrid.pages import _build_document, background_image_rect
+from ctrlgrid.pages import _build_document, background_image_rect, build
+from ctrlgrid.writers.pdf import PdfWriter
 
 # A4 portrait in µm.
 W, H = 210_000, 297_000
@@ -173,3 +176,43 @@ def test_default_document_page_shows_both_bands(tmp_path):
     rec = _run(plain_marks, tmp_path)
     texts = [m.content for m in rec.drawn if isinstance(m, Text)]
     assert "HDR" in texts and "FTR" in texts
+
+
+def test_title_background_image_and_header_render(tmp_path):
+    _png(tmp_path / "bg.png", 400, 560, transparent=True)
+    definition = tmp_path / "cal.yaml"
+    definition.write_text(
+        "version: 1\n"
+        "page:\n"
+        "  format: a4\n"
+        "  margin: 12mm\n"
+        "header:\n"
+        "  height: 7mm\n"
+        "  gap: 3mm\n"
+        '  center: "HDR"\n'
+        "footer:\n"
+        "  height: 7mm\n"
+        "  gap: 3mm\n"
+        '  center: "FTR"\n'
+        "generator: calendar\n"
+        "year: 2026\n"
+        "title_page:\n"
+        '  title: "2026"\n'
+        "  background_image: bg.png\n"
+        "  header: true\n"
+        "  footer: false\n",
+        encoding="utf-8",
+    )
+    doc = loads(definition.read_text(), source=str(definition))
+    out = tmp_path / "cal.pdf"
+    build(doc, PdfWriter(str(out)))
+
+    reader = PdfReader(str(out))
+    page1 = reader.pages[0]
+    # The background image is an XObject on page 1.
+    assert "/XObject" in (page1.get("/Resources") or {})
+    text1 = page1.extract_text()
+    assert "HDR" in text1 and "FTR" not in text1   # header opted in, footer not
+    # A sub-page (contents) still shows both bands.
+    text2 = reader.pages[1].extract_text()
+    assert "HDR" in text2 and "FTR" in text2
