@@ -139,7 +139,7 @@ def _split_line(line: str) -> tuple[str, dict[str, str], str]:
     return name, params, value
 
 
-def _parse_ics(text: str) -> tuple[list[dict], int, str | None]:
+def _parse_ics(text: str, path: Path) -> tuple[list[dict], int, str | None]:
     entries: list[dict] = []
     skipped = 0
     prodid: str | None = None
@@ -169,7 +169,17 @@ def _parse_ics(text: str) -> tuple[list[dict], int, str | None]:
                 unusable = True
             else:
                 digits = value.strip()[:8]
-                date = datetime.date(int(digits[:4]), int(digits[4:6]), int(digits[6:8]))
+                # A malformed DTSTART (non-numeric, too short, or calendrically
+                # invalid like 20260231) must fail loudly, not with a raw
+                # traceback — non-negotiable #6 / § 12, matching the YAML path.
+                try:
+                    date = datetime.date(
+                        int(digits[:4]), int(digits[4:6]), int(digits[6:8])
+                    )
+                except (ValueError, IndexError):
+                    raise DefinitionError(
+                        f"{path}: unreadable DTSTART {value!r} in a VEVENT"
+                    ) from None
         elif in_event and name == "RRULE":
             unusable = True
         elif in_event and name == "SUMMARY":
@@ -190,7 +200,7 @@ def read_holiday_file(path: Path, year: int) -> HolidayImport:
 
     suffix = path.suffix.lower()
     if suffix == ".ics":
-        entries, skipped, origin = _parse_ics(text)
+        entries, skipped, origin = _parse_ics(text, path)
         origin = origin or path.name
     elif suffix in (".yaml", ".yml"):
         entries, origin = _parse_yaml(text, path)

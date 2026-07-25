@@ -113,6 +113,21 @@ def test_ics_origin_prefers_calname_then_prodid(tmp_path):
     assert read_holiday_file(g, 2026).origin == "-//Example//Holidays//EN"
 
 
+def test_ics_invalid_dtstart_is_refused_loudly(tmp_path):
+    ics = (
+        "BEGIN:VCALENDAR\n"
+        "BEGIN:VEVENT\n"
+        "DTSTART;VALUE=DATE:20260231\n"  # 31 February — calendrically invalid
+        "SUMMARY:Impossible\n"
+        "END:VEVENT\n"
+        "END:VCALENDAR\n"
+    )
+    f = tmp_path / "hol.ics"
+    f.write_text(ics.replace("\n", "\r\n"), encoding="utf-8")
+    with pytest.raises(DefinitionError, match="DTSTART"):
+        read_holiday_file(f, 2026)
+
+
 def test_unknown_extension_is_refused_naming_the_supported_set(tmp_path):
     f = tmp_path / "hol.csv"
     f.write_text("2026-01-01,New Year\n", encoding="utf-8")
