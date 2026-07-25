@@ -950,6 +950,26 @@ def _document_context(index: int, total: int) -> PageContext:
     )
 
 
+def document_page_marks(
+    page: DocumentPage, *, area: Area, context: PageContext, q: WriterQuery
+) -> Iterator[Mark]:
+    """What is on one document page: its own marks, then its fill's (§ 7.13).
+
+    One function, because three callers ask the same question — the writer, the
+    capability pre-flight and the media check — and three answers would drift
+    apart the first time a page kind changed.
+
+    The blade is called here, on the handle's side: a document generator names
+    a generator and its config and never reaches into one (§ 3.3).
+    """
+    yield from page.marks
+    if page.fill is not None:
+        from ctrlgrid import generators
+
+        blade = generators.get(page.fill.generator)
+        yield from blade.generate(page.fill.config, area=area, page=context, q=q)
+
+
 def document_bands(
     document: Document,
     geometry: Geometry,
@@ -1001,7 +1021,10 @@ def _refuse_writer_cannot_render_document(
     needed = {"link"}
     first = next(iter(blade.pages(document.config, area=geometry.area, q=probe)), None)
     if first is not None:
-        for mark in first.marks:
+        context = _document_context(0, 1)
+        for mark in document_page_marks(
+            first, area=geometry.area, context=context, q=probe
+        ):
             needed.add(_MARK_CAPABILITY.get(type(mark), "vector"))
     missing = needed - caps
     if not missing:
@@ -1066,7 +1089,7 @@ def _build_document(
         if page.show_footer:
             for mark in footer_marks:
                 writer.draw(mark)
-        for mark in page.marks:
+        for mark in document_page_marks(page, area=geometry.area, context=context, q=probe):
             writer.draw(translate(mark, dx=ox, dy=oy))
         for link in page.links:
             writer.link(

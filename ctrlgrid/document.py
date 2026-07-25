@@ -26,7 +26,7 @@ from __future__ import annotations
 
 from collections.abc import Iterator
 from dataclasses import dataclass
-from typing import Protocol, runtime_checkable
+from typing import Any, Protocol, runtime_checkable
 
 from pydantic import BaseModel
 
@@ -49,6 +49,21 @@ class Link:
 
 
 @dataclass(frozen=True, slots=True)
+class Fill:
+    """A page a blade fills, instead of the document drawing it (§ 7.13).
+
+    The document names the generator and the config it has already validated;
+    the **handle** calls the blade, exactly as it does on the ordinary page
+    path. That is the whole seam of the notebook: a document that composes
+    blades never touches one, so geometry, page context and every future handle
+    feature go on living on the handle's side of the line (§ 3.3).
+    """
+
+    generator: str
+    config: Any
+
+
+@dataclass(frozen=True, slots=True)
 class DocumentPage:
     """One page a document generator produces.
 
@@ -62,6 +77,8 @@ class DocumentPage:
     kind: str
     marks: tuple[Mark, ...]
     links: tuple[Link, ...] = ()
+    fill: Fill | None = None
+    """A blade that fills this page, drawn under the page's own marks (§ 7.13)."""
     title: str | None = None
     background: str | None = None
     """A full-sheet colour fill painted under everything — the title page's

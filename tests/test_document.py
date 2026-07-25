@@ -184,3 +184,52 @@ class TestBandsArePerPage:
         build(loads(definition, source="test"), PdfWriter(path))
         assert text_on(path, 0).count("constant") == 1
         assert text_on(path, 1).count("constant") == 1
+
+
+class TestAPageMayBeFilledByABlade:
+    """§ 7.13: a `DocumentPage` may name a blade and its config instead of
+    carrying marks, and the **handle** calls that blade — the notebook never
+    touches one. One function answers "what is on this page", because the
+    writer, the capability pre-flight and the media check all ask."""
+
+    def _filled(self, marks=()):
+        from ctrlgrid.document import Fill
+        from ctrlgrid.generators.dots import DotsConfig
+
+        config = DotsConfig.model_validate(
+            {"grid": {"x": {"base_spacing": "10mm"}, "y": {"base_spacing": "10mm"}},
+             "base_size": "0.5mm"}
+        )
+        return DocumentPage(
+            dest="d", kind="section", marks=marks, fill=Fill("dots", config)
+        )
+
+    def test_its_own_marks_come_first_then_the_blades(self) -> None:
+        from ctrlgrid.marks import Dot
+        from ctrlgrid.pages import document_page_marks, page_contexts
+
+        own = Text(pos=Point(0, 0), content="own", size=_SIZE)
+        page = self._filled(marks=(own,))
+        context = next(page_contexts(count=1, snap=()))
+        marks = list(
+            document_page_marks(
+                page, area=Area(width=100_000, height=100_000), context=context,
+                q=PdfWriter("unused.pdf"),
+            )
+        )
+        assert marks[0] is own
+        assert all(isinstance(mark, Dot) for mark in marks[1:])
+        assert len(marks) > 50   # an 11 x 11 dot grid, at least
+
+    def test_a_page_without_a_fill_is_just_its_marks(self) -> None:
+        from ctrlgrid.pages import document_page_marks, page_contexts
+
+        own = Text(pos=Point(0, 0), content="own", size=_SIZE)
+        page = DocumentPage(dest="d", kind="plain", marks=(own,))
+        context = next(page_contexts(count=1, snap=()))
+        assert list(
+            document_page_marks(
+                page, area=Area(width=1000, height=1000), context=context,
+                q=PdfWriter("unused.pdf"),
+            )
+        ) == [own]

@@ -210,6 +210,9 @@ def _document_sample(document: Document, blade: object, geometry, q: WriterQuery
     than the generator (§ 3.3), so it is no mark — but on a grayscale screen it
     is exactly what goes flat, and § 12.1 has to say so.
     """
+    from ctrlgrid.pages import document_page_marks, page_contexts
+
+    context = next(page_contexts(count=1, snap=()))
     seen: set[tuple] = set()
     for page in blade.pages(document.config, area=geometry.area, q=q):
         if page.background is not None:
@@ -219,7 +222,9 @@ def _document_sample(document: Document, blade: object, geometry, q: WriterQuery
                 yield Segment(
                     start=Point(0, 0), end=Point(0, 0), weight=0.0, color=page.background
                 )
-        for mark in page.marks:
+        for mark in document_page_marks(
+            page, area=geometry.area, context=context, q=q
+        ):
             key = (
                 type(mark).__name__,
                 getattr(mark, "weight", None),
