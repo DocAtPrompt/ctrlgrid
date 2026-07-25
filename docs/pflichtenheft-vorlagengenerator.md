@@ -1169,7 +1169,10 @@ Links, keine Boxen, alles auf einer Seite; je Mini-Monat **eine rechte Kante pro
 Spalte** — der Wochentagsbuchstabe steht über seiner Spalte, die Tageszahlen
 stehen rechtsbündig übereinander — und links jeder Woche ihre **Wochennummer**,
 verlinkt, sobald es Wochenseiten gibt; die Spalte dafür nimmt ihre Breite von
-den Tagesspalten), **Halbjahr 1 & 2** als Tabellen,
+den Tagesspalten. Der **Monatsname beginnt an der Kante der ersten Tagesspalte**,
+nicht an der Zellkante — sonst steht er über den Wochennummern, und eine Zahl
+unter einem Monatsnamen wird als Tag gelesen; die Wochennummern stehen mit
+deutlichem Abstand links davon), **Halbjahr 1 & 2** als Tabellen,
 Monate, Tage, optional **Wochen** (an `week_start` ausgerichtet, nicht ISO) und
 Notizen. `{year}` als Kopf-Platzhalter. Feiertage kommen **inline oder aus
 einer Datei** (`holidays_file`, YAML-Liste oder konkret-datiertes `.ics`),

@@ -303,6 +303,10 @@ def year_overview_page(page: Page, cfg, n: Nav, months, weekdays) -> DocumentPag
 _WEEK_COL = pt(15)
 #: The air kept clear at a column's right edge, so adjacent numbers never touch.
 _MINI_PAD = pt(2)
+#: Between a week number and the day grid it belongs to. Wide enough that a
+#: two-digit week never crowds a two-digit Monday — the crowding is what made
+#: the week numbers read as days.
+_WEEK_GAP = pt(9)
 
 
 def _mini_month(page: Page, cfg, months, weekdays, month, x, top, w, h,
@@ -320,7 +324,6 @@ def _mini_month(page: Page, cfg, months, weekdays, month, x, top, w, h,
     from ctrlgrid.generators.calendar import week_of
 
     start = _start_weekday(cfg.week_start)
-    page.link_text(round(x), round(top), months[month - 1], f"month-{month:02d}", pt(9))
 
     day_size = pt(6.5)
     week_size = pt(6)
@@ -329,6 +332,13 @@ def _mini_month(page: Page, cfg, months, weekdays, month, x, top, w, h,
     def right_edge(column: int) -> float:
         """The shared right edge of a day column — letters and numbers use it."""
         return x + _WEEK_COL + (column + 1) * col_w - _MINI_PAD
+
+    # Where a two-digit day in the first column begins. The month name starts
+    # here too, so the name stands over its own days and *not* over the week
+    # numbers: a number directly under a month name is read as a day, which is
+    # exactly the misreading the week column must not invite (§ 7).
+    body_left = round(right_edge(0) - page.q.text_width("30", family="sans", size=round(day_size)))
+    page.link_text(body_left, round(top), months[month - 1], f"month-{month:02d}", pt(9))
 
     header = top + pt(13)
     for c in range(7):
@@ -348,8 +358,10 @@ def _mini_month(page: Page, cfg, months, weekdays, month, x, top, w, h,
             break
         number = week_of(datetime.date(cfg.year, month, first), cfg.year, cfg.week_start)
         label = str(number)
+        # Right-aligned just left of the day grid: close enough to read as this
+        # row's, far enough not to join the column the month name heads.
         wx = round(
-            x + _WEEK_COL - _MINI_PAD * 2
+            body_left - _WEEK_GAP
             - page.q.text_width(label, family="sans", size=round(week_size))
         )
         # Nudged down by the size difference so the week number sits on the same

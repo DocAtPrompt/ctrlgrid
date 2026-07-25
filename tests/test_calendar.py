@@ -387,7 +387,8 @@ class TestYearOverviewGrid:
         """January's texts — the top-left mini-month of the twelve."""
         texts = [m for m in page.marks if isinstance(m, Text)]
         top = max(t.pos.y for t in texts if t.content == "January")
-        return [t for t in texts if t.pos.x < 61_000 and top - 60_000 < t.pos.y < top]
+        # `<= top` keeps the month name itself, which sits on that very baseline.
+        return [t for t in texts if t.pos.x < 61_000 and top - 60_000 < t.pos.y <= top]
 
     def _right(self, mark: Text) -> int:
         """A mark's right edge, however it is anchored."""
@@ -446,3 +447,18 @@ class TestYearOverviewGrid:
     def test_no_link_dangles_with_week_pages(self) -> None:
         _pages, dests, edges = _graph(cfg(week_view={}, notes={"count": 5}))
         assert sorted(target for _src, target in edges if target not in dests) == []
+
+    def test_the_month_name_stands_over_its_own_days(self) -> None:
+        texts = self._january(self._year())
+        title = next(t for t in texts if t.content == "January")
+        # The first column's numbers are right-aligned, so a two-digit day is
+        # where the column's text actually begins — and the name begins there.
+        mondays = [t for t in self._days(texts) if t.content in {"12", "19", "26"}]
+        assert len(mondays) == 3
+        assert {t.pos.x for t in mondays} == {title.pos.x}
+
+    def test_the_week_numbers_stand_clear_of_the_month_column(self) -> None:
+        texts = self._january(self._year())
+        title = next(t for t in texts if t.content == "January")
+        # Crowded against the days, a week number is read as one of them.
+        assert title.pos.x - max(self._right(t) for t in self._weeks(texts)) >= pt(8)
