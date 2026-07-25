@@ -397,6 +397,18 @@ class CalendarGenerator:
                 "(§ 9)",
                 field="notes",
             )
+        # A mini-month of the full-year overview is sized from its content, so a
+        # narrow sheet is told rather than handed twelve months running into one
+        # another (§ 8.2).
+        needed_w = layout.mini_month_width(q)
+        cell_w = layout.mini_month_cell_width(area.width)
+        if needed_w > cell_w:
+            raise DefinitionError(
+                f"the full-year overview needs about {round(needed_w / 1000)} mm for each of "
+                f"its twelve mini-months and the three across leave only "
+                f"{round(cell_w / 1000)} mm — use a wider page or smaller margins (§ 9)",
+                field="page",
+            )
         # A month lists all 31 possible day rows on one page; below a readable
         # minimum the run is refused rather than shrunk (§ 8.2).
         min_row = 4000  # 4 mm

@@ -288,8 +288,8 @@ def year_overview_page(page: Page, cfg, n: Nav, months, weekdays) -> DocumentPag
     page.text(0, top, f"{cfg.year} · full year", pt(15), INK)
     top += pt(22)
     cols, rows = 3, 4
-    gutter = mm(4)
-    cell_w = (page.W - (cols - 1) * gutter) / cols
+    gutter = _YEAR_GUTTER
+    cell_w = mini_month_cell_width(page.W)
     cell_h = (page.H - top - pt(2) - (rows - 1) * gutter) / rows
     for m in range(12):
         r, c = divmod(m, cols)
@@ -299,14 +299,34 @@ def year_overview_page(page: Page, cfg, n: Nav, months, weekdays) -> DocumentPag
     return page.done("year", "year", f"{cfg.year} full year")
 
 
-#: The mini-month's left column, holding the week number (§ 7).
-_WEEK_COL = pt(15)
-#: The air kept clear at a column's right edge, so adjacent numbers never touch.
-_MINI_PAD = pt(2)
+#: The air between two day columns. The mini-month is built from its content
+#: outwards — a column is one two-digit day plus this — rather than by dividing
+#: the cell, so tightening the days is what widens the gap beside them.
+_DAY_GAP = pt(11)
 #: Between a week number and the day grid it belongs to. Wide enough that a
 #: two-digit week never crowds a two-digit Monday — the crowding is what made
 #: the week numbers read as days.
-_WEEK_GAP = pt(9)
+_WEEK_GAP = pt(24)
+#: Between the twelve mini-months, three across.
+_YEAR_GUTTER = mm(4)
+
+
+def mini_month_width(q) -> int:
+    """How wide one mini-month needs to be: the week number, the gap beside it,
+    and seven day columns (§ 7).
+
+    Content-sized, so it is measured here once and refused in the pre-flight
+    against the cell it has to sit in — a narrow sheet must be told, not handed
+    twelve months running into each other (§ 8.2).
+    """
+    day_w = q.text_width("30", family="sans", size=round(pt(6.5)))
+    week_w = q.text_width("53", family="sans", size=round(pt(6)))
+    return round(week_w + _WEEK_GAP + day_w + 6 * (day_w + _DAY_GAP))
+
+
+def mini_month_cell_width(area_width: int) -> float:
+    """The width each of the twelve mini-months gets — three across (§ 7)."""
+    return (area_width - 2 * _YEAR_GUTTER) / 3
 
 
 def _mini_month(page: Page, cfg, months, weekdays, month, x, top, w, h,
@@ -315,9 +335,12 @@ def _mini_month(page: Page, cfg, months, weekdays, month, x, top, w, h,
 
     Everything hangs off one right edge per column: the weekday letter and every
     day number in that column are right-aligned to it, so the letter really does
-    sit over its column and 9 and 30 stack on their units digit. A week-number
-    column on the left takes its width from the day columns — the days move
-    closer together and the week gains a place to be named, and linked.
+    sit over its column and 9 and 30 stack on their units digit.
+
+    The grid is built from its content outwards rather than by dividing the cell:
+    a column is one two-digit day plus `_DAY_GAP`. So the days sit as close as
+    they need to, the week number keeps a wide gap beside them, and what is left
+    over falls between the months instead of stretching them.
     """
     # Imported here, not at the top: `calendar` imports this module back, and the
     # week arithmetic must live once, not twice.
@@ -327,17 +350,21 @@ def _mini_month(page: Page, cfg, months, weekdays, month, x, top, w, h,
 
     day_size = pt(6.5)
     week_size = pt(6)
-    col_w = (w - _WEEK_COL) / 7
-
-    def right_edge(column: int) -> float:
-        """The shared right edge of a day column — letters and numbers use it."""
-        return x + _WEEK_COL + (column + 1) * col_w - _MINI_PAD
+    # Measured, not divided: the widest day and the widest week the year can show.
+    day_w = page.q.text_width("30", family="sans", size=round(day_size))
+    week_w = page.q.text_width("53", family="sans", size=round(week_size))
+    col_w = day_w + _DAY_GAP
 
     # Where a two-digit day in the first column begins. The month name starts
     # here too, so the name stands over its own days and *not* over the week
     # numbers: a number directly under a month name is read as a day, which is
     # exactly the misreading the week column must not invite (§ 7).
-    body_left = round(right_edge(0) - page.q.text_width("30", family="sans", size=round(day_size)))
+    body_left = round(x + week_w + _WEEK_GAP)
+
+    def right_edge(column: int) -> float:
+        """The shared right edge of a day column — letters and numbers use it."""
+        return body_left + day_w + column * col_w
+
     page.link_text(body_left, round(top), months[month - 1], f"month-{month:02d}", pt(9))
 
     header = top + pt(13)

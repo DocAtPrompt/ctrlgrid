@@ -1172,7 +1172,12 @@ verlinkt, sobald es Wochenseiten gibt; die Spalte dafür nimmt ihre Breite von
 den Tagesspalten. Der **Monatsname beginnt an der Kante der ersten Tagesspalte**,
 nicht an der Zellkante — sonst steht er über den Wochennummern, und eine Zahl
 unter einem Monatsnamen wird als Tag gelesen; die Wochennummern stehen mit
-deutlichem Abstand links davon), **Halbjahr 1 & 2** als Tabellen,
+deutlichem Abstand links davon. Das Raster ist **aus seinem Inhalt gebaut**, nicht
+aus der Zelle geteilt: eine Spalte ist ein zweistelliger Tag plus Luft, also rücken
+die Tage eng zusammen, der Abstand neben der Wochennummer bleibt deutlich größer
+als der zwischen zwei Tagen, und der Rest fällt zwischen die Monate. Passt ein
+Mini-Monat nicht in seine Zelle — ein zu schmales Blatt —, wird der Lauf abgelehnt,
+§ 8.2), **Halbjahr 1 & 2** als Tabellen,
 Monate, Tage, optional **Wochen** (an `week_start` ausgerichtet, nicht ISO) und
 Notizen. `{year}` als Kopf-Platzhalter. Feiertage kommen **inline oder aus
 einer Datei** (`holidays_file`, YAML-Liste oder konkret-datiertes `.ics`),

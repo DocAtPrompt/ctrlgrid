@@ -462,3 +462,23 @@ class TestYearOverviewGrid:
         title = next(t for t in texts if t.content == "January")
         # Crowded against the days, a week number is read as one of them.
         assert title.pos.x - max(self._right(t) for t in self._weeks(texts)) >= pt(8)
+
+    def test_the_week_number_stands_further_off_than_a_day_does(self) -> None:
+        texts = self._january(self._year())
+        title = next(t for t in texts if t.content == "January")
+        row = sorted(
+            (t for t in self._days(texts) if t.content in {"12", "13", "14", "15"}),
+            key=lambda t: t.pos.x,
+        )
+        between_days = row[1].pos.x - self._right(row[0])
+        beside_week = title.pos.x - max(self._right(t) for t in self._weeks(texts))
+        # Closer to its neighbours than the week number is to the block: that is
+        # what makes the days read as a block and the week number as its label.
+        assert beside_week > between_days
+
+    def test_a_page_too_narrow_for_the_mini_months_is_refused(self) -> None:
+        # The grid is sized from its content now, so a narrow sheet has to be
+        # told rather than handed twelve months running into each other.
+        narrow = Area(width=100_000, height=277_000)
+        with pytest.raises(DefinitionError, match="full-year overview needs"):
+            CalendarGenerator().check(cfg(), area=narrow, q=Q)
