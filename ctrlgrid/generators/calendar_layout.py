@@ -208,24 +208,74 @@ def title_page(page: Page, cfg) -> DocumentPage:
     )
 
 
+#: The contents page's vertical rhythm. Named, because `contents_page` draws
+#: with them and `check` refuses on them — one arithmetic, never two that drift.
+CONTENTS_NAV = pt(14)         # the nav strip's own height, above everything
+_CONTENTS_TITLE_GAP = pt(34)  # title top → first entry top
+_CONTENTS_LINE = pt(22)       # one entry to the next
+_CONTENTS_GROUP_GAP = pt(14)  # the whitespace between two groups
+
+
+def contents_height(entries: int, groups: int) -> int:
+    """How tall the contents block is, title included (§ 7).
+
+    Shared by the drawing and the pre-flight refusal: a contents page is one
+    page or it is refused (§ 8.2), and the two may not disagree about how tall
+    it is.
+    """
+    return (
+        _CONTENTS_TITLE_GAP
+        + entries * _CONTENTS_LINE
+        + max(0, groups - 1) * _CONTENTS_GROUP_GAP
+    )
+
+
 def contents_page(page: Page, cfg, n: Nav, months, notes_index) -> DocumentPage:
-    """The table of contents: links to the overviews, months and note indices."""
+    """The table of contents: links to the overviews, months and note indices.
+
+    One centred column, not two: a contents page is *read*, and a single column
+    with a common left edge gives the eye one edge to follow — and a bigger tap
+    target on a pen device. The three groups (overviews, months, notes) are set
+    apart by whitespace rather than by rules, because they are already distinct
+    in kind and a line would be ink that says nothing (§ 7).
+    """
     nav(page, n)
-    top = pt(20)
-    page.text(0, top, "Contents", pt(20), INK)
-    top += pt(30)
-    entries = [
-        ("Full-year overview", "year"),
-        (f"Half-year 1 · {months[0][:3]}–{months[5][:3]}", "half-1"),
-        (f"Half-year 2 · {months[6][:3]}–{months[11][:3]}", "half-2"),
+    groups = [
+        [
+            ("Full-year overview", "year"),
+            (f"Half-year 1 · {months[0][:3]}–{months[5][:3]}", "half-1"),
+            (f"Half-year 2 · {months[6][:3]}–{months[11][:3]}", "half-2"),
+        ],
+        [(months[i], f"month-{i + 1:02d}") for i in range(12)],
+        list(notes_index),
     ]
-    entries += [(months[i], f"month-{i + 1:02d}") for i in range(12)]
-    entries += list(notes_index)
-    per_col = -(-len(entries) // 2)  # two columns
-    col_w = page.W / 2
-    for i, (label, target) in enumerate(entries):
-        c, r = divmod(i, per_col)
-        page.link_text(round(c * col_w), top + r * pt(22), label, target, pt(12))
+    groups = [group for group in groups if group]
+
+    size = pt(12)
+    # The column is as wide as its widest entry and sits in the middle of the
+    # sheet — measured, never guessed, so a translated month name still centres.
+    width = max(
+        page.q.text_width(label, family="sans", size=round(size))
+        for group in groups
+        for label, _ in group
+    )
+    left = round((page.W - width) / 2)
+
+    # Centred vertically between the nav strip and the foot of the area, so the
+    # air falls evenly above and below instead of pooling at the bottom. The
+    # pre-flight has already refused a block too tall to sit here (§ 8.2).
+    entries = sum(len(group) for group in groups)
+    block = contents_height(entries, len(groups))
+    top = CONTENTS_NAV + max(0, round((page.H - CONTENTS_NAV - block) / 2))
+
+    page.text(round(page.W / 2), top, "Contents", pt(20), INK, "center")
+    top += _CONTENTS_TITLE_GAP
+    for index, group in enumerate(groups):
+        if index:
+            top += _CONTENTS_GROUP_GAP   # the whitespace between the groups
+        for label, target in group:
+            page.link_text(left, top, label, target, size)
+            top += _CONTENTS_LINE
     return page.done("index", "index", "Contents")
 
 

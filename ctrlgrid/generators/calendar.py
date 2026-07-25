@@ -381,6 +381,22 @@ class CalendarGenerator:
                     "page. Lower a height or use `rest` (§ 9)",
                     field="day",
                 )
+        # The contents is one centred column, so it is taller than the page-wide
+        # list it replaced: a very long notes index would run off the sheet. One
+        # page per view or the run is refused (§ 8.2) — never a half-drawn list.
+        from ctrlgrid.generators import calendar_layout as layout
+
+        toc = self._notes_index_toc(cfg, layout, area)
+        groups = 2 + (1 if toc else 0)          # overviews, months, notes
+        needed = layout.CONTENTS_NAV + layout.contents_height(15 + len(toc), groups)
+        if needed > area.height:
+            raise DefinitionError(
+                f"the contents page needs about {round(needed / 1000)} mm of height and the "
+                f"pattern area is {round(area.height / 1000)} mm — its notes index alone runs "
+                f"to {len(toc)} entries. Use a taller page, smaller margins, or fewer notes "
+                "(§ 9)",
+                field="notes",
+            )
         # A month lists all 31 possible day rows on one page; below a readable
         # minimum the run is refused rather than shrunk (§ 8.2).
         min_row = 4000  # 4 mm

@@ -23,8 +23,9 @@ from ctrlgrid.generators.calendar import (
     day_count,
     days_of_year,
 )
+from ctrlgrid.generators.calendar_layout import pt
 from ctrlgrid.loader import loads
-from ctrlgrid.marks import Area
+from ctrlgrid.marks import Area, Text
 from ctrlgrid.pages import build
 from ctrlgrid.writers.pdf import PdfWriter
 
@@ -318,3 +319,56 @@ class TestItValidatesAndBuilds:
         assert "Alexander" in text          # the header rendered
         assert "{year}" not in text          # the placeholder was resolved
         assert "2026" in text
+
+
+class TestContentsLayout:
+    """The contents page is one centred column, its groups set apart by
+    whitespace, the whole block centred between nav strip and foot (§ 7)."""
+
+    def _page(self, **kw):
+        pages, _dests, _edges = _graph(cfg(**kw))
+        return next(p for p in pages if p.dest == "index")
+
+    def _entries(self, page) -> list[Text]:
+        """The entry texts, top first. They are the only ones at their size —
+        the nav strip is smaller and the title larger."""
+        texts = [m for m in page.marks if isinstance(m, Text) and m.size == pt(12)]
+        return sorted(texts, key=lambda mark: -mark.pos.y)
+
+    def test_the_entries_share_one_left_edge(self) -> None:
+        entries = self._entries(self._page(notes={"count": 5}))
+        assert len({mark.pos.x for mark in entries}) == 1   # one column, one edge
+
+    def test_the_column_is_centred_on_the_sheet(self) -> None:
+        entries = self._entries(self._page(notes={"count": 5}))
+        left = entries[0].pos.x
+        widest = max(Q.text_width(m.content, family="sans", size=m.size) for m in entries)
+        # Equal air to the left of the column and to the right of its widest entry.
+        assert abs((left + widest + left) - AREA.width) <= 2
+
+    def test_whitespace_separates_the_groups(self) -> None:
+        entries = self._entries(self._page(notes={"count": 5}))
+        ys = [mark.pos.y for mark in entries]
+        steps = [ys[i] - ys[i + 1] for i in range(len(ys) - 1)]
+        within = steps[3]           # January → February, inside the months
+        assert steps[2] > within    # half-year 2 → January, across the groups
+        assert steps[14] > within   # December → Notes, across the groups
+
+    def test_the_block_sits_vertically_centred(self) -> None:
+        page = self._page(notes={"count": 5})
+        entries = self._entries(page)
+        title = next(m for m in page.marks if isinstance(m, Text) and m.size == pt(20))
+        above = AREA.height - (title.pos.y + title.size)   # area top → the title's cap
+        below = entries[-1].pos.y                          # last baseline → area foot
+        # Not exact: the nav strip sits inside the air above and nothing balances
+        # it below. Close enough that neither end pools the whitespace.
+        assert abs(above - below) < pt(30)
+
+    def test_a_contents_too_long_for_the_page_is_refused(self) -> None:
+        # One column holds fewer entries than the two it replaced, so a very long
+        # notes index no longer fits — refused before page one, never half-drawn.
+        with pytest.raises(DefinitionError, match="contents page needs"):
+            CalendarGenerator().check(cfg(notes={"count": 3000}), area=AREA, q=Q)
+
+    def test_an_ordinary_notes_count_is_not_refused(self) -> None:
+        CalendarGenerator().check(cfg(notes={"count": 200}), area=AREA, q=Q)

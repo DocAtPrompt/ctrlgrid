@@ -1160,7 +1160,11 @@ Seiten: optionales **Titelblatt** (Vollflächenfarbe über ein neues
 einem **Vollflächen-PNG** darüber (`background_image`, `cover`/`contain`, dessen
 transparente Stellen die Farbe durchlassen) und **optional Kopf-/Fußzeile**
 (`header`/`footer` je einzeln; `plain` wich `show_header`/`show_footer`)), **Inhaltsverzeichnis**
-(Nabe), eine minimale **Ganzjahresübersicht** (nur Zahlen als unterstrichene
+(Nabe — **eine mittige Spalte** mit gemeinsamer linker Kante, die drei Gruppen
+Übersichten/Monate/Notizen durch Weißraum statt Linien getrennt, der Block
+vertikal zwischen Navigationsleiste und Fuß zentriert; passt er nicht auf eine
+Seite — ein sehr langer Notizen-Index —, wird der Lauf abgelehnt, § 8.2),
+eine minimale **Ganzjahresübersicht** (nur Zahlen als unterstrichene
 Links, keine Boxen, alles auf einer Seite), **Halbjahr 1 & 2** als Tabellen,
 Monate, Tage, optional **Wochen** (an `week_start` ausgerichtet, nicht ISO) und
 Notizen. `{year}` als Kopf-Platzhalter. Feiertage kommen **inline oder aus

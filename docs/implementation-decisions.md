@@ -784,3 +784,22 @@ required, not defaulted, parameter so a new caller cannot silently omit it. The
 strip spans the full sheet width but only the band height, not the `gap`, and is
 the band's first mark so the text paints over it (`Layer` is paint-order, not
 sorted). Both fields default `None` — byte-identical to before.
+
+## 46. The contents is one centred column, and may now be refused (§ 7.12)
+
+The contents page was two page-wide columns anchored under the nav strip. It is
+now a single column, its width measured from its widest entry and centred on the
+sheet, the three groups (overviews, months, notes) separated by whitespace rather
+than rules, and the whole block centred vertically between the nav strip and the
+foot. Reasons: a contents page is read, and one common left edge gives the eye a
+single edge to follow — and a wider tap target on a pen device; whitespace already
+says "different kind", so a rule would be ink that says nothing.
+
+The cost is real and is why this is recorded: one column holds fewer entries than
+two, so a very long notes index (roughly `notes.count` above 390 on A4) no longer
+fits one page. § 8.2 admits no scrolling and no shrinking, so `check` refuses it
+before page one, naming the height needed, the height available and the number of
+index entries. A definition that built before can therefore now be refused — the
+deliberate trade for a contents page that is read rather than scanned. The height
+arithmetic lives once, in `calendar_layout.contents_height`, used by both the
+drawing and the refusal so the two cannot drift.
