@@ -11,10 +11,14 @@ import datetime
 
 import pytest
 from pydantic import ValidationError
+from pypdf import PdfReader
 
 from ctrlgrid.errors import DefinitionError
 from ctrlgrid.generators.calendar import CalendarConfig, CalendarGenerator
 from ctrlgrid.generators.holiday_import import read_holiday_file
+from ctrlgrid.loader import loads
+from ctrlgrid.pages import build
+from ctrlgrid.writers.pdf import PdfWriter
 
 
 def test_yaml_list_is_read_and_filtered_to_the_year(tmp_path):
@@ -239,3 +243,27 @@ def test_yaml_report_line_does_not_double_the_filename(tmp_path):
     lines = CalendarGenerator().describe(cfg)
     assert "1 holidays from hol.yaml" in lines
     assert not any("(hol.yaml)" in line for line in lines)
+
+
+def test_imported_holiday_appears_on_the_month_page(tmp_path):
+    (tmp_path / "hol.yaml").write_text(
+        "- date: 2026-01-06\n  label: Epiphany\n", encoding="utf-8"
+    )
+    definition = tmp_path / "cal.yaml"
+    definition.write_text(
+        "version: 1\n"
+        "page:\n"
+        "  format: a4\n"
+        "  margin: 12mm\n"
+        "generator: calendar\n"
+        "year: 2026\n"
+        "holidays_file: hol.yaml\n",
+        encoding="utf-8",
+    )
+    doc = loads(definition.read_text(), source=str(definition))
+    out = tmp_path / "cal.pdf"
+    build(doc, PdfWriter(str(out)))
+
+    reader = PdfReader(str(out))
+    text = "".join(page.extract_text() for page in reader.pages)
+    assert "Epiphany" in text
