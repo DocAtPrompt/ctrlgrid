@@ -169,7 +169,8 @@ def nav(page: Page, n: Nav) -> None:
 
     Index (the contents) and Year (the full-year overview) are always there;
     Week and Notes appear only when those views exist. Month/Week are contextual
-    — the current page's month and week.
+    — the current page's month and week. It hangs off the *right* edge: the page
+    title owns the left, and the two no longer compete for the same corner.
     """
     size = pt(9)
     entries = [("Index", "index"), ("Year", "year"), ("Month", n.month)]
@@ -177,10 +178,15 @@ def nav(page: Page, n: Nav) -> None:
         entries.append(("Week", n.week))
     if n.has_notes:
         entries.append(("Notes", "notes-index"))
-    x = 0
-    for label, target in entries:
-        page.link_text(x, pt(1), label, target, size)
-        x += page.q.text_width(label, family="sans", size=size) + pt(14)
+    gap = pt(14)
+    widths = [page.q.text_width(label, family="sans", size=size) for label, _ in entries]
+    # Ranged against the right edge: on the left it shared the corner with the
+    # page title, and the two fought over it. Measured, so a translated label
+    # still ends flush.
+    x = page.W - (sum(widths) + gap * (len(entries) - 1))
+    for (label, target), width in zip(entries, widths, strict=True):
+        page.link_text(round(x), pt(1), label, target, size)
+        x += width + gap
 
 
 def crumb(page: Page, *, title, prev, nxt, up=None):
@@ -523,6 +529,16 @@ def month_page(page: Page, cfg, n: Nav, months, weekdays, month, holidays, prev,
     avail = page.H - top - pt(2)
     row_h = avail / ndays
     marked = marked_days(cfg)
+    size = pt(10)
+    # The weekday keeps the left edge; the numbers get a column of their own and
+    # are right-aligned in it, so 9 stands under 30 on its units digit. Both are
+    # measured — a definition may name its days "Montag" or "月".
+    name_w = max(
+        page.q.text_width(name, family="sans", size=round(size)) for name in weekdays
+    )
+    num_right = pt(1) + name_w + pt(7) + page.q.text_width(
+        "30", family="sans", size=round(size)
+    )
     for d in range(1, ndays + 1):
         date = datetime.date(cfg.year, month, d)
         rtop = top + (d - 1) * row_h
@@ -532,11 +548,28 @@ def month_page(page: Page, cfg, n: Nav, months, weekdays, month, holidays, prev,
         if fill:
             page.box(0, rtop, page.W, row_h, 0.0, fill, fill)
         page.hline(0, page.W, rtop, 0.2, GUIDE)
-        page.link_text(pt(1), round(rtop + row_h / 2 - pt(5)),
-                       f"{weekdays[date.weekday()]} {d}", f"day-{date.isoformat()}", pt(10))
+        # One link over both pieces — the whole date is the tap target, even
+        # though it is set as two columns. Each piece is underlined on its own,
+        # so no rule runs across the gap between them.
+        label_top = round(rtop + row_h / 2 - pt(5))
+        name = weekdays[date.weekday()]
+        number = str(d)
+        num_w = page.q.text_width(number, family="sans", size=round(size))
+        page.text(pt(1), label_top, name, size, LINK)
+        page.text(num_right - num_w, label_top, number, size, LINK)
+        under = label_top + size + pt(0.8)
+        page.hline(pt(1), pt(1) + page.q.text_width(name, family="sans", size=round(size)),
+                   under, 0.35, LINK)
+        page.hline(num_right - num_w, num_right, under, 0.35, LINK)
+        page.links.append(Link(
+            Point(0, page._y(label_top + size + pt(2))),
+            Point(round(num_right + pt(1)), page._y(label_top - pt(1))),
+            f"day-{date.isoformat()}",
+        ))
         holiday = holidays.get(date)
         if holiday is not None:
-            page.text(mm(22), round(rtop + row_h / 2 - pt(4)), holiday.label, pt(8), INK)
+            page.text(round(num_right + pt(14)), round(rtop + row_h / 2 - pt(4)),
+                      holiday.label, pt(8), INK)
     page.hline(0, page.W, top + ndays * row_h, 0.2, GUIDE)
     return page.done(f"month-{month:02d}", "month", f"{months[month - 1]} {cfg.year}")
 

@@ -611,3 +611,43 @@ class TestContentsColourKey:
         many = [{"color": "#ffd9ec", "label": f"Kind {i}"} for i in range(40)]
         with pytest.raises(DefinitionError, match="contents page needs"):
             CalendarGenerator().check(cfg(legend=many), area=AREA, q=Q)
+
+
+class TestMonthRowsAndNavPlacement:
+    """The month row sets the weekday and the day number as two columns, and the
+    nav strip hangs off the right so the page title keeps the left (§ 7)."""
+
+    def _pages(self):
+        pages, _dests, _edges = _graph(cfg())
+        return pages
+
+    def _right(self, mark: Text) -> int:
+        return mark.pos.x + Q.text_width(mark.content, family="sans", size=mark.size)
+
+    def _row_labels(self, page) -> tuple[list[Text], list[Text]]:
+        rows = [m for m in page.marks if isinstance(m, Text) and m.size == pt(10)]
+        return ([t for t in rows if not t.content.isdigit()],
+                [t for t in rows if t.content.isdigit()])
+
+    def test_the_weekday_names_share_a_left_edge(self) -> None:
+        may = next(p for p in self._pages() if p.dest == "month-05")
+        names, _numbers = self._row_labels(may)
+        assert len(names) == 31
+        assert len({t.pos.x for t in names}) == 1
+
+    def test_the_day_numbers_share_a_right_edge(self) -> None:
+        may = next(p for p in self._pages() if p.dest == "month-05")
+        _names, numbers = self._row_labels(may)
+        assert len(numbers) == 31           # 9 stands under 30 on its units digit
+        assert len({self._right(t) for t in numbers}) == 1
+
+    def test_the_whole_date_stays_one_tap_target(self) -> None:
+        may = next(p for p in self._pages() if p.dest == "month-05")
+        # Split into two columns, but still one link per day — not two.
+        assert len([lk for lk in may.links if lk.target.startswith("day-2026-05")]) == 31
+
+    def test_the_nav_strip_ends_at_the_right_edge(self) -> None:
+        for page in self._pages()[:4]:
+            nav_marks = [m for m in page.marks if isinstance(m, Text) and m.size == pt(9)]
+            if nav_marks:                    # the title page carries no nav
+                assert max(self._right(t) for t in nav_marks) == AREA.width

@@ -1137,7 +1137,7 @@ Ausschießen, kein Zyklus); bestehende Klingen bleiben unangetastet, `generate`
 
 **Links als Fähigkeit, kein siebtes Primitiv.** Ein Link ist eine PDF-Annotation,
 keine Zeichenmarke — genau wie das Lesezeichen (`outline`, § 10.1) *außerhalb* der
-sechs Primitive (§ 6) lebt. Der Schreiber bekommt `define_dest`/`link` und die
+sechs Primitive (§ 6) lebt. Die **Navigationsleiste** sitzt am *rechten* Rand: links gehört dem Seitentitel, und die beiden stritten sich sonst um dieselbe Ecke. Der Schreiber bekommt `define_dest`/`link` und die
 Capability `"link"` (PDF ja, PNG nein → ein Kalender auf PNG wird benannt
 abgelehnt, § 10.2). Das **Sichtbare** eines Links ist ein `Text` mit einem
 `Segment`-Unterstrich, den die Seite ohnehin zeichnet — § 6 bleibt ein Vertrag
@@ -1178,7 +1178,9 @@ die Tage eng zusammen, der Abstand neben der Wochennummer bleibt deutlich größ
 als der zwischen zwei Tagen, und der Rest fällt zwischen die Monate. Passt ein
 Mini-Monat nicht in seine Zelle — ein zu schmales Blatt —, wird der Lauf abgelehnt,
 § 8.2), **Halbjahr 1 & 2** als Tabellen,
-Monate, Tage, optional **Wochen** (an `week_start` ausgerichtet, nicht ISO) und
+Monate (der Wochentag hält die linke Kante, die Tageszahlen stehen
+**rechtsbündig** in einer eigenen Spalte darunter, beides zusammen bleibt *ein*
+Sprungziel), Tage, optional **Wochen** (an `week_start` ausgerichtet, nicht ISO) und
 Notizen. `{year}` als Kopf-Platzhalter. Feiertage kommen **inline oder aus
 einer Datei** (`holidays_file`, YAML-Liste oder konkret-datiertes `.ics`),
 gegen `base_dir` aufgelöst wie `logo`, aufs Jahr gefiltert und mit der
