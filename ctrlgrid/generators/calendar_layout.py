@@ -294,28 +294,81 @@ def year_overview_page(page: Page, cfg, n: Nav, months, weekdays) -> DocumentPag
     for m in range(12):
         r, c = divmod(m, cols)
         _mini_month(page, cfg, months, weekdays, m + 1,
-                    c * (cell_w + gutter), top + r * (cell_h + gutter), cell_w, cell_h)
+                    c * (cell_w + gutter), top + r * (cell_h + gutter), cell_w, cell_h,
+                    n.has_week)
     return page.done("year", "year", f"{cfg.year} full year")
 
 
-def _mini_month(page: Page, cfg, months, weekdays, month, x, top, w, h) -> None:
+#: The mini-month's left column, holding the week number (§ 7).
+_WEEK_COL = pt(15)
+#: The air kept clear at a column's right edge, so adjacent numbers never touch.
+_MINI_PAD = pt(2)
+
+
+def _mini_month(page: Page, cfg, months, weekdays, month, x, top, w, h,
+                has_week: bool = False) -> None:
+    """One mini-month of the full-year overview (§ 7).
+
+    Everything hangs off one right edge per column: the weekday letter and every
+    day number in that column are right-aligned to it, so the letter really does
+    sit over its column and 9 and 30 stack on their units digit. A week-number
+    column on the left takes its width from the day columns — the days move
+    closer together and the week gains a place to be named, and linked.
+    """
+    # Imported here, not at the top: `calendar` imports this module back, and the
+    # week arithmetic must live once, not twice.
+    from ctrlgrid.generators.calendar import week_of
+
     start = _start_weekday(cfg.week_start)
     page.link_text(round(x), round(top), months[month - 1], f"month-{month:02d}", pt(9))
-    col_w = w / 7
+
+    day_size = pt(6.5)
+    week_size = pt(6)
+    col_w = (w - _WEEK_COL) / 7
+
+    def right_edge(column: int) -> float:
+        """The shared right edge of a day column — letters and numbers use it."""
+        return x + _WEEK_COL + (column + 1) * col_w - _MINI_PAD
+
     header = top + pt(13)
     for c in range(7):
-        page.text(round(x + c * col_w + col_w / 2), round(header),
-                  weekdays[(start + c) % 7][:1], pt(6), GUIDE, "center")
+        page.text(round(right_edge(c)), round(header),
+                  weekdays[(start + c) % 7][:1], week_size, GUIDE, "right")
+
     grid_top = header + pt(6)
     row_h = (h - (grid_top - top)) / 6
     ndays = _month_length(cfg.year, month)
     lead = (datetime.date(cfg.year, month, 1).weekday() - start) % 7
+
+    # The week number of each row that actually holds days, right-aligned against
+    # the day grid. It links to its week page when there are week pages to link to.
+    for row in range(6):
+        first = max(1, row * 7 - lead + 1)
+        if first > ndays:
+            break
+        number = week_of(datetime.date(cfg.year, month, first), cfg.year, cfg.week_start)
+        label = str(number)
+        wx = round(
+            x + _WEEK_COL - _MINI_PAD * 2
+            - page.q.text_width(label, family="sans", size=round(week_size))
+        )
+        # Nudged down by the size difference so the week number sits on the same
+        # baseline as its own days: `top` is the cap, and the two sizes differ.
+        cy = round(grid_top + row * row_h + day_size - week_size)
+        if has_week:
+            page.link_text(wx, cy, label, f"week-{number:02d}", week_size)
+        else:
+            page.text(wx, cy, label, week_size, GUIDE)
+
     for d in range(1, ndays + 1):
         idx = lead + d - 1
-        cx = x + (idx % 7) * col_w
+        label = str(d)
+        # Right-aligned by measuring: `link_text` anchors left, so the underline
+        # and the tap box follow the glyphs rather than a guessed box.
+        cx = right_edge(idx % 7) - page.q.text_width(label, family="sans", size=round(day_size))
         cy = grid_top + (idx // 7) * row_h
-        page.link_text(round(cx + pt(1)), round(cy), str(d),
-                       f"day-{cfg.year:04d}-{month:02d}-{d:02d}", pt(6.5))
+        page.link_text(round(cx), round(cy), label,
+                       f"day-{cfg.year:04d}-{month:02d}-{d:02d}", day_size)
 
 
 def half_year_page(page: Page, cfg, n: Nav, months, half: int) -> DocumentPage:

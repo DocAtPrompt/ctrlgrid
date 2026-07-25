@@ -1165,7 +1165,11 @@ transparente Stellen die Farbe durchlassen) und **optional Kopf-/Fußzeile**
 vertikal zwischen Navigationsleiste und Fuß zentriert; passt er nicht auf eine
 Seite — ein sehr langer Notizen-Index —, wird der Lauf abgelehnt, § 8.2),
 eine minimale **Ganzjahresübersicht** (nur Zahlen als unterstrichene
-Links, keine Boxen, alles auf einer Seite), **Halbjahr 1 & 2** als Tabellen,
+Links, keine Boxen, alles auf einer Seite; je Mini-Monat **eine rechte Kante pro
+Spalte** — der Wochentagsbuchstabe steht über seiner Spalte, die Tageszahlen
+stehen rechtsbündig übereinander — und links jeder Woche ihre **Wochennummer**,
+verlinkt, sobald es Wochenseiten gibt; die Spalte dafür nimmt ihre Breite von
+den Tagesspalten), **Halbjahr 1 & 2** als Tabellen,
 Monate, Tage, optional **Wochen** (an `week_start` ausgerichtet, nicht ISO) und
 Notizen. `{year}` als Kopf-Platzhalter. Feiertage kommen **inline oder aus
 einer Datei** (`holidays_file`, YAML-Liste oder konkret-datiertes `.ics`),

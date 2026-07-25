@@ -372,3 +372,77 @@ class TestContentsLayout:
 
     def test_an_ordinary_notes_count_is_not_refused(self) -> None:
         CalendarGenerator().check(cfg(notes={"count": 200}), area=AREA, q=Q)
+
+
+class TestYearOverviewGrid:
+    """The full-year overview's mini-months: one right edge per column, so a
+    weekday letter sits over its own column and 9 stacks under 30 — and a week
+    number down the left, linked when there are week pages (§ 7)."""
+
+    def _year(self, **kw):
+        pages, _dests, _edges = _graph(cfg(**kw))
+        return next(p for p in pages if p.dest == "year")
+
+    def _january(self, page) -> list[Text]:
+        """January's texts — the top-left mini-month of the twelve."""
+        texts = [m for m in page.marks if isinstance(m, Text)]
+        top = max(t.pos.y for t in texts if t.content == "January")
+        return [t for t in texts if t.pos.x < 61_000 and top - 60_000 < t.pos.y < top]
+
+    def _right(self, mark: Text) -> int:
+        """A mark's right edge, however it is anchored."""
+        if mark.align == "right":
+            return mark.pos.x
+        return mark.pos.x + Q.text_width(mark.content, family="sans", size=mark.size)
+
+    # The three kinds are told apart by how they are set, not by their content:
+    # a "5" is both a day and a week number in January.
+    def _letters(self, texts):
+        return [t for t in texts if t.size == pt(6) and t.align == "right"]
+
+    def _weeks(self, texts):
+        return [t for t in texts if t.size == pt(6) and t.align != "right"]
+
+    def _days(self, texts):
+        return [t for t in texts if t.size == pt(6.5)]
+
+    def test_the_weekday_letters_sit_over_their_columns(self) -> None:
+        texts = self._january(self._year())
+        letters = sorted(self._right(t) for t in self._letters(texts))
+        rows: dict[int, list[Text]] = {}
+        for day in self._days(texts):
+            rows.setdefault(day.pos.y, []).append(day)
+        full = next(r for r in rows.values() if len(r) == 7)   # a whole week
+        assert letters == sorted(self._right(t) for t in full)
+
+    def test_the_day_numbers_in_a_column_share_a_right_edge(self) -> None:
+        texts = self._january(self._year())
+        # Every Monday of January 2026 — one and two digits in the same column.
+        mondays = [t for t in self._days(texts) if t.content in {"5", "12", "19", "26"}]
+        assert len(mondays) == 4
+        assert len({self._right(t) for t in mondays}) == 1
+
+    def test_every_week_row_carries_its_number(self) -> None:
+        texts = self._january(self._year())
+        # January 2026 spans five weeks, and each row is named once.
+        assert [t.content for t in sorted(self._weeks(texts), key=lambda m: -m.pos.y)] == [
+            "1", "2", "3", "4", "5",
+        ]
+
+    def test_the_week_number_sits_on_its_own_row_baseline(self) -> None:
+        texts = self._january(self._year())
+        baselines = {t.pos.y for t in self._days(texts)}
+        # Sizes differ, so a shared cap top would leave the number a hair high —
+        # it is nudged onto the day baseline instead.
+        assert all(week.pos.y in baselines for week in self._weeks(texts))
+
+    def test_the_week_numbers_link_when_week_pages_exist(self) -> None:
+        targets = {link.target for link in self._year(week_view={}).links}
+        assert "week-01" in targets
+
+    def test_without_week_pages_the_numbers_are_not_linked(self) -> None:
+        assert not any(link.target.startswith("week-") for link in self._year().links)
+
+    def test_no_link_dangles_with_week_pages(self) -> None:
+        _pages, dests, edges = _graph(cfg(week_view={}, notes={"count": 5}))
+        assert sorted(target for _src, target in edges if target not in dests) == []
