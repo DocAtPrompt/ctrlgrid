@@ -302,6 +302,18 @@ Update the spec and CLAUDE.md in the same breath, so the next instance inherits
 the truth; and note the **elements-of-style / verify-before-completion habits**
 this project runs on — claims are backed by a command's output, never asserted.
 
+## What to do next
+
+A handover written at the end of the 2026-07-25 session names the order:
+[`docs/superpowers/plans/2026-07-25-next-steps-handover.md`](superpowers/plans/2026-07-25-next-steps-handover.md).
+Phase 0 is the **online presence** — the README does not mention the calendar,
+there is no calendar example, and the handbook's calendar section predates the
+whole beautification pass. Then an edge ruler, angled line families (which
+calligraphy guides *and* origami pre-creasing both need), international presets,
+and a `notebook` document generator; then fold notation and a parametric `net`.
+A specific paper aeroplane was considered and **refused**: it is a drawing, not
+a structure, and § 2 rules out a drawing language.
+
 ## Open questions
 
 Two of § 15's six are now settled since the last handover. **Question 3 closed**
