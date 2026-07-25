@@ -8,6 +8,7 @@ nothing about the metrics the output is built from.
 from __future__ import annotations
 
 import pytest
+from pydantic import ValidationError
 
 from ctrlgrid.errors import DefinitionError
 from ctrlgrid.frame import layout_band
@@ -139,3 +140,17 @@ class TestGlyphCoverage:
         message = str(excinfo.value)
         assert "ł" in message
         assert "font" in message.lower()
+
+
+class TestBandColourModel:
+    def test_colour_fields_default_to_none(self) -> None:
+        band = Band(height="12mm", center="x")
+        assert band.background is None and band.text_color is None
+
+    def test_colour_fields_accept_a_colour(self) -> None:
+        band = Band(height="12mm", center="x", background="#2f3a48", text_color="#ffffff")
+        assert band.background == "#2f3a48" and band.text_color == "#ffffff"
+
+    def test_an_invalid_colour_is_refused(self) -> None:
+        with pytest.raises(ValidationError):  # via ColorField
+            Band(height="12mm", center="x", background="not-a-colour")

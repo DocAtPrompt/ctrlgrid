@@ -238,6 +238,31 @@ def _text_or_image(value: Any) -> Any:
 FieldContent = Annotated[str | ImageSpec | None, BeforeValidator(_text_or_image)]
 
 
+def _as_color(value: Any) -> Any:
+    """`#rrggbb`, six digits, RGB — no names, no alpha, no CMYK (§ 5.3).
+
+    `none` and an absent key mean the same thing: no colour. § 5.1 lists `none`
+    among the keywords that stand where a measure could, so it is spelled out
+    rather than left to an empty value.
+    """
+    if value is None or value == "none":
+        return None
+    if not (
+        isinstance(value, str)
+        and len(value) == 7
+        and value.startswith("#")
+        and all(character in "0123456789abcdefABCDEF" for character in value[1:])
+    ):
+        raise ValueError(
+            f"colour must be #rrggbb, six digits, RGB — got {value!r}. "
+            "Opacity is a field of its own (§ 5.3)"
+        )
+    return value
+
+
+ColorField = Annotated[str | None, BeforeValidator(_as_color)]
+
+
 class Band(Section):
     """A header or footer: three fields on a fixed height (§ 8.4, § 8.9).
 
@@ -254,6 +279,11 @@ class Band(Section):
     left: FieldContent = None
     center: FieldContent = None
     right: FieldContent = None
+    #: A full-width colour strip behind the band (band height only), and the
+    #: colour of the band's text — both off by default (§ 8.9). `None` is
+    #: byte-identical to today: no strip, black text.
+    background: ColorField | None = None
+    text_color: ColorField | None = None
 
     @model_validator(mode="after")
     def _heights_are_non_negative(self) -> Band:
@@ -300,31 +330,6 @@ def _check(value: str, allowed: set[str], field: str) -> None:
 
 REMAINDER_MODES = {"end", "center", "whole_cycles"}
 SNAP_MODES = {"none", "spacing", "cycle", "pixel"}
-
-
-def _as_color(value: Any) -> Any:
-    """`#rrggbb`, six digits, RGB — no names, no alpha, no CMYK (§ 5.3).
-
-    `none` and an absent key mean the same thing: no colour. § 5.1 lists `none`
-    among the keywords that stand where a measure could, so it is spelled out
-    rather than left to an empty value.
-    """
-    if value is None or value == "none":
-        return None
-    if not (
-        isinstance(value, str)
-        and len(value) == 7
-        and value.startswith("#")
-        and all(character in "0123456789abcdefABCDEF" for character in value[1:])
-    ):
-        raise ValueError(
-            f"colour must be #rrggbb, six digits, RGB — got {value!r}. "
-            "Opacity is a field of its own (§ 5.3)"
-        )
-    return value
-
-
-ColorField = Annotated[str | None, BeforeValidator(_as_color)]
 
 
 class BorderSpec(Section):
