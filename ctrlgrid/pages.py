@@ -902,6 +902,15 @@ def _document_preflight(
     blade.check(document.config, area=geometry.area, q=probe)
     _refuse_writer_cannot_render_document(document, blade, geometry, q, probe)
 
+    # § 12.1 reaches a document too: its pages are walked for the weights and
+    # colours the medium has to carry. A round-to-zero stroke raises, the rest
+    # become notices, and `--strict` turns them into errors — the same
+    # treatment the blade path gets, from the same function.
+    from ctrlgrid.media import media_findings
+
+    findings = media_findings(document, probe, strict=document.strict)
+    geometry = replace(geometry, notices=geometry.notices + tuple(findings))
+
     # The optional header/footer are constant across a document (§ 7), so they
     # are measured once here — against a context whose count is the real page
     # total, and with the generator's own placeholders (`{year}`). Measured in

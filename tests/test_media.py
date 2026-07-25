@@ -20,7 +20,6 @@ from pathlib import Path
 
 import pytest
 
-from ctrlgrid.document import is_document_generator
 from ctrlgrid.errors import DefinitionError
 from ctrlgrid.loader import loads
 from ctrlgrid.media import media_findings
@@ -145,18 +144,10 @@ class TestPaperUsesAssumedDpi:
         # A preset is documentation (§ 9.3), and one that warns about itself
         # teaches the wrong thing. This caught a 0.1pt stroke — 0.83px at
         # 600 dpi — in two presets on the day it was written.
-        from ctrlgrid.generators import get
         from ctrlgrid.loader import load_preset, preset_names
 
         for name in preset_names():
             document = load_preset(name)
-            if is_document_generator(get(document.generator)):
-                # The media check samples a blade's marks, and a document
-                # generator has no single pattern area to sample — it owns its
-                # pages. So `calendar-a4` is not covered here, and nothing else
-                # covers it either: § 12.1 does not reach document generators
-                # yet. Recorded rather than quietly skipped.
-                continue
             assert media_findings(document, Q) == [], f"{name} warns about itself"
 
 
@@ -196,3 +187,73 @@ class TestInThePreflight:
         with pytest.raises(DefinitionError):
             build(document, PdfWriter(path))
         assert not path.exists()
+
+
+class TestDocumentGenerators:
+    """§ 12.1 for a generator that owns its pages (§ 7).
+
+    The check reads marks, and a document has no single pattern area to read
+    them from — it has pages. Every page is walked, not one per page kind: a
+    marked day's own colour appears only on the pages carrying that date, so a
+    shortcut would measure January and miss a birthday in May.
+    """
+
+    CALENDAR = (
+        "generator: calendar\nyear: 2026\n"
+        "holiday_color: '#fce9e4'\n"
+        "holidays:\n"
+        "  - {date: 2026-05-03, label: 'a birthday', color: '#cc4488'}\n"
+        "notes: {count: 2}\n"
+    )
+
+    def test_a_colour_that_appears_only_on_a_late_page_is_still_found(self) -> None:
+        # The birthday is in May; its colour is on no page before it. On a
+        # grayscale device it turns to mud, and that has to be said.
+        notes = findings(GRAY + self.CALENDAR)
+        assert any("#cc4488" in note for note in notes)
+
+    def test_the_title_pages_full_sheet_colour_counts_as_a_colour(self) -> None:
+        # The fill is a page property the handle paints, not a mark — but on a
+        # grayscale screen it is exactly what goes flat.
+        notes = findings(
+            GRAY + self.CALENDAR + "title_page: {title: '2026', background: '#2f3a48'}\n"
+        )
+        assert any("#2f3a48" in note for note in notes)
+
+    def test_a_calendar_on_paper_says_nothing(self) -> None:
+        from ctrlgrid.loader import load_preset
+
+        assert media_findings(load_preset("calendar-a4"), Q) == []
+
+    def test_strict_turns_a_documents_finding_into_an_error(self) -> None:
+        document = loads(GRAY + self.CALENDAR, None, source="test")
+        with pytest.raises(DefinitionError):
+            media_findings(document, Q, strict=True)
+
+
+class TestDocumentsInTheRun:
+    """The check has to be *called* on the document path, not merely callable.
+
+    A calendar wants a wide sheet — the twelve mini-months of its year page are
+    refused on a portrait e-ink screen (§ 9) — so the medium here is a landscape
+    reMarkable 2, which is also the case a user would actually meet.
+    """
+
+    ON_A_GRAYSCALE_SCREEN = (
+        "version: 1\npage:\n  device: remarkable-2\n  orientation: landscape\n"
+        "  margin: 0mm\n"
+        "generator: calendar\nyear: 2026\n"
+        "holidays:\n  - {date: 2026-05-03, label: 'a birthday', color: '#cc4488'}\n"
+    )
+
+    def test_the_preflight_reports_a_documents_findings_as_notices(self) -> None:
+        document = loads(self.ON_A_GRAYSCALE_SCREEN, None, source="test")
+        geometry, _contexts, _bands, _cover = preflight(document, Q)
+        # The link blue and the birthday pink read as one tone there — a real
+        # finding, and one nothing said before the check reached documents.
+        assert any("#cc4488" in note for note in geometry.notices)
+
+    def test_strict_stops_a_document_run_at_the_preflight(self) -> None:
+        document = loads(self.ON_A_GRAYSCALE_SCREEN, {"strict": True}, source="test")
+        with pytest.raises(DefinitionError):
+            preflight(document, Q)

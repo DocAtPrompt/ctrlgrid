@@ -879,3 +879,34 @@ Snapping needed no new machinery: a slanted family reports no periodic axis at
 all, so § 8.3's existing handling applies unchanged and the handle never learns
 what an angle is. `governing: true` and `law: log10` are refused on a slanted
 family for the same reason — both name an axis that is not there.
+
+
+## 49. The media check walks every page of a document (§ 12.1, § 7)
+
+§ 12.1 measures a definition against its medium by reading marks, and it read
+them from a *blade*: build the geometry, take page 0's context, call `generate`.
+A document generator refuses `generate` by design — it owns pages — so the check
+raised on one, and the document pre-flight never called it. A calendar's weights
+and colours were therefore measured against nothing at all, which the new
+"every shipped preset is clean on its own medium" test found by having to skip
+`calendar-a4`.
+
+The sample now branches on the document seam and walks `pages()`, keeping **one
+mark per distinct stroke width and colour**. Two calls inside that are worth
+recording:
+
+**Every page, not the first of each `kind`.** `DocumentPage.kind` is right there
+and sampling one page per kind would be nine pages instead of 456. It would also
+be wrong: a marked day carries its own colour and appears only on the pages
+holding that date, so a birthday in May would go unmeasured while January passed.
+The full walk costs about 0.17 s once per run — a calendar build went from 1.6 s
+to 1.8 s — and the memory stays at a dozen marks because only distinct
+(weight, colour) survive.
+
+**A page's `background` counts as a colour.** The title page's full-sheet fill is
+a page property the handle paints (§ 3.3), not a mark, so a mark-only sample
+would miss it — and on a grayscale screen that fill is exactly what goes flat.
+
+The findings are real, not theoretical: a calendar on a landscape reMarkable 2
+now says that its link blue `#2f5686` and a birthday's `#cc4488` are 21 grey
+levels apart and will read as one tone. Nothing said that before.

@@ -39,7 +39,7 @@ needs a human *and* the user has chosen to defer PyPI for now (see *Not done*).
 uv sync --extra dev && uv run pytest && uv run ruff check .
 ```
 
-1081 tests, all green, ruff clean. Sixty-odd commits on `main`, linear history,
+1087 tests, all green, ruff clean. Sixty-odd commits on `main`, linear history,
 pushed to **[github.com/DocAtPrompt/ctrlgrid](https://github.com/DocAtPrompt/ctrlgrid)**
 (public); CI runs green there on Linux (3.11–3.13), macOS and Windows. Fifteen
 presets — one per generator (`lines`, `dots`, `polar`, `form`, `maze`,
@@ -98,15 +98,6 @@ says so.
 | pulled forward into M1 | format table, presets, `check`, overwrite protection, placeholders — the M1 acceptance criteria needed them |
 
 ### Not done
-
-**The media check does not reach a document generator.** § 12.1 samples a
-blade's marks against the medium, and `calendar` has no single pattern area to
-sample — it owns its pages. So `calendar-a4` is the one preset
-`test_every_shipped_preset_is_clean_on_its_own_medium` skips, and the skip says
-so in place rather than passing quietly. Fixing it means sampling a document's
-pages the way the capability pre-flight samples one page's marks; small, and
-nobody has needed it yet because the calendar is drawn for paper and pen tablets
-at weights well above the threshold.
 
 **Two small edges of M5 remain**, and each names why:
 
@@ -223,7 +214,7 @@ and knows nothing about margins.
 | `clip.py` | Liang–Barsky in exact rationals, shared by `perspective` and slanted `lines` |
 | `ruler.py` | the edge scale's ladder: tick positions, exact labels, the strip it needs (§ 8.12) |
 | `images.py` | PNG sources: signature check, pixel size, aspect (§ 5.2, § 13) |
-| `media.py` | the media check: resolution and colour findings (§ 12.1) |
+| `media.py` | the media check: resolution and colour findings (§ 12.1), for blades **and** documents — a document's pages are all walked, one mark kept per distinct weight and colour (decision 49) |
 | `impose.py` | N-up layout, the 100 % fit check, crop marks (§ 14) |
 | `fonts.py` | font files: `fsType` licence check, version, coverage (§ 10.3) |
 | `cover.py` | the cover sheet: calibration figures, the stroke-weight ladder, settings summary (§ 8.8) |

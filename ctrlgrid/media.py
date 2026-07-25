@@ -21,7 +21,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from ctrlgrid.errors import DefinitionError
-from ctrlgrid.marks import Arc, Dot, Polygon, Segment
+from ctrlgrid.marks import Arc, Dot, Point, Polygon, Segment
 from ctrlgrid.writers import WriterQuery
 
 if TYPE_CHECKING:
@@ -170,8 +170,15 @@ def _colour_findings(marks: list[object], document: Document) -> list[str]:
 
 
 def _sample(document: Document, q: WriterQuery):
-    """The marks of page 0, to read weights and colours off (§ 12.1)."""
+    """The marks to read weights and colours off (§ 12.1).
+
+    A blade fills one pattern area with one repeating pattern, so page 0 shows
+    everything it has. A **document generator** owns heterogeneous pages
+    instead (§ 7), and there every page is walked — see `_document_sample` for
+    why one page per kind would be cheaper and wrong.
+    """
     from ctrlgrid import generators
+    from ctrlgrid.document import is_document_generator
     from ctrlgrid.pages import Geometry, page_contexts
 
     geometry = Geometry.of(
@@ -182,9 +189,47 @@ def _sample(document: Document, q: WriterQuery):
         blade_axes=document.axes,
         density=document.device.density if document.device else None,
     )
-    page = next(page_contexts(count=1, snap=geometry.pixel_snap))
     blade = generators.get(document.generator)
+    if is_document_generator(blade):
+        return _document_sample(document, blade, geometry, q)
+    page = next(page_contexts(count=1, snap=geometry.pixel_snap))
     return blade.generate(document.config, area=geometry.area, page=page, q=q)
+
+
+def _document_sample(document: Document, blade: object, geometry, q: WriterQuery):
+    """One mark per distinct stroke width and colour, across **every** page.
+
+    Every page, not the first of each `kind`: a marked day carries its own
+    colour and appears on exactly the pages holding that date, so a shortcut
+    would measure January and miss a birthday in May — the silent almost-right
+    of § 5.1. The full walk of a 456-page year planner costs about a fifth of a
+    second, once per run, and only one mark per distinct (weight, colour) is
+    kept, so a document is no heavier here than a sheet.
+
+    A page's `background` is a colour too. The handle paints that fill rather
+    than the generator (§ 3.3), so it is no mark — but on a grayscale screen it
+    is exactly what goes flat, and § 12.1 has to say so.
+    """
+    seen: set[tuple] = set()
+    for page in blade.pages(document.config, area=geometry.area, q=q):
+        if page.background is not None:
+            key = ("background", page.background)
+            if key not in seen:
+                seen.add(key)
+                yield Segment(
+                    start=Point(0, 0), end=Point(0, 0), weight=0.0, color=page.background
+                )
+        for mark in page.marks:
+            key = (
+                type(mark).__name__,
+                getattr(mark, "weight", None),
+                getattr(mark, "diameter", None),
+                getattr(mark, "color", None),
+            )
+            if key in seen:
+                continue
+            seen.add(key)
+            yield mark
 
 
 def _weights(marks: list[object]) -> set[tuple[float, str]]:

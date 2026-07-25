@@ -2199,6 +2199,18 @@ sichtbar wäre — und beim PDF-Weg (§ 9.2), der der übliche ist, nie.
 Grundlage ist eine **Auflösung je Medium**: bei Geräteprofilen `density`, bei
 Papierformaten ein angenommener Druckwert (`assumed_dpi`, § 9.1, typisch 600).
 
+**Auch Dokumentgeneratoren werden geprüft** (§ 7, festgelegt beim Bau 2026-07).
+Eine Klinge füllt eine Musterfläche mit einem sich wiederholenden Muster —
+Seite 0 zeigt alles, was sie hat. Ein Dokument besitzt dagegen ungleiche Seiten,
+deshalb werden **alle** Seiten durchlaufen und je Stärke und Farbe eine Marke
+behalten. Nicht eine Seite je Seitenart: die eigene Farbe eines markierten Tages
+steht nur auf den Seiten dieses Datums, ein Geburtstag im Mai bliebe also
+ungemessen — das stille „fast richtig" aus § 5.1. Der volle Durchlauf eines
+Jahresplaners mit 456 Seiten kostet etwa zwei Zehntelsekunden, einmal pro Lauf.
+Die **Hintergrundfarbe einer Seite** zählt dabei als Farbe mit, obwohl der Griff
+sie malt und sie keine Marke ist: auf einem Graustufenschirm ist gerade sie es,
+die zu Brei wird.
+
 #### Auflösungsbedingte Befunde
 
 | Befund | Bedeutung |
