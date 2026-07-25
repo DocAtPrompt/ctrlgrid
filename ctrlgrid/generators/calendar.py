@@ -74,10 +74,13 @@ def _resolve_def_image(value: str | None, info, field: str) -> str | None:
 
 
 class Holiday(Section):
-    """One holiday: a date and the label to show on it (§ 7)."""
+    """One marked day: a date, the label to show on it, and optionally its own
+    colour (§ 7). Not only public holidays — a birthday or an anniversary is the
+    same thing to the calendar, and its own colour is what tells them apart."""
 
     date: datetime.date
     label: str
+    color: ColorField | None = None
 
 
 class DayBlock(Section):
@@ -190,6 +193,9 @@ class CalendarConfig(BaseModel):
     weekdays: tuple[str, ...] | None = None
     holidays: tuple[Holiday, ...] = ()
     holidays_file: str | None = None
+    #: The fill for a marked day that names no colour of its own (§ 7). It beats
+    #: the weekend shade, because a marked day is the more particular fact.
+    holiday_color: ColorField = "#fce9e4"
     #: Computed provenance for the report (set by the before-validator, never by
     #: the user); `describe()` names it. § 7.12.
     holidays_source: str | None = None
@@ -473,7 +479,7 @@ class CalendarGenerator:
         weekdays = cfg.weekday_names()
         has_notes = cfg.notes is not None
         has_week = cfg.week_view is not None
-        holidays = {h.date: h.label for h in cfg.holidays}
+        holidays = {h.date: h for h in cfg.holidays}
         all_days = list(days_of_year(cfg.year))
         weeks = weeks_of_year(cfg.year, cfg.week_start) if has_week else []
         day_blocks = cfg.day.blocks if cfg.day is not None else (

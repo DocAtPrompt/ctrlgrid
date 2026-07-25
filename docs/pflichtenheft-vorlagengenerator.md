@@ -1185,7 +1185,16 @@ gegen `base_dir` aufgelöst wie `logo`, aufs Jahr gefiltert und mit der
 Inline-Liste vereint (Inline gewinnt bei Datumsgleichheit). Wiederkehrende
 (`RRULE`) und terminierte (DATE-TIME) `.ics`-Events werden **gezählt
 übersprungen**, nie still verschluckt; die Quelle nennt der Laufbericht
-(`X-WR-CALNAME`/`PRODID`), nichts im PDF. Damit ist § 7.12 vollständig.
+(`X-WR-CALNAME`/`PRODID`), nichts im PDF.
+
+Ein Eintrag ist nicht auf Feiertage beschränkt — Geburtstage und Jahrestage sind
+demselben Kalender dasselbe. Jeder trägt optional eine **eigene Farbe** (`color`),
+sonst die des Dokuments (`holiday_color`); sie **schlägt die Wochenend-Tönung**,
+weil der markierte Tag die besondere Aussage ist. Gezeigt wird sie überall
+*hinter* dem Tag: als Zellfüllung in der Halbjahrestabelle, als Zeilenfüllung auf
+der Monatsseite, als Fläche hinter der Zahl in der Ganzjahresübersicht (die
+bewusst keine Zellrahmen hat) und als Fläche hinter der Bezeichnung auf der
+Tagesseite. Damit ist § 7.12 vollständig.
 
 ---
 

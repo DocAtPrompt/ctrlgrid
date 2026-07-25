@@ -527,3 +527,48 @@ class TestHalfYearTable:
         only = [t for t in page.marks
                 if isinstance(t, Text) and t.content == "31" and t.size == pt(6.5)]
         assert len(only) == 1
+
+
+class TestMarkedDays:
+    """A marked day — a holiday, a birthday, an anniversary — wears a colour,
+    its own or the definition's default, and it beats the weekend shade (§ 7)."""
+
+    MARKS = {
+        "holidays": [
+            {"date": "2026-01-01", "label": "New Year"},
+            {"date": "2026-05-03", "label": "Birthday", "color": "#ffd9ec"},
+        ]
+    }
+
+    def _page(self, dest: str):
+        pages, _dests, _edges = _graph(cfg(**self.MARKS))
+        return next(p for p in pages if p.dest == dest)
+
+    def _fills(self, page) -> set[str]:
+        return {m.fill_color for m in page.marks
+                if isinstance(m, Polygon) and m.fill_color}
+
+    def test_an_entry_may_carry_its_own_colour(self) -> None:
+        c = cfg(**self.MARKS)
+        assert c.holidays[1].color == "#ffd9ec"
+        assert c.holidays[0].color is None      # this one takes the default
+        assert c.holiday_color is not None
+
+    def test_the_half_year_cell_takes_the_marked_colour(self) -> None:
+        fills = self._fills(self._page("half-1"))
+        c = cfg(**self.MARKS)
+        assert c.holiday_color in fills                       # New Year's cell
+        assert c.year_view.weekend_shade in fills             # weekends still shaded
+
+    def test_the_month_row_takes_the_entrys_own_colour(self) -> None:
+        assert "#ffd9ec" in self._fills(self._page("month-05"))
+
+    def test_the_year_overview_colours_the_number_itself(self) -> None:
+        # No cell boxes there by design, so the mark is a patch behind the number.
+        assert cfg(**self.MARKS).holiday_color in self._fills(self._page("year"))
+
+    def test_the_day_page_sets_the_label_on_its_colour(self) -> None:
+        assert "#ffd9ec" in self._fills(self._page("day-2026-05-03"))
+
+    def test_an_unmarked_weekday_stays_plain(self) -> None:
+        assert self._fills(self._page("day-2026-05-04")) == set()

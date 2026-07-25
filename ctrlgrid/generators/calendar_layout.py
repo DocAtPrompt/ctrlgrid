@@ -131,6 +131,25 @@ class Page:
                             links=tuple(self.links), title=title)
 
 
+def marked_days(cfg) -> dict[datetime.date, str]:
+    """date → the colour that marks it (§ 7).
+
+    A marked day is any entry of `holidays` — a public holiday, a birthday, an
+    anniversary; the calendar does not care which. Its own `color` wins, else the
+    definition's `holiday_color`.
+    """
+    return {h.date: (h.color or cfg.holiday_color) for h in cfg.holidays}
+
+
+def _badge(page: Page, x, top, text, size, color) -> None:
+    """A filled patch behind a piece of text — how a marked day shows itself
+    where there is no cell to fill (§ 7). Drawn before the text, so the text
+    reads over it; the patch is the glyphs' own width, measured."""
+    pad = pt(1.5)
+    width = page.q.text_width(text, family="sans", size=round(size))
+    page.box(x - pad, top - pad, width + 2 * pad, size + 2 * pad, 0.0, color, color)
+
+
 # ------------------------------------------------------------------ nav strip
 
 
@@ -291,11 +310,12 @@ def year_overview_page(page: Page, cfg, n: Nav, months, weekdays) -> DocumentPag
     gutter = _YEAR_GUTTER
     cell_w = mini_month_cell_width(page.W)
     cell_h = (page.H - top - pt(2) - (rows - 1) * gutter) / rows
+    marked = marked_days(cfg)
     for m in range(12):
         r, c = divmod(m, cols)
         _mini_month(page, cfg, months, weekdays, m + 1,
                     c * (cell_w + gutter), top + r * (cell_h + gutter), cell_w, cell_h,
-                    n.has_week)
+                    n.has_week, marked)
     return page.done("year", "year", f"{cfg.year} full year")
 
 
@@ -330,7 +350,7 @@ def mini_month_cell_width(area_width: int) -> float:
 
 
 def _mini_month(page: Page, cfg, months, weekdays, month, x, top, w, h,
-                has_week: bool = False) -> None:
+                has_week: bool = False, marked: dict | None = None) -> None:
     """One mini-month of the full-year overview (§ 7).
 
     Everything hangs off one right edge per column: the weekday letter and every
@@ -406,6 +426,10 @@ def _mini_month(page: Page, cfg, months, weekdays, month, x, top, w, h,
         # and the tap box follow the glyphs rather than a guessed box.
         cx = right_edge(idx % 7) - page.q.text_width(label, family="sans", size=round(day_size))
         cy = grid_top + (idx // 7) * row_h
+        # No cell boxes here by design (§ 7), so a marked day colours the number.
+        colour = (marked or {}).get(datetime.date(cfg.year, month, d))
+        if colour:
+            _badge(page, round(cx), round(cy), label, day_size, colour)
         page.link_text(round(cx), round(cy), label,
                        f"day-{cfg.year:04d}-{month:02d}-{d:02d}", day_size)
 
@@ -434,6 +458,7 @@ def _half_table(page: Page, cfg, months, top, h, *, first_month: int) -> None:
     col_w = (page.W - day_col - (day_col if both else 0)) / 6
     row_h = h / 32  # one header row + 31 day rows
     shade = cfg.year_view.weekend_shade
+    marked = marked_days(cfg)
     size = pt(6.5)
 
     def in_row(row: int, text_size: float) -> int:
@@ -456,8 +481,10 @@ def _half_table(page: Page, cfg, months, top, h, *, first_month: int) -> None:
         for d in range(1, ndays + 1):
             rtop = top + row_h * d
             date = datetime.date(cfg.year, month, d)
-            if date.weekday() >= 5 and shade:
-                page.box(cx, rtop, col_w, row_h, 0.0, shade, shade)
+            # The marked day's own colour first: it is the more particular fact.
+            fill = marked.get(date) or (shade if date.weekday() >= 5 else None)
+            if fill:
+                page.box(cx, rtop, col_w, row_h, 0.0, fill, fill)
             page.box(cx, rtop, col_w, row_h, 0.2, GUIDE)  # only existing days get a cell
             if cfg.year_view.cell_link == "day":
                 page.links.append(
@@ -472,30 +499,38 @@ def month_page(page: Page, cfg, n: Nav, months, weekdays, month, holidays, prev,
     top = crumb(page, title=f"{months[month - 1]} {cfg.year}", prev=prev, nxt=nxt, up="year")
     avail = page.H - top - pt(2)
     row_h = avail / ndays
+    marked = marked_days(cfg)
     for d in range(1, ndays + 1):
         date = datetime.date(cfg.year, month, d)
         rtop = top + (d - 1) * row_h
-        if date.weekday() >= 5 and cfg.month_view.weekend_shade:
-            page.box(0, rtop, page.W, row_h, 0.0,
-                     cfg.month_view.weekend_shade, cfg.month_view.weekend_shade)
+        fill = marked.get(date) or (
+            cfg.month_view.weekend_shade if date.weekday() >= 5 else None
+        )
+        if fill:
+            page.box(0, rtop, page.W, row_h, 0.0, fill, fill)
         page.hline(0, page.W, rtop, 0.2, GUIDE)
         page.link_text(pt(1), round(rtop + row_h / 2 - pt(5)),
                        f"{weekdays[date.weekday()]} {d}", f"day-{date.isoformat()}", pt(10))
-        label = holidays.get(date)
-        if label:
-            page.text(mm(22), round(rtop + row_h / 2 - pt(4)), label, pt(8), LINK)
+        holiday = holidays.get(date)
+        if holiday is not None:
+            page.text(mm(22), round(rtop + row_h / 2 - pt(4)), holiday.label, pt(8), INK)
     page.hline(0, page.W, top + ndays * row_h, 0.2, GUIDE)
     return page.done(f"month-{month:02d}", "month", f"{months[month - 1]} {cfg.year}")
 
 
-def day_page(page: Page, cfg, n: Nav, months, weekdays, date, blocks, holiday_label, prev, nxt):
+def day_page(page: Page, cfg, n: Nav, months, weekdays, date, blocks, holiday, prev, nxt):
     month = date.month
     nav(page, n)
     title = f"{weekdays[date.weekday()]} {date.day} {months[month - 1]}"
     top = crumb(page, title=title, prev=prev, nxt=nxt, up=f"month-{month:02d}")
-    if holiday_label:
-        page.text(0, top, holiday_label, pt(9), LINK)
-        top += pt(12)
+    if holiday is not None:
+        # The day has no cell to fill, so the label wears the colour itself. It
+        # starts a little lower than the body would: the patch reaches above the
+        # cap, and the title above it has descenders.
+        top += pt(4)
+        _badge(page, 0, top, holiday.label, pt(9), holiday.color or cfg.holiday_color)
+        page.text(0, top, holiday.label, pt(9), INK)
+        top += pt(16)
     _draw_blocks(page, blocks, top)
     return page.done(f"day-{date.isoformat()}", "day", title)
 

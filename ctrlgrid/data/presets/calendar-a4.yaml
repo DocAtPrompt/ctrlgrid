@@ -45,10 +45,16 @@ months:
   - December
 weekdays: [Mon, Tue, Wed, Thu, Fri, Sat, Sun]
 
-# A list of holidays: each marks its day cell and shows on the month and day.
+# Marked days: holidays, birthdays, anniversaries — the calendar treats them
+# alike. Each fills its cell in the half-year table, its row on the month page,
+# its number in the full-year overview, and carries its label on the day page.
+# `color` is per entry; entries without one take `holiday_color`.
+holiday_color: "#fce9e4"
 holidays:
   - { date: 2026-01-01, label: New Year }
   - { date: 2026-12-25, label: Christmas }
+  # - { date: 2026-05-03, label: "Mama's birthday", color: "#ffd9ec" }
+  # holidays_file: holidays.ics   # or a YAML list — see § 7.12
 
 # A cover: a full-page colour with a centred title and subtitle. Drop it for no
 # title page.
