@@ -13,7 +13,7 @@ import pytest
 from pydantic import ValidationError
 
 from ctrlgrid.errors import DefinitionError
-from ctrlgrid.generators.calendar import CalendarConfig
+from ctrlgrid.generators.calendar import CalendarConfig, CalendarGenerator
 from ctrlgrid.generators.holiday_import import read_holiday_file
 
 
@@ -204,3 +204,20 @@ def test_holidays_source_cannot_be_set_by_the_user(tmp_path):
     # A user value is popped and ignored; no file → no source.
     cfg = _cfg(tmp_path, holidays_source="forged")
     assert cfg.holidays_source is None
+
+
+def test_describe_names_the_file_source(tmp_path):
+    (tmp_path / "hol.ics").write_text(_ICS.replace("\n", "\r\n"), encoding="utf-8")
+    cfg = _cfg(tmp_path, holidays_file="hol.ics")
+    lines = CalendarGenerator().describe(cfg)
+    assert any(
+        "holidays from hol.ics (Austrian Holidays)" in line
+        and "kept 2 of 3 in 2026" in line
+        and "skipped 2 recurring/timed events" in line
+        for line in lines
+    )
+
+
+def test_describe_keeps_the_plain_line_for_inline_only(tmp_path):
+    cfg = _cfg(tmp_path, holidays=[{"date": "2026-01-01", "label": "New Year"}])
+    assert "1 holidays" in CalendarGenerator().describe(cfg)

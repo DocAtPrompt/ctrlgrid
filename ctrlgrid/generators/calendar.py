@@ -334,7 +334,9 @@ class CalendarGenerator:
             f"year {cfg.year}, week starts {cfg.week_start}",
             f"{day_count(cfg.year)} day pages",
         ]
-        if cfg.holidays:
+        if cfg.holidays_source:            # a file was imported — name the source (§ 7.12)
+            lines.append(cfg.holidays_source)
+        elif cfg.holidays:
             lines.append(f"{len(cfg.holidays)} holidays")
         if cfg.notes is not None:
             lines.append(f"{cfg.notes.count} note pages, {cfg.notes.surface}")
