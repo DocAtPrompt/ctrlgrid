@@ -94,7 +94,14 @@ day:
     - { type: todo,     rows: 8,          height: 20% }
     - { type: notes,    height: rest,     surface: grid }
 
-# Note pages and their numbered index; the index paginates if `count` is large.
+# Note pads. One mapping is one pad; a list gives several, each with its own
+# count, surface and name — lined to write on, squared to reckon on, dotted to
+# sketch on. Each pad numbers its pages from 1 and has its own index, and every
+# index links to the others. The index paginates when a pad is long.
 notes:
   count: 20
   surface: dots           # blank | lines | dots | grid
+# notes:
+#   - { count: 10, surface: lines, label: "Writing" }
+#   - { count: 10, surface: grid,  label: "Sums" }
+#   - { count: 10, surface: dots,  label: "Sketches" }

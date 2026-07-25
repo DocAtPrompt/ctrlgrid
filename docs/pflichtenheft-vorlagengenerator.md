@@ -1182,7 +1182,12 @@ Monate und **Wochen** (der Wochentag hält die linke Kante, die Tageszahlen steh
 **rechtsbündig** in einer eigenen Spalte darunter, beides zusammen bleibt *ein*
 Sprungziel; beide Ansichten rechnen dieselben Spalten über `date_columns`, und
 ein Tag außerhalb des Jahres steht in denselben Spalten, nur ohne Link), Tage, optional **Wochen** (an `week_start` ausgerichtet, nicht ISO) und
-Notizen. `{year}` als Kopf-Platzhalter. Feiertage kommen **inline oder aus
+**Notizen**. `notes` nimmt **einen Block oder eine Liste**: jeder Block hat
+seine eigene Seitenzahl, seine eigene Fläche (Linien zum Schreiben, Karo zum
+Rechnen, Punkte zum Skizzieren) und seinen eigenen Namen. Jeder Block zählt
+**ab 1** — man greift zu „Skizze 3", nicht zu „Notiz 23" —, hat seinen eigenen
+nummerierten Index, und jeder Index verlinkt auf die anderen Blöcke. Das
+Inhaltsverzeichnis führt **eine Zeile je Block**. `{year}` als Kopf-Platzhalter. Feiertage kommen **inline oder aus
 einer Datei** (`holidays_file`, YAML-Liste oder konkret-datiertes `.ics`),
 gegen `base_dir` aufgelöst wie `logo`, aufs Jahr gefiltert und mit der
 Inline-Liste vereint (Inline gewinnt bei Datumsgleichheit). Wiederkehrende

@@ -218,7 +218,7 @@ def nav(page: Page, n: Nav) -> None:
     if n.has_week:
         entries.append(("Week", n.week))
     if n.has_notes:
-        entries.append(("Notes", "notes-index"))
+        entries.append(("Notes", "notes-1"))
     gap = pt(14)
     widths = [page.q.text_width(label, family="sans", size=size) for label, _ in entries]
     # Ranged against the right edge: on the left it shared the corner with the
@@ -609,29 +609,48 @@ def day_page(page: Page, cfg, n: Nav, months, weekdays, date, blocks, holiday, p
     return page.done(f"day-{date.isoformat()}", "day", title)
 
 
-def notes_index_page(page: Page, cfg, n: Nav, *, page_no, page_count, numbers, prev, nxt):
+def notes_index_page(page: Page, cfg, n: Nav, *, pad, pad_no, name, others,
+                     page_no, page_count, numbers, prev, nxt):
+    """One pad's numbered index, with a strip to the other pads (§ 7)."""
+    from ctrlgrid.generators.calendar import note_dest, notes_index_dest
+
     nav(page, n)
-    title = "Notes" if page_count == 1 else f"Notes {page_no} / {page_count}"
+    title = name if page_count == 1 else f"{name} {page_no} / {page_count}"
     top = crumb(page, title=title, prev=prev, nxt=nxt)
-    avail = page.H - top - pt(2)
-    row_h = avail / len(numbers)
-    width = len(str(cfg.notes.count))
+    # The other pads, so they are reachable from here and not only from the
+    # contents. The pad you are on is named but not linked to itself.
+    if len(others) > 1:
+        top += pt(4)      # clear of the title's descenders
+        x = pt(1)
+        size = pt(9)
+        for i, (other, dest) in enumerate(others):
+            if i == pad_no:
+                page.text(x, top, other, size, INK)
+            else:
+                page.link_text(x, top, other, dest, size)
+            x += page.q.text_width(other, family="sans", size=round(size)) + pt(14)
+        top += pt(18)
+    # A fixed row, the same one `notes_capacity` counts with — one arithmetic,
+    # not two. Dividing the page instead made a ten-page pad's rows enormous.
+    row_h = _NOTES_ROW
     for i, num in enumerate(numbers):
         rtop = top + i * row_h
         page.hline(0, page.W, rtop, 0.2, GUIDE)
         page.link_text(pt(1), round(rtop + row_h / 2 - pt(5)), str(num),
-                       f"note-{num:0{width}d}", pt(11))
+                       note_dest(pad_no, num, pad.count), pt(11))
     page.hline(0, page.W, top + len(numbers) * row_h, 0.2, GUIDE)
-    dest = "notes-index" if page_no == 1 else f"notes-index-{page_no}"
-    return page.done(dest, "notes_index", title)
+    return page.done(notes_index_dest(pad_no, page_no), "notes_index", title)
 
 
-def note_page(page: Page, cfg, n: Nav, *, num, prev, nxt) -> DocumentPage:
-    width = len(str(cfg.notes.count))
+def note_page(page: Page, cfg, n: Nav, *, pad, pad_no, name, num, prev, nxt) -> DocumentPage:
+    """One note page, on the surface its own pad asked for (§ 7)."""
+    from ctrlgrid.generators.calendar import note_dest, notes_index_dest
+
     nav(page, n)
-    top = crumb(page, title=f"Note {num}", prev=prev, nxt=nxt, up="notes-index")
-    page.surface(0, top, page.W, page.H - top - pt(2), cfg.notes.surface)
-    return page.done(f"note-{num:0{width}d}", "notes", f"Note {num}")
+    title = f"{name} {num}"
+    top = crumb(page, title=title, prev=prev, nxt=nxt, up=notes_index_dest(pad_no))
+    page.surface(0, top, page.W, page.H - top - pt(2), pad.surface)
+    return page.done(note_dest(pad_no, num, pad.count), "notes", title)
 
 
 def _start_weekday(week_start: str) -> int:
@@ -759,9 +778,11 @@ def _month_length(year: int, month: int) -> int:
     return _cal.monthrange(year, month)[1]
 
 
-def notes_capacity(height: int) -> int:
-    """How many numbered rows fit one index page at a comfortable height (§ 9).
+#: One row of a notes index. Fixed, so a long pad paginates instead of shrinking
+#: and a short one does not stretch its rows across the sheet (§ 8.2, § 9).
+_NOTES_ROW = mm(9)
 
-    A fixed row height, so the index paginates over several one-page sheets
-    rather than shrinking to hold a large count on one page (§ 8.2, § 9)."""
-    return max(1, int((height - pt(44)) // mm(9)))
+
+def notes_capacity(height: int) -> int:
+    """How many numbered rows fit one index page at a comfortable height (§ 9)."""
+    return max(1, int((height - pt(44)) // _NOTES_ROW))

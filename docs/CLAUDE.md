@@ -39,7 +39,7 @@ needs a human *and* the user has chosen to defer PyPI for now (see *Not done*).
 uv sync --extra dev && uv run pytest && uv run ruff check .
 ```
 
-992 tests, all green, ruff clean. Sixty-odd commits on `main`, linear history,
+1000 tests, all green, ruff clean. Sixty-odd commits on `main`, linear history,
 pushed to **[github.com/DocAtPrompt/ctrlgrid](https://github.com/DocAtPrompt/ctrlgrid)**
 (public); CI runs green there on Linux (3.11–3.13), macOS and Windows. Eleven
 presets — one per generator (`lines`, `dots`, `polar`, `form`, `maze`,

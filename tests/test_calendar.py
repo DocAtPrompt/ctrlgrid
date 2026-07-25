@@ -120,8 +120,8 @@ class TestPageEnumeration:
         assert d[2] == "half-1" and d[3] == "half-2"
         assert d[4] == "month-01" and d[15] == "month-12"
         assert d[16] == "day-2026-01-01" and d[16 + 364] == "day-2026-12-31"
-        assert "notes-index" in d
-        assert d[-1] == "note-20" and "note-01" in d
+        assert "notes-1" in d          # the pad's index, qualified by its pad
+        assert d[-1] == "note-1-20" and "note-1-01" in d
         assert len(d) == 1 + 1 + 2 + 12 + 365 + 1 + 20
 
     def test_a_leap_year_has_one_more_day_page(self) -> None:
@@ -156,7 +156,7 @@ class TestLinks:
         pages, _dests, _edges = _graph(cfg(notes={"count": 5}))
         contents = next(p for p in pages if p.dest == "index")
         targets = {link.target for link in contents.links}
-        assert {"year", "half-1", "half-2", "month-01", "month-12", "notes-index"} <= targets
+        assert {"year", "half-1", "half-2", "month-01", "month-12", "notes-1"} <= targets
 
     def test_a_month_links_every_date_to_its_day(self) -> None:
         pages, _dests, _edges = _graph(cfg())
@@ -166,13 +166,13 @@ class TestLinks:
 
     def test_the_notes_index_numbers_link_to_notes(self) -> None:
         pages, _dests, _edges = _graph(cfg(notes={"count": 5}))
-        index = next(p for p in pages if p.dest == "notes-index")
+        index = next(p for p in pages if p.dest == "notes-1")
         targets = {link.target for link in index.links}
-        assert {"note-1", "note-5"} <= targets
+        assert {"note-1-1", "note-1-5"} <= targets
 
     def test_the_notes_index_paginates_for_a_large_count(self) -> None:
         _pages, dests, _edges = _graph(cfg(notes={"count": 200}))
-        assert "notes-index" in dests and "notes-index-2" in dests
+        assert "notes-1" in dests and "notes-1-p2" in dests
 
     def test_every_page_carries_the_nav_strip(self) -> None:
         pages, _dests, _edges = _graph(cfg(notes={"count": 3}))
@@ -365,12 +365,15 @@ class TestContentsLayout:
         assert abs(above - below) < pt(30)
 
     def test_a_contents_too_long_for_the_page_is_refused(self) -> None:
-        # One column holds fewer entries than the two it replaced, so a very long
-        # notes index no longer fits — refused before page one, never half-drawn.
+        # One column holds fewer entries than the two it replaced. A pad is one
+        # line however long it is, so it takes many pads to overflow — and then
+        # it is refused before page one, never half-drawn.
+        pads = [{"count": 2, "label": f"Pad {i}"} for i in range(40)]
         with pytest.raises(DefinitionError, match="contents page needs"):
-            CalendarGenerator().check(cfg(notes={"count": 3000}), area=AREA, q=Q)
+            CalendarGenerator().check(cfg(notes=pads), area=AREA, q=Q)
 
     def test_an_ordinary_notes_count_is_not_refused(self) -> None:
+        # However much it paginates, one pad is one line in the contents.
         CalendarGenerator().check(cfg(notes={"count": 200}), area=AREA, q=Q)
 
 
@@ -757,3 +760,59 @@ class TestDayBlockRules:
     def test_half_hours_on_a_block_that_has_no_hours_is_refused(self) -> None:
         with pytest.raises(ValidationError, match="belongs to a schedule block"):
             cfg(day={"blocks": [{"type": "todo", "rows": 4, "half_hours": True}]})
+
+
+class TestSeveralNotePads:
+    """`notes` takes one pad or several, each with its own count and surface —
+    lines to write on, squares to reckon on, dots to sketch on (§ 7)."""
+
+    PADS = [
+        {"count": 3, "surface": "lines", "label": "Writing"},
+        {"count": 2, "surface": "grid", "label": "Sums"},
+        {"count": 2, "surface": "dots", "label": "Sketches"},
+    ]
+
+    def test_a_single_mapping_still_means_one_pad(self) -> None:
+        # Every definition written before this existed still validates.
+        c = cfg(notes={"count": 5, "surface": "dots"})
+        assert len(c.notes) == 1 and c.notes[0].count == 5
+
+    def test_each_pad_numbers_its_own_pages_from_one(self) -> None:
+        d = dests(cfg(notes=self.PADS))
+        assert "note-1-1" in d and "note-1-3" in d      # Writing 1..3
+        assert "note-2-1" in d and "note-2-2" in d      # Sums 1..2
+        assert "note-3-1" in d and "note-3-2" in d      # Sketches 1..2
+
+    def test_each_pad_gets_its_own_index(self) -> None:
+        d = dests(cfg(notes=self.PADS))
+        assert {"notes-1", "notes-2", "notes-3"} <= set(d)
+
+    def test_a_pad_page_is_drawn_on_its_own_surface(self) -> None:
+        pages, _dests, _edges = _graph(cfg(notes=self.PADS))
+        lined = next(p for p in pages if p.dest == "note-1-1")
+        dotted = next(p for p in pages if p.dest == "note-3-1")
+        # A dot grid is drawn as zero-length segments; ruled lines are not.
+        assert not any(isinstance(m, Segment) and m.start == m.end for m in lined.marks)
+        assert any(isinstance(m, Segment) and m.start == m.end for m in dotted.marks)
+
+    def test_an_index_reaches_the_other_pads(self) -> None:
+        pages, _dests, _edges = _graph(cfg(notes=self.PADS))
+        first = next(p for p in pages if p.dest == "notes-1")
+        targets = {link.target for link in first.links}
+        assert {"notes-2", "notes-3"} <= targets
+
+    def test_the_contents_lists_one_line_per_pad(self) -> None:
+        pages, _dests, _edges = _graph(cfg(notes=self.PADS))
+        contents = next(p for p in pages if p.dest == "index")
+        labels = {m.content for m in contents.marks if isinstance(m, Text)}
+        assert {"Writing", "Sums", "Sketches"} <= labels
+
+    def test_unlabelled_pads_are_still_told_apart(self) -> None:
+        pages, _dests, _edges = _graph(cfg(notes=[{"count": 1}, {"count": 1}]))
+        contents = next(p for p in pages if p.dest == "index")
+        labels = {m.content for m in contents.marks if isinstance(m, Text)}
+        assert {"Notes 1", "Notes 2"} <= labels
+
+    def test_no_link_dangles_across_the_pads(self) -> None:
+        _pages, dests_, edges = _graph(cfg(notes=self.PADS))
+        assert sorted(t for _s, t in edges if t not in dests_) == []

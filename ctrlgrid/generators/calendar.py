@@ -55,6 +55,26 @@ def _inline_date(item) -> datetime.date | None:
     return None
 
 
+def notes_name(pads, index: int) -> str:
+    """What a pad is called (§ 7). Its own label, else `Notes` when it is the
+    only one and a numbered `Notes n` when it is not — two pads must never
+    answer to the same name in the contents."""
+    label = pads[index].label
+    if label:
+        return label
+    return "Notes" if len(pads) == 1 else f"Notes {index + 1}"
+
+
+def notes_index_dest(pad: int, page_no: int = 1) -> str:
+    """A pad's index page. Qualified by the pad, so several can coexist."""
+    return f"notes-{pad + 1}" if page_no == 1 else f"notes-{pad + 1}-p{page_no}"
+
+
+def note_dest(pad: int, number: int, count: int) -> str:
+    """One note page. Numbered from 1 within its own pad (§ 7)."""
+    return f"note-{pad + 1}-{number:0{len(str(count))}d}"
+
+
 def _resolve_def_image(value: str | None, info, field: str) -> str | None:
     """Anchor an image path to the definition (§ 5.2) and check it loads — here,
     in validation, so a missing or unreadable PNG is refused before page one
@@ -204,10 +224,19 @@ class WeekView(Section):
 
 
 class NotesSpec(Section):
-    """The note pages and their numbered index (§ 7)."""
+    """One pad of note pages with its own numbered index (§ 7).
+
+    A calendar may carry several: lined pages to write on, squared ones to
+    reckon on, dotted ones to sketch on. Each pad numbers its own pages from 1 —
+    you reach for "sketch 3", not for "note 23" — so the destinations carry the
+    pad they belong to.
+    """
 
     count: int = Field(ge=1)
     surface: Surface = "lines"
+    #: What this pad is for. Shown as its index title and in the contents; with
+    #: several pads it is the only thing telling them apart.
+    label: str | None = None
 
 
 class CalendarConfig(BaseModel):
@@ -235,7 +264,19 @@ class CalendarConfig(BaseModel):
     month_view: MonthView = MonthView()
     week_view: WeekView | None = None
     day: DaySpec | None = None
-    notes: NotesSpec | None = None
+    notes: tuple[NotesSpec, ...] = ()
+
+    @field_validator("notes", mode="before")
+    @classmethod
+    def _one_pad_or_several(cls, value):
+        """`notes:` takes one pad or a list of them (§ 7), the way a mandala's
+        motif rings do — the single-map form of every existing definition still
+        validates and still means one pad."""
+        if value is None:
+            return ()
+        if isinstance(value, dict):
+            return (value,)
+        return value
 
     @field_validator("months")
     @classmethod
@@ -401,8 +442,10 @@ class CalendarGenerator:
             lines.append(cfg.holidays_source)
         elif cfg.holidays:
             lines.append(f"{len(cfg.holidays)} holidays")
-        if cfg.notes is not None:
-            lines.append(f"{cfg.notes.count} note pages, {cfg.notes.surface}")
+        for index, pad in enumerate(cfg.notes):
+            lines.append(
+                f"{pad.count} {notes_name(cfg.notes, index)!r} pages, {pad.surface}"
+            )
         return lines
 
     def check(self, cfg: CalendarConfig, *, area: Area, q: WriterQuery) -> None:
@@ -484,22 +527,21 @@ class CalendarGenerator:
             total += 1
         if cfg.week_view is not None:
             total += len(weeks_of_year(cfg.year, cfg.week_start))
-        if cfg.notes is not None:
-            capacity = layout.notes_capacity(area.height)
-            index_pages = -(-cfg.notes.count // capacity)  # ceil
-            total += index_pages + cfg.notes.count
+        capacity = layout.notes_capacity(area.height)
+        for pad in cfg.notes:
+            index_pages = -(-pad.count // capacity)  # ceil
+            total += index_pages + pad.count
         return total
 
     def _notes_index_toc(self, cfg, layout, area) -> list[tuple[str, str]]:
-        """The contents page's links to the (paginated) notes index."""
-        if cfg.notes is None:
-            return []
-        total = -(-cfg.notes.count // layout.notes_capacity(area.height))
-        if total == 1:
-            return [("Notes", "notes-index")]
+        """The contents page's links to the note pads — one line per pad.
+
+        Not one per index *page*: a pad that paginates is still one pad, and its
+        index pages already lead to each other.
+        """
         return [
-            (f"Notes {k}", "notes-index" if k == 1 else f"notes-index-{k}")
-            for k in range(1, total + 1)
+            (notes_name(cfg.notes, index), notes_index_dest(index))
+            for index in range(len(cfg.notes))
         ]
 
     # ------------------------------------------------------------------- pages
@@ -510,7 +552,7 @@ class CalendarGenerator:
 
         months = cfg.month_names()
         weekdays = cfg.weekday_names()
-        has_notes = cfg.notes is not None
+        has_notes = bool(cfg.notes)
         has_week = cfg.week_view is not None
         holidays = {h.date: h for h in cfg.holidays}
         all_days = list(days_of_year(cfg.year))
@@ -568,24 +610,29 @@ class CalendarGenerator:
             yield from self._notes_pages(cfg, layout, make, nav())
 
     def _notes_pages(self, cfg, layout, page, nav) -> Iterator[DocumentPage]:
-        count = cfg.notes.count
         cap = layout.notes_capacity(page().H)
-        chunks = [list(range(i + 1, min(i + cap, count) + 1)) for i in range(0, count, cap)]
-        total = len(chunks)
-
-        def index_dest(page_no: int) -> str:
-            return "notes-index" if page_no == 1 else f"notes-index-{page_no}"
-
-        for page_no, numbers in enumerate(chunks, start=1):
-            prev = index_dest(page_no - 1) if page_no > 1 else None
-            nxt = index_dest(page_no + 1) if page_no < total else None
-            yield layout.notes_index_page(
-                page(), cfg, nav, page_no=page_no, page_count=total,
-                numbers=numbers, prev=prev, nxt=nxt,
-            )
-
-        width = len(str(count))
-        for i in range(1, count + 1):
-            prev = f"note-{i - 1:0{width}d}" if i > 1 else None
-            nxt = f"note-{i + 1:0{width}d}" if i < count else None
-            yield layout.note_page(page(), cfg, nav, num=i, prev=prev, nxt=nxt)
+        # Every pad's index links to every other one, so the pads are reachable
+        # from each other and not only through the contents (§ 7).
+        others = [
+            (notes_name(cfg.notes, i), notes_index_dest(i)) for i in range(len(cfg.notes))
+        ]
+        for pad_no, pad in enumerate(cfg.notes):
+            count = pad.count
+            chunks = [
+                list(range(i + 1, min(i + cap, count) + 1)) for i in range(0, count, cap)
+            ]
+            for page_no, numbers in enumerate(chunks, start=1):
+                yield layout.notes_index_page(
+                    page(), cfg, nav, pad=pad, pad_no=pad_no,
+                    name=notes_name(cfg.notes, pad_no), others=others,
+                    page_no=page_no, page_count=len(chunks), numbers=numbers,
+                    prev=notes_index_dest(pad_no, page_no - 1) if page_no > 1 else None,
+                    nxt=notes_index_dest(pad_no, page_no + 1) if page_no < len(chunks) else None,
+                )
+            for i in range(1, count + 1):
+                yield layout.note_page(
+                    page(), cfg, nav, pad=pad, pad_no=pad_no,
+                    name=notes_name(cfg.notes, pad_no), num=i,
+                    prev=note_dest(pad_no, i - 1, count) if i > 1 else None,
+                    nxt=note_dest(pad_no, i + 1, count) if i < count else None,
+                )
