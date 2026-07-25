@@ -111,3 +111,22 @@ def test_ics_origin_prefers_calname_then_prodid(tmp_path):
     g = tmp_path / "hol2.ics"
     g.write_text(no_name.replace("\n", "\r\n"), encoding="utf-8")
     assert read_holiday_file(g, 2026).origin == "-//Example//Holidays//EN"
+
+
+def test_unknown_extension_is_refused_naming_the_supported_set(tmp_path):
+    f = tmp_path / "hol.csv"
+    f.write_text("2026-01-01,New Year\n", encoding="utf-8")
+    with pytest.raises(DefinitionError, match="must be .ics, .yaml or .yml"):
+        read_holiday_file(f, 2026)
+
+
+def test_missing_file_is_refused_with_the_path(tmp_path):
+    with pytest.raises(DefinitionError, match="cannot read the holidays file"):
+        read_holiday_file(tmp_path / "nope.yaml", 2026)
+
+
+def test_non_utf8_file_gives_the_cp1252_hint(tmp_path):
+    f = tmp_path / "hol.yaml"
+    f.write_bytes(b"- date: 2026-01-01\n  label: Caf\xe9 Day\n")  # é as CP1252
+    with pytest.raises(DefinitionError, match="CP1252"):
+        read_holiday_file(f, 2026)
