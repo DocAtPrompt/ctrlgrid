@@ -161,7 +161,10 @@ def date_columns(page: Page, weekdays, size, x=None) -> tuple[int, int]:
     x = pt(1) if x is None else x
     name_w = max(page.q.text_width(name, family="sans", size=round(size)) for name in weekdays)
     widest = page.q.text_width("30", family="sans", size=round(size))
-    return x, round(x + name_w + pt(7) + widest)
+    # The gap is set tight on purpose. Right-aligning costs a single digit one
+    # digit-width of extra air — it starts where the tens column would — so a
+    # comfortable gap for `12` leaves `1` looking adrift from its weekday.
+    return x, round(x + name_w + pt(3) + widest)
 
 
 def date_label(page: Page, top, name, number, size, columns, *, target=None,
