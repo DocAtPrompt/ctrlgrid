@@ -138,3 +138,46 @@ class TestEffectivePeriod:
         # 5 marks per period would be the lcm with a 5-long weight cycle:
         # sum = 4, base = 2 mm, 15 marks / 3 entries = 5 repeats -> 40 mm
         assert period_um(spacing, base_um=2000, marks=15) == 40000
+
+
+class TestPositionsBothWays:
+    """§ 7.1: a slanted family's line 0 goes through the origin, so the cycle
+    has to be read *downwards* from it as well as upwards."""
+
+    def test_from_zero_it_is_the_ordinary_walk(self) -> None:
+        cycle = Cycle.of([Decimal(2), Decimal(1)])
+        upward = list(cycle.positions(base_um=1000, extent_um=10_000))
+        both = list(cycle.positions_between(base_um=1000, lower_um=0, upper_um=10_000))
+        assert both == upward
+
+    def test_below_zero_the_index_runs_negative(self) -> None:
+        cycle = Cycle.of([Decimal(1)])
+        got = list(cycle.positions_between(base_um=1000, lower_um=-3000, upper_um=2000))
+        assert got == [(-3, -3000), (-2, -2000), (-1, -1000), (0, 0), (1, 1000), (2, 2000)]
+
+    def test_the_cycle_is_read_backwards_not_negated(self) -> None:
+        # [2, 1] downwards from zero steps 1 first and then 2 — the cycle read
+        # in reverse. Negating the upward positions would give -2000, -3000 and
+        # silently mirror the pattern.
+        cycle = Cycle.of([Decimal(2), Decimal(1)])
+        got = list(cycle.positions_between(base_um=1000, lower_um=-4000, upper_um=3000))
+        assert [position for _index, position in got] == [-4000, -3000, -1000, 0, 2000, 3000]
+
+    def test_the_index_keeps_the_other_cycles_in_step(self) -> None:
+        # weight.at(index) and color[index % len] must go on meaning the same
+        # thing below zero, so the index continues rather than restarting.
+        cycle = Cycle.of([Decimal(2), Decimal(1)])
+        got = dict(
+            (index, position)
+            for index, position in cycle.positions_between(
+                base_um=1000, lower_um=-4000, upper_um=3000
+            )
+        )
+        assert got[-1] == -1000 and got[-2] == -3000 and got[0] == 0
+
+    def test_an_offset_moves_line_zero_and_nothing_else(self) -> None:
+        cycle = Cycle.of([Decimal(1)])
+        got = list(
+            cycle.positions_between(base_um=1000, lower_um=-2000, upper_um=2000, offset_um=500)
+        )
+        assert [position for _index, position in got] == [-1500, -500, 500, 1500]

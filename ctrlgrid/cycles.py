@@ -107,6 +107,61 @@ class Cycle:
             )
         return self._walk(base_um=base_um, extent_um=extent_um, offset_um=offset_um)
 
+    def positions_between(
+        self,
+        *,
+        base_um: int,
+        lower_um: int,
+        upper_um: int,
+        offset_um: int = 0,
+        field: str | None = None,
+    ) -> Iterator[tuple[int, int]]:
+        """Every mark in `[lower_um, upper_um]`, which may reach below zero.
+
+        A slanted family's line 0 goes through the pattern area's origin, and
+        the area lies on both sides of it (§ 7.1) — so the cycle has to be read
+        downwards as well as upwards. Downwards means the cycle **in reverse**,
+        not the upward positions negated: `[2, 1]` steps 1 first going down, so
+        the pattern stays symmetric about line 0 instead of shifting by a step.
+
+        No new arithmetic is needed for that. The position of mark `index` is
+        `offset + base * ((index // n) * total + prefix[index % n])`, and
+        Python's floor division continues that formula for negative indices all
+        by itself: index −1 lands one *last* cycle entry below zero.
+
+        The index goes on counting downwards, so `weight.at(index)` and
+        `color[index % len]` mean below line 0 what they mean above it.
+        """
+        if lower_um > upper_um:
+            raise DefinitionError(
+                f"the range {lower_um}…{upper_um} µm runs backwards", field=field
+            )
+        below = []
+        index = -1
+        while True:
+            position = _round(self._exact(index, base_um=base_um, offset_um=offset_um))
+            if position < lower_um:
+                break
+            below.append((index, position))
+            index -= 1
+        yield from reversed(below)
+
+        index = 0
+        while True:
+            position = _round(self._exact(index, base_um=base_um, offset_um=offset_um))
+            if position > upper_um:
+                return
+            if position >= lower_um:
+                yield index, position
+            index += 1
+
+    def _exact(self, index: int, *, base_um: int, offset_um: int) -> Decimal:
+        """Where mark `index` sits, exactly — the one formula, for either sign."""
+        n = len(self.values)
+        return Decimal(offset_um) + Decimal(base_um) * (
+            Decimal(index // n) * self.total + self.prefix_sums[index % n]
+        )
+
     def _walk(self, *, base_um: int, extent_um: int, offset_um: int) -> Iterator[tuple[int, int]]:
         n = len(self.values)
         base = Decimal(base_um)
