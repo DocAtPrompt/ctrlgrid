@@ -130,6 +130,29 @@ def raw_extent(sheet: Sheet, header: Band | None, footer: Band | None) -> tuple[
     return width, height
 
 
+def background_image_rect(
+    sheet_w: int, sheet_h: int, aspect: float, fit: str
+) -> tuple[int, int, int, int]:
+    """The (x, y, width, height) in sheet µm for a full-sheet background image
+    of the given pixel `aspect` (width / height), fitted `cover` or `contain`
+    (§ 7.12). `contain` fits the whole image inside the sheet (the colour fills
+    the rest); `cover` fills the sheet and may overhang (the PDF MediaBox crops
+    it). Centred; integer µm so the same input gives the same bytes (#5)."""
+    sheet_aspect = sheet_w / sheet_h
+    # Width-bound when: contain and the image is relatively wider than the sheet,
+    # or cover and it is relatively taller. Otherwise height-bound.
+    width_bound = (aspect >= sheet_aspect) if fit == "contain" else (aspect < sheet_aspect)
+    if width_bound:
+        width = sheet_w
+        height = round(sheet_w / aspect)
+    else:
+        height = sheet_h
+        width = round(sheet_h * aspect)
+    x = round((sheet_w - width) / 2)
+    y = round((sheet_h - height) / 2)
+    return x, y, width, height
+
+
 @dataclass(frozen=True, slots=True)
 class Box:
     """A rectangle in sheet coordinates — a header or footer band."""
