@@ -1156,7 +1156,10 @@ ein dokumentgelieferter Kopf-Platzhalter (§ 8.10), durch `extra` an
 Vollständiger Entwurf in
 [`docs/superpowers/specs/2026-07-24-calendar-generator-design.md`](superpowers/specs/2026-07-24-calendar-generator-design.md).
 Seiten: optionales **Titelblatt** (Vollflächenfarbe über ein neues
-`DocumentPage.background`/`plain`, vom Griff gezeichnet), **Inhaltsverzeichnis**
+`DocumentPage.background`, vom Griff gezeichnet, optional mit
+einem **Vollflächen-PNG** darüber (`background_image`, `cover`/`contain`, dessen
+transparente Stellen die Farbe durchlassen) und **optional Kopf-/Fußzeile**
+(`header`/`footer` je einzeln; `plain` wich `show_header`/`show_footer`)), **Inhaltsverzeichnis**
 (Nabe), eine minimale **Ganzjahresübersicht** (nur Zahlen als unterstrichene
 Links, keine Boxen, alles auf einer Seite), **Halbjahr 1 & 2** als Tabellen,
 Monate, Tage, optional **Wochen** (an `week_start` ausgerichtet, nicht ISO) und

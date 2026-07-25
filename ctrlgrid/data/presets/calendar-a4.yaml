@@ -56,6 +56,12 @@ title_page:
   background: "#2f3a48"
   text_color: "#ffffff"
   # logo: logo.png     # optional PNG above the title (path relative to this file)
+  # background_image: cover.png   # a full-sheet PNG over the colour; transparent
+  #                               # areas show `background` through (path relative
+  #                               # to this file)
+  # background_fit: cover         # cover (fill, crop) | contain (fit inside)
+  # header: false                 # show the header band on the cover too
+  # footer: false                 # show the footer band on the cover too
 
 # The half-year tables (Jan–Jun, Jul–Dec); a day cell jumps to its day page.
 year_view: { weekend_shade: "#f0f2f5", cell_link: day }

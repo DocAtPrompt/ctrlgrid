@@ -758,3 +758,17 @@ recurring/timed events are skipped and counted, never silently dropped (§ 5.1).
 Merge rule: inline wins on a shared date (hand-authored beats a feed). The
 UTF-8/CP1252 decode is replicated from `read_names` rather than imported, to
 avoid a generator→loader import cycle; the shared contract is the message text.
+
+## 44. Title background image and header/footer are handle-drawn (§ 7.12)
+
+The title page's background PNG and its optional header/footer are drawn by the
+handle, not the generator, for the same reason the background *colour* already
+is: only the handle knows the sheet (§ 3.3). `DocumentPage` carries the resolved
+image path and fit; `pages.background_image_rect` computes the cover/contain
+rectangle in integer µm (determinism, #5), and the PDF MediaBox — not an
+explicit clip — crops a `cover` overhang. `plain` (all-or-nothing) became
+independent `show_header`/`show_footer` so the cover can show one band alone.
+The image is validated at load time like `logo`, via a shared `_resolve_def_image`
+helper. Header/footer band *colours* are deliberately out of scope — a later
+step gives each band its own background and text colour; until then contrast on
+a dark cover is the user's to manage.
