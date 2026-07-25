@@ -18,6 +18,7 @@ from typing import Literal
 
 from ctrlgrid.marks import Um
 from ctrlgrid.model import RulerSpec
+from ctrlgrid.writers import WriterQuery
 
 #: Tick lengths, measured outward from the pattern edge. Fixed measures the way
 #: the cover sheet's figures are fixed (§ 8.8): a yardstick nobody can bend is
@@ -28,12 +29,6 @@ LONG_TICK: Um = 3000
 
 #: Between the long tick and its number.
 LABEL_GAP: Um = 1000
-
-#: Cap height as a share of the font size. Digits have no descender, so this is
-#: what a number is tall. A proportion and not a measurement: it only reserves
-#: space, while the *width* that decides whether two numbers collide is measured
-#: by the writer (§ 10.2).
-CAP_HEIGHT = (7, 10)
 
 #: Micrometres per unit of the printed numbers — the one place `unit` acts.
 _PER_UNIT: dict[str, int] = {"mm": 1000, "cm": 10_000, "in": 25_400}
@@ -81,8 +76,18 @@ def label_text(ruler: RulerSpec, *, at: Um) -> str:
     return format(value.normalize(), "f")
 
 
-def strip_width(ruler: RulerSpec) -> Um:
+def number_height(ruler: RulerSpec, *, q: WriterQuery) -> Um:
+    """How tall a number is, asked of the writer rather than guessed at.
+
+    The font's ascent, which is at least the height of a digit — measuring is
+    what § 10.2 has a query for, and a guessed proportion is precisely the kind
+    of almost-right number this project keeps finding in its own bugs.
+    """
+    ascent, _descent = q.text_metrics(family=ruler.font.family, size=ruler.font.size.um)
+    return ascent
+
+
+def strip_width(ruler: RulerSpec, *, q: WriterQuery) -> Um:
     """The room a ruler needs between the pattern edge and whatever stands next
-    to it — the long tick, the gap, and the height of a digit."""
-    numerator, denominator = CAP_HEIGHT
-    return LONG_TICK + LABEL_GAP + ruler.font.size.um * numerator // denominator
+    to it — the long tick, the gap, and the height of a number."""
+    return LONG_TICK + LABEL_GAP + number_height(ruler, q=q)

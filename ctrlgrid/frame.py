@@ -23,9 +23,16 @@ from pathlib import Path
 from ctrlgrid import fonts
 from ctrlgrid.errors import DefinitionError
 from ctrlgrid.images import load_image
-from ctrlgrid.marks import Arc, Image, Layer, Mark, Point, Polygon, Text, Um
-from ctrlgrid.model import Band, BorderSpec, ImageSpec, PageSpec, StampSpec
+from ctrlgrid.marks import Arc, Image, Layer, Mark, Point, Polygon, Segment, Text, Um
+from ctrlgrid.model import Band, BorderSpec, ImageSpec, PageSpec, RulerSpec, StampSpec
 from ctrlgrid.pages import Box, Geometry, PageContext, Sheet, resolve_placeholders
+from ctrlgrid.ruler import (
+    LABEL_GAP,
+    label_text,
+    number_height,
+    tick_length,
+    ticks,
+)
 from ctrlgrid.writers import WriterQuery
 
 ELLIPSIS = "…"
@@ -144,6 +151,96 @@ def hole_marks(page: PageSpec, sheet: Sheet, *, is_even: bool) -> list[Arc]:
         )
         for centre in centres
     ]
+
+
+#: Where each edge of the pattern area is, and which way is *away* from it.
+#: `along` names the axis the scale runs on, `outward` the sign it grows in on
+#: the other axis (§ 8.12).
+_EDGES: dict[str, tuple[str, int]] = {
+    "bottom": ("x", -1),
+    "top": ("x", +1),
+    "left": ("y", -1),
+    "right": ("y", +1),
+}
+
+
+def _edge_start(edge: str, geometry: Geometry) -> tuple[Point, Um]:
+    """Where zero sits for this edge, and how far the scale runs.
+
+    Zero is the pattern area's origin corner — the numbers agree with the grid,
+    not with the paper's corner (§ 8.12).
+    """
+    origin, area = geometry.origin, geometry.area
+    if edge == "bottom":
+        return Point(origin.x, origin.y), area.width
+    if edge == "top":
+        return Point(origin.x, origin.y + area.height), area.width
+    if edge == "left":
+        return Point(origin.x, origin.y), area.height
+    return Point(origin.x + area.width, origin.y), area.height
+
+
+def _at(edge: str, start: Point, *, along: Um, out: Um) -> Point:
+    """A point `along` the edge from zero and `out` away from the pattern."""
+    axis, sign = _EDGES[edge]
+    if axis == "x":
+        return Point(start.x + along, start.y + sign * out)
+    return Point(start.x + sign * out, start.y + along)
+
+
+def ruler_marks(ruler: RulerSpec | None, geometry: Geometry, *, q: WriterQuery) -> list[Mark]:
+    """The edge scale (§ 8.12), in sheet coordinates.
+
+    The ticks grow *outward* from the pattern edge into the margin, on
+    `Layer.FRAME`: no space is reserved and the pattern area never moves, the
+    same way a `border` never moves a grid line (§ 8.1). Whether the margin can
+    take them is `check_rulers`' question, asked once before page one.
+
+    On the vertical edges the numbers turn 90°, reading bottom to top: the
+    strip a ruler needs is then the height of a digit on all four edges instead
+    of the full width of a number on two of them.
+    """
+    if ruler is None:
+        return []
+
+    marks: list[Mark] = []
+    height = number_height(ruler, q=q)
+    for edge in ruler.edges:
+        start, extent = _edge_start(edge, geometry)
+        turned = edge in ("left", "right")
+        for tick in ticks(ruler, extent=extent):
+            length = tick_length(tick.kind)
+            marks.append(
+                Segment(
+                    start=_at(edge, start, along=tick.at, out=0),
+                    end=_at(edge, start, along=tick.at, out=length),
+                    weight=ruler.weight.mm,
+                    color=ruler.color,
+                    layer=Layer.FRAME,
+                )
+            )
+            if tick.kind != "label":
+                continue
+            # A glyph grows from its baseline towards its own "up", which the
+            # 90° turn points at the sheet's left. So on `bottom` and `right`
+            # the number grows back towards the pattern and its baseline has to
+            # start a whole number-height further out.
+            _axis, sign = _EDGES[edge]
+            grows_outward = sign < 0 if turned else sign > 0
+            out = length + LABEL_GAP + (0 if grows_outward else height)
+            marks.append(
+                Text(
+                    pos=_at(edge, start, along=tick.at, out=out),
+                    content=label_text(ruler, at=tick.at),
+                    size=ruler.font.size.um,
+                    family=ruler.font.family,
+                    align="center",
+                    angle=90.0 if turned else 0.0,
+                    color=ruler.color,
+                    layer=Layer.FRAME,
+                )
+            )
+    return marks
 
 
 def stamp_mark(stamp: StampSpec | None, sheet: Sheet, *, q: WriterQuery) -> Text | None:

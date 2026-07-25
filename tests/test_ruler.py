@@ -12,8 +12,25 @@ from __future__ import annotations
 import pytest
 from pydantic import ValidationError
 
+from ctrlgrid.frame import ruler_marks
+from ctrlgrid.loader import loads
+from ctrlgrid.marks import Layer, Point, Segment, Text
 from ctrlgrid.model import RulerSpec
-from ctrlgrid.ruler import LABEL_GAP, LONG_TICK, Tick, label_text, strip_width, ticks
+from ctrlgrid.pages import Geometry
+from ctrlgrid.ruler import (
+    LABEL_GAP,
+    LONG_TICK,
+    Tick,
+    label_text,
+    number_height,
+    strip_width,
+    ticks,
+)
+from ctrlgrid.writers.pdf import PdfWriter
+
+#: A metrics oracle: font metrics are fixed data, not rendering (§ 10.2), and
+#: this is how the rest of the suite asks for them.
+Q = PdfWriter("unused.pdf")
 
 
 class TestTheSection:
@@ -125,6 +142,98 @@ class TestTheLadder:
         ruler = RulerSpec(edges=["bottom"], unit="cm", mid_every="none", label_every="25mm")
         assert [label_text(ruler, at=at) for at in (25_000, 50_000)] == ["2.5", "5"]
 
-    def test_the_strip_is_tick_plus_gap_plus_cap_height(self) -> None:
+    def test_the_strip_is_tick_plus_gap_plus_the_measured_number(self) -> None:
+        # Measured, not guessed: the writer knows how tall a digit is (§ 10.2).
         ruler = RulerSpec(edges=["bottom"])
-        assert strip_width(ruler) == LONG_TICK + LABEL_GAP + ruler.font.size.um * 7 // 10
+        ascent, _ = Q.text_metrics(family=ruler.font.family, size=ruler.font.size.um)
+        assert strip_width(ruler, q=Q) == LONG_TICK + LABEL_GAP + ascent
+        assert number_height(ruler, q=Q) == ascent
+
+
+def document(page: str = "", blocks: str = ""):
+    """A minimal A4 definition, in the shape the rest of the suite uses."""
+    text = (
+        "version: 1\n"
+        "page:\n"
+        "  format: a4\n"
+        f"{page}"
+        f"{blocks}"
+        "generator: lines\n"
+        "families:\n"
+        "  - {direction: horizontal, base_spacing: 10mm}\n"
+    )
+    return loads(text, None, source="test")
+
+
+def geometry(doc) -> Geometry:
+    return Geometry.of(
+        doc.sheet,
+        header=doc.header,
+        footer=doc.footer,
+        pattern=doc.pattern,
+        blade_axes=doc.axes,
+    )
+
+
+class TestTheMarks:
+    def test_the_bottom_ruler_zeroes_on_the_pattern_origin(self) -> None:
+        doc = document(page="  margin: 20mm\n")
+        area = geometry(doc)
+        marks = ruler_marks(RulerSpec(edges=["bottom"]), area, q=Q)
+        first = next(m for m in marks if isinstance(m, Segment))
+        assert first.start == Point(area.origin.x, area.origin.y)
+        assert first.end.y == area.origin.y - LONG_TICK  # outward, into the margin
+
+    def test_the_left_ruler_zeroes_on_the_same_corner(self) -> None:
+        doc = document(page="  margin: 20mm\n")
+        area = geometry(doc)
+        marks = ruler_marks(RulerSpec(edges=["left"]), area, q=Q)
+        first = next(m for m in marks if isinstance(m, Segment))
+        assert first.start == Point(area.origin.x, area.origin.y)
+        assert first.end.x == area.origin.x - LONG_TICK
+
+    def test_the_far_edges_grow_away_from_the_pattern_too(self) -> None:
+        doc = document(page="  margin: 20mm\n")
+        area = geometry(doc)
+        top = ruler_marks(RulerSpec(edges=["top"]), area, q=Q)
+        right = ruler_marks(RulerSpec(edges=["right"]), area, q=Q)
+        first_top = next(m for m in top if isinstance(m, Segment))
+        first_right = next(m for m in right if isinstance(m, Segment))
+        assert first_top.start.y == area.origin.y + area.area.height
+        assert first_top.end.y == first_top.start.y + LONG_TICK
+        assert first_right.start.x == area.origin.x + area.area.width
+        assert first_right.end.x == first_right.start.x + LONG_TICK
+
+    def test_every_mark_is_frame_layer(self) -> None:
+        doc = document(page="  margin: 20mm\n")
+        marks = ruler_marks(RulerSpec(edges=["bottom", "left"]), geometry(doc), q=Q)
+        assert {mark.layer for mark in marks} == {Layer.FRAME}
+
+    def test_the_numbers_stand_upright_below_and_turn_on_the_side(self) -> None:
+        # § 8.12: rotated on the vertical edges, so the strip is the same width
+        # on all four.
+        doc = document(page="  margin: 20mm\n")
+        marks = ruler_marks(RulerSpec(edges=["bottom", "left"]), geometry(doc), q=Q)
+        angles = {mark.angle for mark in marks if isinstance(mark, Text)}
+        assert angles == {0.0, 90.0}
+
+    def test_nothing_is_drawn_into_the_pattern_area(self) -> None:
+        doc = document(page="  margin: 20mm\n")
+        area = geometry(doc)
+        marks = ruler_marks(RulerSpec(edges=["bottom"]), area, q=Q)
+        assert all(
+            mark.start.y <= area.origin.y and mark.end.y <= area.origin.y
+            for mark in marks
+            if isinstance(mark, Segment)
+        )
+        assert all(mark.pos.y < area.origin.y for mark in marks if isinstance(mark, Text))
+
+    def test_the_numbers_stay_inside_the_sheet(self) -> None:
+        # A number hangs below its tick: with a 20 mm margin it has room, and
+        # the check of the next class is what refuses when it has not.
+        doc = document(page="  margin: 20mm\n")
+        marks = ruler_marks(RulerSpec(edges=["bottom"]), geometry(doc), q=Q)
+        assert all(mark.pos.y > 0 for mark in marks if isinstance(mark, Text))
+
+    def test_it_draws_nothing_when_there_is_no_ruler(self) -> None:
+        assert ruler_marks(None, geometry(document()), q=Q) == []
