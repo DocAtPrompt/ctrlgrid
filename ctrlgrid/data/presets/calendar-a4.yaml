@@ -88,6 +88,8 @@ week_view: { surface: lines, tasks: true }
 # The day page — an ordered list of blocks. Reorder, resize, drop or repeat.
 day:
   blocks:
+    # `half_hours: true` rules the half hours too — the hour line then steps
+    # up a shade so the half stays subordinate.
     - { type: schedule, from: 7, to: 22, height: 55%, surface: lines }
     - { type: todo,     rows: 8,          height: 20% }
     - { type: notes,    height: rest,     surface: grid }

@@ -118,6 +118,9 @@ class DayBlock(Section):
     start_hour: int | None = Field(default=None, alias="from", ge=0, le=24)
     end_hour: int | None = Field(default=None, alias="to", ge=0, le=24)
     rows: int | None = Field(default=None, ge=1)
+    #: Rule the half hours too. Off by default, so an existing definition draws
+    #: exactly what it drew before.
+    half_hours: bool = False
 
     @field_validator("height")
     @classmethod
@@ -135,6 +138,12 @@ class DayBlock(Section):
                 raise ValueError(
                     f"schedule `from` ({self.start_hour}) must be before `to` ({self.end_hour})"
                 )
+        elif self.half_hours:
+            # Refused rather than ignored: a key that does nothing where it
+            # stands is the silent almost-right § 5.1 warns about.
+            raise ValueError(
+                f"`half_hours` belongs to a schedule block, not to a {self.type} one (§ 7)"
+            )
         return self
 
 

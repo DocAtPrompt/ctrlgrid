@@ -23,9 +23,9 @@ from ctrlgrid.generators.calendar import (
     day_count,
     days_of_year,
 )
-from ctrlgrid.generators.calendar_layout import pt
+from ctrlgrid.generators.calendar_layout import FAINT, GUIDE, pt
 from ctrlgrid.loader import loads
-from ctrlgrid.marks import Area, Polygon, Text
+from ctrlgrid.marks import Area, Polygon, Segment, Text
 from ctrlgrid.pages import build
 from ctrlgrid.writers.pdf import PdfWriter
 
@@ -716,3 +716,44 @@ class TestDayScheduleHours:
             for t in self._hours()
         }
         assert len(edges) == 1
+
+
+class TestDayBlockRules:
+    """The day's blocks share one left edge, and the schedule may rule halves."""
+
+    def _day(self, blocks):
+        pages, _dests, _edges = _graph(cfg(day={"blocks": blocks}))
+        return next(p for p in pages if p.dest == "day-2026-05-03")
+
+    def _rules(self, page, color):
+        """The writing rules only — a block's own top border spans the full
+        width from x=0, and is not one of them."""
+        return [m for m in page.marks
+                if isinstance(m, Segment) and m.color == color
+                and m.start.y == m.end.y and m.start.x > 0]
+
+    def test_the_blocks_start_their_rules_at_one_edge(self) -> None:
+        # An hour column and a column of tick boxes are different widths; left
+        # to themselves the two blocks ruled from different places.
+        day = self._day([
+            {"type": "schedule", "from": 7, "to": 12, "height": "50%"},
+            {"type": "todo", "rows": 4, "height": "rest"},
+        ])
+        assert len({m.start.x for m in self._rules(day, FAINT)}) == 1
+
+    def test_half_hours_are_off_by_default(self) -> None:
+        day = self._day([{"type": "schedule", "from": 7, "to": 12, "height": "100%"}])
+        assert len(self._rules(day, FAINT)) == 5      # one rule per hour
+        assert self._rules(day, GUIDE) == []          # no hierarchy, nothing louder
+
+    def test_half_hours_add_a_lighter_rule_between_the_hours(self) -> None:
+        day = self._day([
+            {"type": "schedule", "from": 7, "to": 12, "height": "100%", "half_hours": True}
+        ])
+        # The hour steps up to GUIDE so the half stays subordinate in FAINT.
+        assert len(self._rules(day, GUIDE)) == 5
+        assert len(self._rules(day, FAINT)) == 5
+
+    def test_half_hours_on_a_block_that_has_no_hours_is_refused(self) -> None:
+        with pytest.raises(ValidationError, match="belongs to a schedule block"):
+            cfg(day={"blocks": [{"type": "todo", "rows": 4, "half_hours": True}]})

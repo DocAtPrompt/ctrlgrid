@@ -682,19 +682,45 @@ def week_page(page: Page, cfg, n: Nav, months, weekdays, *, week_no, start_date,
 # ------------------------------------------------------------------- day blocks
 
 
+#: The hour numbers and the tick boxes sit in a marker column; this is the air
+#: between it and where the writing starts.
+_BLOCK_GUTTER = mm(3)
+
+
+def _rules_left(page: Page, blocks) -> int:
+    """The one left edge every block's rules start at (§ 7).
+
+    Each block has its own marker column — hours for a schedule, tick boxes for
+    a todo — of its own width. Left to itself each would start its rules
+    somewhere else, and the page would have a ragged left edge instead of one.
+    """
+    marker = 0
+    for b in blocks:
+        if b.type == "schedule":
+            size = pt(7)
+            marker = max(marker, pt(1) + max(
+                page.q.text_width(str(b.start_hour + i), family="sans", size=round(size))
+                for i in range(max(1, b.end_hour - b.start_hour))
+            ))
+        elif b.type == "todo":
+            marker = max(marker, pt(1) + mm(4))
+    return round(marker + _BLOCK_GUTTER) if marker else 0
+
+
 def _draw_blocks(page: Page, blocks, top) -> None:
     avail = page.H - top - pt(2)
     fixed = sum(int(b.height[:-1]) for b in blocks if b.height != "rest")
     rests = [b for b in blocks if b.height == "rest"]
     rest_h = round(avail * max(0, 100 - fixed) / 100 / len(rests)) if rests else 0
+    rules_left = _rules_left(page, blocks)
     y = top
     for b in blocks:
         h = rest_h if b.height == "rest" else round(avail * int(b.height[:-1]) / 100)
-        _draw_block(page, b, y, h)
+        _draw_block(page, b, y, h, rules_left)
         y += h
 
 
-def _draw_block(page: Page, b, top, h) -> None:
+def _draw_block(page: Page, b, top, h, rules_left: int = 0) -> None:
     page.hline(0, page.W, top, 0.35, GUIDE)
     inner = top + pt(2)
     if b.type == "schedule":
@@ -706,20 +732,23 @@ def _draw_block(page: Page, b, top, h) -> None:
         # a space is half a digit wide, so ` 7` used to end 0.7 mm short of `10`.
         widths = {s: page.q.text_width(s, family="sans", size=round(size)) for s in labels}
         num_right = pt(1) + max(widths.values())
-        # The rule starts just past the hours, not at a guessed inset, so an
-        # all-single-digit span (7–9) does not leave a wide empty gutter.
-        rule_left = num_right + mm(3)
+        rule_left = rules_left or num_right + _BLOCK_GUTTER
+        # With half hours on, the hour rule steps up to GUIDE so the half stays
+        # subordinate in FAINT; without them it keeps the FAINT it always had.
+        hour_color = GUIDE if b.half_hours else FAINT
         for i, label in enumerate(labels):
             ry = inner + i * rh
             page.text(num_right - widths[label], round(ry), label, size, INK)
-            page.hline(rule_left, page.W, ry + rh - pt(1), 0.2, FAINT)
+            if b.half_hours:
+                page.hline(rule_left, page.W, ry + rh / 2 - pt(1), 0.2, FAINT)
+            page.hline(rule_left, page.W, ry + rh - pt(1), 0.2, hour_color)
     elif b.type == "todo":
         rows = b.rows or max(1, int((h - pt(2)) // mm(8)))
         rh = (h - pt(2)) / rows
         for i in range(rows):
             ry = inner + i * rh
             page.box(pt(1), round(ry), mm(4), mm(4), 0.35, GUIDE)
-            page.hline(mm(7), page.W, round(ry + mm(4)), 0.2, FAINT)
+            page.hline(rules_left or mm(7), page.W, round(ry + mm(4)), 0.2, FAINT)
     else:  # notes
         page.surface(0, inner, page.W, h - pt(4), b.surface)
 
