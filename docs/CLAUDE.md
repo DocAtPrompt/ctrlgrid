@@ -39,11 +39,11 @@ needs a human *and* the user has chosen to defer PyPI for now (see *Not done*).
 uv sync --extra dev && uv run pytest && uv run ruff check .
 ```
 
-1109 tests, all green, ruff clean. Sixty-odd commits on `main`, linear history,
+1131 tests, all green, ruff clean. Sixty-odd commits on `main`, linear history,
 pushed to **[github.com/DocAtPrompt/ctrlgrid](https://github.com/DocAtPrompt/ctrlgrid)**
-(public); CI runs green there on Linux (3.11–3.13), macOS and Windows. Sixteen
-presets — one per generator (`lines`, `dots`, `polar`, `form`, `maze`,
-`perspective`, `mandala`, `staves`, `grid`, `tiling`), the two documents
+(public); CI runs green there on Linux (3.11–3.13), macOS and Windows. Seventeen
+presets — one per blade (`lines`, `dots`, `polar`, `form`, `maze`,
+`perspective`, `mandala`, `staves`, `grid`, `tiling`, `net`), the two documents
 (`calendar-a4`, `notebook-a4`), and four papers that are all `lines` with
 different cycles (`calligraphy-a4`, `seyes-a4`, `mizige-a4`,
 `knitting-chart-a4`) — and a
@@ -95,6 +95,7 @@ says so.
 | post-M9 `calendar` | a linked, write-on planner PDF (§ 7) — the first **document generator**: it owns heterogeneous, cross-linked pages (Index, Year two-table, Month day-list, configurable Day blocks, paginated Notes-index, Notes) instead of one pattern area. Two new mechanisms modelled on `outline`: a **`link` capability** (writer method + capability, PDF-only, PNG refused; links drawn as underlined Text) and a **document-mode page loop** in `pages.py`. Dates deterministic from the year, names from the def (English default), one-page-per-view fit-or-refuse. Pages: an opt-in **title** page (full-sheet colour via a new `DocumentPage.background` (+ an optional full-sheet `background_image`, `cover`/`contain`, transparency shows the colour), optional `logo`, and independent opt-in `show_header`/`show_footer` (replacing `plain`)), a **contents** hub, a **full-year overview** (twelve mini-months, three across, numbers as links, no cell boxes), **half-year 1 & 2** tables (short months' columns end — no empty cells), months, days, opt-in **weeks** (`week_start`-aligned), and notes. `{year}` header placeholder. Holidays come inline **or from a file** (`holidays_file`: a YAML list or a concrete-dated `.ics`, resolved against `base_dir` like `logo`, filtered to the year, merged with inline — inline wins on a date clash; `.ics` recurring/timed events skipped and counted; source named in the run report). **§ 7.12 is complete.** |
 | post-M9 `ruler` | an edge scale as frame furniture (§ 8.12): `ruler: {edges: [bottom, left], unit: cm}`. Zero at the *pattern area's* origin, so the numbers agree with the grid; ticks grow outward into the margin and reserve nothing, so switching it on moves no grid line (§ 8.1's rule for `border`, restated). Physical edges, not `inner`/`outer`. `unit` says what the numbers mean, three lengths say where the ticks are, each a whole multiple of the one below. The ladder arithmetic lives once in `ruler.py` (drawing *and* pre-flight use it); the number's height and width are asked of the writer, never guessed. Four refusals before page one; PNG refused by the existing capability path. Example `13-ruler-edge`, decision 47 |
 | post-M9 slanted `lines` | `direction: 55deg` (§ 7.1, decision 48) — spaced *perpendicular*, clipped, and anchored so that **line 0 goes through the pattern area's origin** with an unlimited family growing both ways. `0deg`/`90deg` reproduce `horizontal`/`vertical` mark for mark, which is the test that keeps it one rule. Downwards reads the cycle backwards (`Cycle.positions_between`), the perpendicular's sign points into the area, and negative perpendicular coordinates are legal. A slanted family reports **no** periodic axis, so § 7.1's "no snapping" needs no new machinery; `governing`/`log10` on one are refused. Liang–Barsky moved to `ctrlgrid/clip.py`, shared with `perspective`. Preset `calligraphy-a4`, example `14-calligraphy-italic` |
+| post-M9 `net` | the eleventh blade (§ 7.14, decision 51): a `tray` or a `tuck_top` box from its **inner** dimensions, cut lines solid, creases dashed, glue tabs computed, centred and **refused rather than scaled**. The mechanism: a style produces **panels** and one rule makes the marks — an edge two panels share is a fold, an edge only one has is a cut — so a new style is a panel list, never a traced outline, and the match is exact because positions are integer µm. Every flap must span its attachment edge (that is what makes it exact). Two stated conventions: inner dimensions, and one thickness rule (a panel closing *over* a layer is widened, a flap sliding *inside* is shortened); `thickness: 0` gives the ideal net, and a test says so. Preset `box-tuck-a4`, example `16-net-tray` |
 | post-M9 `notebook` | the **second document generator**, and the first that composes blades (§ 7.13, decision 50): sections, each filled by an ordinary generator, with a linked contents page, opt-in dividers and a cover. The seam: a `DocumentPage` may carry a `Fill` (generator name + validated config) instead of marks, and **the handle calls the blade** — `pages.document_page_marks` is the one function that says what is on a page, used by the writer, the capability pre-flight and the media check. A section is a definition in miniature, validated by that blade's own `config_model` with the loader's context (so `px`/`%w` resolve there too). Document bands are now laid out **per page**, so `{page}` counts and a per-page `{section}` names the section; `calendar-a4` stayed byte-identical. `page_layout.Page` extracted from `calendar_layout` and shared. Preset `notebook-a4`, example `15-notebook` |
 | post-M9 band colour | a header/footer `Band` takes `background` (a full-width strip, band height only) and `text_color`, both default off — drawn in `layout_band` so both the blade and document paths get them; resolves the title-page contrast (§ 8.9) |
 | pulled forward into M1 | format table, presets, `check`, overwrite protection, placeholders — the M1 acceptance criteria needed them |
@@ -223,6 +224,8 @@ and knows nothing about margins.
 | `generators/` | registry, `common.py` (cycle + dash fields), `polar_geometry.py` (shared by `polar` + `mandala`), the ten blades, and the `calendar` document generator (`calendar.py` + `calendar_layout.py`) |
 | `document.py` | the document-generator seam (§ 7): `DocumentPage`, `Link`, `Fill`, the `DocumentGenerator` protocol — a generator that owns pages, not one pattern area |
 | `generators/page_layout.py` | the shared page builder both documents draw on (§ 7.13) |
+| `generators/net_geometry.py` | panels in, cuts and creases out — the shared-edge rule (§ 7.14) |
+| `generators/net_styles.py` | the box styles: `tray` and `tuck_top`, as panel lists (§ 7.14) |
 | `writers/` | seam 3 protocols, `pdf.py` (reportlab) and `png.py` (Pillow) |
 
 ### The three seams (§ 3.6)
@@ -338,9 +341,12 @@ question 4 was deliberately left out of it — the angle is what unlocks
 calligraphy guides *and* origami pre-creasing; the unit is a convenience on top,
 and § 15 says that class waits on real use. 1c shipped `seyes-a4`, `mizige-a4` and `knitting-chart-a4` (Genkō yōshi was
 dropped with its reason: its furigana strip needs interrupted rules, and § 2
-rules out a drawing language), and 1d shipped `notebook`. What is left of the
-handover is **phase 2**: fold notation (probably a documented convention plus
-presets — the dash machinery already draws it) and a parametric `net`.
+rules out a drawing language), and 1d shipped `notebook`. **Phase 2b is built too:** `net` (§ 7.14, decision 51), with `box-tuck-a4` and
+`16-net-tray`. What is left of the handover is the small rest of phase 2: fold
+notation as a *documented convention* (2a — the dash machinery already draws
+valley and mountain folds; § 7.14 names them, presets could show them) and
+pre-creasing grids for tessellations (2c — `grid` plus the diagonals of 1b,
+mostly a preset).
 A specific paper aeroplane was considered and **refused**: it is a drawing, not
 a structure, and § 2 rules out a drawing language.
 

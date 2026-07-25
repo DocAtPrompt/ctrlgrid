@@ -948,3 +948,35 @@ Three consequences fell out of it, each small and each deliberate:
   notebook needed the same builder, the way `polar_geometry` is shared by
   `polar` and `mandala`. The calendar's tests passed untouched, which is what
   made it an extraction rather than a rewrite.
+
+
+## 51. A net is panels; cut and fold fall out of the geometry (§ 7.14)
+
+`net` could have been written the way a person draws one: trace the outline,
+then draw the creases inside it. Instead a style produces **panels** and one
+rule turns them into marks — an edge two panels share is a fold, an edge only
+one has is a cut.
+
+The reason is that the first way has to be right twice. An outline and a crease
+list are two descriptions of the same box, and the moment a style changes, one
+of them is stale — a net that looks plausible and does not close, which is the
+failure class § 5.1 names. With panels there is one description, and the
+distinction is computed.
+
+The matching is exact rather than tolerant: positions are integer micrometres
+(§ 3.3), so two panels either share an edge or they do not, and there is no
+epsilon anyone has to tune. What that costs is a rule every style must keep —
+**a flap spans its attachment edge completely** and tapers only on its free
+side, or its fold edge would only partly coincide with its neighbour's and the
+crease would come out as two cuts. A carton is die-cut that way in any case, so
+the constraint costs nothing real. Three panels on one edge is an
+`AssertionError`, not a `DefinitionError`: no user can write it, only a wrong
+style.
+
+Two conventions had to be *chosen*, and both are written in § 7.14 and tested in
+both directions rather than left in the arithmetic: dimensions are **inner**
+(the number a user has is the thing that must go in the box), and thickness has
+one rule — a panel that closes over a layer is widened by it, a flap that slides
+inside one is shortened by it. `thickness: 0` reduces every style to its ideal
+net, and the test that says so is what keeps the rule from quietly growing
+special cases.

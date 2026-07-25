@@ -1289,6 +1289,77 @@ Höhe).
 ganze Dokument, ein Abschnitt nimmt den Musterbereich, wie er ist), kein eigenes
 Format je Abschnitt, keine verschachtelten Notizbücher.
 
+### 7.14 `net` — parametrische Schachtelnetze
+
+Maße hinein, das Gesetz rechnet das Netz: Schnittlinien durchgezogen, Falzlinien
+gestrichelt, Klebelaschen ausgerechnet. Der Generator, der das Versprechen des
+Werkzeugs **beweist**, statt es zu beschreiben — eine Schachtel, die 2 mm daneben
+liegt, schließt nicht.
+
+```yaml
+generator: net
+style: tuck_top          # tuck_top | tray
+length: 80mm             # Innenmaße — der Raum *in* der Schachtel
+width: 50mm
+height: 30mm
+thickness: 0.3mm         # Material; 0 für dünnes Papier
+glue_tab: 12mm
+tuck: 15mm               # die Zunge, die in die Vorderwand rutscht (tuck_top)
+cut:  { weight: 0.4pt, color: "#000000" }
+fold: { weight: 0.25pt, color: "#888888", style: dashed }
+```
+
+**Warum das keine Zeichensprache ist (§ 2).** § 2 schließt freie Striche an
+gewählten Koordinaten aus und erlaubt einem Generator ein eigenes Gesetz. Ein
+Netz ist das Zweite: Die Def sagt *Steckschachtel, 80 × 50 × 30 mm, 0,3 mm
+Karton*, und jede Koordinate folgt daraus. Einen Schlüssel, der eine Fläche
+*platziert*, gibt es nicht und darf es nicht geben.
+
+**Der Mechanismus: Flächen, und Kanten, die zweimal vorkommen.** Eine Bauart
+liefert **Flächen** — geschlossene Polygone in lokalen Mikrometern — und sonst
+nichts. Dann gilt eine Regel:
+
+> Eine Kante, die zwei Flächen teilen, ist eine **Falz**; eine Kante, die nur zu
+> einer gehört, ist ein **Schnitt**.
+
+Damit fällt die Unterscheidung aus der Geometrie heraus, statt von Hand gepflegt
+zu werden, und eine neue Bauart ist eine Liste von Flächen statt eines
+nachgezeichneten Umrisses. Der Vergleich ist **exakt**, weil Positionen
+ganzzahlige Mikrometer sind (§ 3.3) — keine Toleranz zum Justieren. Der Preis
+ist eine Regel für die Bauarten: **jede Lasche überdeckt ihre Anschlusskante
+vollständig** und verjüngt nur an ihrer freien Seite. So wird ein Karton ohnehin
+gestanzt.
+
+**Zwei Konventionen, beide Entscheidungen und keine Herleitungen:**
+
+1. **Maße sind Innenmaße.** Die Zahl, die der Nutzer hat, ist das Ding, das
+   hineinsoll.
+2. **Materialstärke hat eine Regel:** Eine Fläche, die *über* eine Lage
+   schließt, wird um `thickness` breiter; eine Lasche, die *hinein* rutscht,
+   wird um ebenso viel kürzer. Bei `thickness: 0` verschwindet jede Zugabe und
+   das Netz ist das ideale — ein Test hält genau das fest.
+
+**Bauarten.** `tray`: Boden, vier Wände, an den Enden der beiden Stirnwände je
+eine verjüngte Klebelasche. `tuck_top`: ein Wandstreifen (`length`, `width + t`,
+`length + t`, `width + t`) mit Klebelasche, dazu oben wie unten ein Deckel
+(`width + t` tief) mit Zunge (`tuck − t`) und zwei Staublaschen. Die
+Faltnotation ist die aus § 2a und braucht keine neue Mechanik: `style: dashed`
+für die Talfalte, `dash: [3, 1, 1, 1]` für die Bergfalte.
+
+**Abgelehnt wird, vor Seite eins:** ein Netz, das nicht auf den Musterbereich
+passt — mit Flachgröße und Bereich in Millimetern und dem Hinweis, dass ein Netz
+**nie skaliert** wird (§ 8.2) —, ein Maß ≤ 0, eine `thickness` ab der Hälfte des
+kleinsten Maßes (die Wände träfen sich in der Mitte), ein Schlüssel, der für die
+gewählte Bauart nichts tut (`tuck` an einer Wanne, § 5.1), und eine unbekannte
+Bauart, die die vorhandenen nennt.
+
+**Bewusst nicht enthalten:** weitere Bauarten (Umschlag, Wickelschachtel,
+Stülpdeckel — alle dieselbe Mechanik mit anderer Flächenliste, sie kommen, wenn
+sie jemand braucht), Beschriftungen auf den Flächen (§ 2: das Werkzeug
+beschreibt Struktur), das Schachteln mehrerer Netze auf einem Blatt, und eine
+Falzzugabe je Rille — Letzteres ist Druckereipraxis und wäre hier eine geratene
+Zahl (§ 9.2).
+
 ---
 
 ## 8. Geometrie

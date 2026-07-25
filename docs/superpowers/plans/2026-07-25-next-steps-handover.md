@@ -217,7 +217,15 @@ dash-dot, reference crease thin. The dash machinery already does this —
 missing is the name, not the capability. Consider a documented convention plus
 presets rather than new code.
 
-### 2b. Parametric nets — `net` (recommended as the next big blade)
+### 2b. Parametric nets — `net` (recommended as the next big blade) — **built, 2026-07-26**
+
+> Done: `tray` and `tuck_top`, § 7.14, decision 51, preset `box-tuck-a4`,
+> example `16-net-tray`. Two styles rather than one, and `thickness` with it,
+> both by the user's call. The mechanism worth knowing: a style produces panels
+> and the cut/fold distinction falls out of the geometry — an edge two panels
+> share is a crease. **Still open: nobody has cut one out and folded it.**
+
+
 
 A box of 80×50×30 mm, an envelope for a given card: cut lines solid, fold lines
 dashed, glue tabs computed. This **is** a structure — measurements in, a law

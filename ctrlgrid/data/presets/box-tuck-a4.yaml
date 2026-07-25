@@ -1,0 +1,41 @@
+# net — a tuck-top box, ready to print, cut and fold. A4 landscape.
+#
+# Measurements in, the law computes the net (§ 7.14): cut lines solid, creases
+# dashed, glue tab and dust flaps worked out from the dimensions. This is the
+# preset that *proves* the tool's promise instead of describing it — print it at
+# 100 %, cut it out, fold it. If it closes, your printer did not scale.
+#
+# Two conventions, both worth knowing before you change a number:
+#
+#   * the dimensions are the **inner** ones — the space inside the box, because
+#     that is the number you actually have (the thing that must go in);
+#   * `thickness` is the material. A panel that closes over a layer is widened
+#     by it, a flap that slides inside one is shortened by it. Use 0 for thin
+#     paper, 0.3mm for ordinary 250 g/m² card.
+#
+# A net is never scaled to fit: if it does not fit the sheet, the run is refused
+# with the flat size it needs. Try a smaller box, a bigger format, or
+# `--nup`-free A3.
+version: 1
+
+page:
+  format: a4
+  orientation: landscape     # a box strip is wider than it is tall
+  margin: 8mm
+
+generator: net
+style: tuck_top              # tuck_top | tray
+
+length: 70mm                 # inner
+width: 40mm
+height: 25mm
+thickness: 0.3mm             # 250 g/m² card; 0 for paper
+
+glue_tab: 12mm               # the tab that closes the wall strip
+tuck: 15mm                   # the tongue that slides into the front wall
+# dust: 20mm                 # the flaps under the lid; absent = length / 3, ≤ 25 mm
+
+# The fold notation of § 2a, with the ordinary keys: cuts solid, creases dashed.
+# A mountain fold, if you want to tell it from a valley: `dash: [3, 1, 1, 1]`.
+cut:  { weight: 0.4pt,  color: "#000000" }
+fold: { weight: 0.25pt, color: "#888888", style: dashed }

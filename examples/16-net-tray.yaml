@@ -1,0 +1,25 @@
+# net — an open tray, the one you can cut out in a minute (§ 7.14).
+#
+# 80 x 50 x 30 mm inside: a base, four walls and four glue tabs, cut lines solid
+# and creases dashed. Print at 100 %, cut round the solid lines, fold along the
+# dashed ones, glue the four tabs inside the end walls.
+#
+# The dimensions are the *inner* ones — the space the thing you are storing has
+# to fit into. `thickness` is left at zero here because a tray's walls stand
+# outside its base, so ordinary paper needs no allowance; a tuck-top box does,
+# and the `box-tuck-a4` preset shows it.
+#
+# This example is the tool's promise made checkable: if the folded tray does not
+# close, either the arithmetic or the printer is wrong, and the calibration
+# cover sheet (`--cover`) tells you which.
+version: 1
+
+page:
+  format: a4
+  margin: 10mm
+
+generator: net
+style: tray
+length: 80mm
+width: 50mm
+height: 30mm

@@ -132,8 +132,10 @@ planned.
 | `form` | fillable forms: phone logs, checklists, handover sheets |
 | `perspective` | one-, two- and three-point vanishing-point grids |
 | `mandala` | rotationally symmetric templates: rings, rosettes, star polygons |
+| `net` | box nets: a tray or a tuck-top carton from its inner dimensions |
 
-Each of those fills **one page**, as many times as you ask for. Two *document*
+Each of those fills **one page**, as many times as you ask for — `net` fills it
+with one figure you cut out and fold, and refuses rather than scale it. Two *document*
 generators are the exception, producing whole linked documents instead:
 `calendar`, which has its own section below, and `notebook` — sections of pages,
 each filled by one of the ten above, with a contents page that links to them:

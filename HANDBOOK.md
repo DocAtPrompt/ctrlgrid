@@ -882,6 +882,47 @@ Examples: [`10-mandala.yaml`](examples/10-mandala.yaml) and
 [`10b-mandala-scallops.yaml`](examples/10b-mandala-scallops.yaml). Preset:
 `mandala-a4`.
 
+### `net` — box nets you cut out and fold
+
+Measurements in, a law computes the net: cut lines solid, creases dashed, glue
+tabs worked out. The one generator whose output you can check with scissors.
+
+```yaml
+generator: net
+style: tuck_top        # tuck_top | tray
+length: 80mm           # inner dimensions — the space inside the box
+width: 50mm
+height: 30mm
+thickness: 0.3mm       # the material; 0 for thin paper
+glue_tab: 12mm
+tuck: 15mm             # the tongue that slides into the front wall (tuck_top)
+```
+
+Two conventions are worth knowing before you change a number:
+
+- **The dimensions are inner ones** — the space the contents need, which is the
+  number you actually have.
+- **`thickness` has one rule:** a panel that closes *over* a layer is widened by
+  it, a flap that slides *inside* one is shortened by it. `0` gives the ideal
+  net, which is right for paper; `0.3mm` is ordinary 250 g/m² card.
+
+`style: tray` is an open box — base, four walls, four glue tabs.
+`style: tuck_top` is the classic carton — a wall strip with a glue tab, and a
+lid with a tongue at each end supported by dust flaps.
+
+Cuts and creases are drawn through the ordinary keys, so § 2a's fold notation
+needs nothing new: `fold: { style: dashed }` is a valley fold,
+`fold: { dash: [3, 1, 1, 1] }` a mountain fold.
+
+**A net is never scaled.** If it does not fit the sheet the run is refused with
+the flat size it needs and the size there is — a box 2 mm out does not close, so
+"fit to page" would be worse than an error. What else is refused: a dimension of
+zero, a `thickness` at or past half the smallest dimension, `tuck` or `dust` on
+a tray where they would do nothing, and an unknown style.
+
+Example: [`16-net-tray.yaml`](examples/16-net-tray.yaml). Preset:
+`box-tuck-a4`.
+
 ### `calendar` — a linked, write-on planner
 
 Unlike every generator above, `calendar` does not fill one page — it produces a
@@ -1158,6 +1199,7 @@ the documentation. There is one for every generator:
 dots-5mm            grid-a4             mandala-a4          maze-medium
 millimeter-a4       perspective-2pt-a4  phone-log-a5        polar-a4
 staves-treble-a4    tiling-hex-a4       calendar-a4         notebook-a4
+box-tuck-a4
 ```
 
 And five that are papers rather than generators — each one is `lines` with a
