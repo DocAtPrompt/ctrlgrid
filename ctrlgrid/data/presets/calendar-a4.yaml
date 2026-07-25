@@ -22,6 +22,8 @@ header:
   font: { size: 9pt }
   center: "{year}"
   right: "your name"
+  # background: "#2f3a48"   # a full-width colour strip behind the band
+  # text_color: "#ffffff"   # the band's text colour (default black)
 
 generator: calendar
 year: 2026

@@ -1541,6 +1541,11 @@ beschnitten, es passt oder es ist ein Fehler.
 bleibt es immer beim Fehler. Kürzen ist nur für Freitext in Kopf und Fuß
 sinnvoll.
 
+Ein Band trägt optional eine **Hintergrundfarbe** (`background`, ein Farbstreifen
+über die volle Blattbreite und die Bandhöhe — nicht den `gap`) und eine
+**Textfarbe** (`text_color`, Standard Schwarz). Beide sind ohne Angabe aus und
+ändern kein bestehendes Blatt. Der Streifen liegt hinter dem Text.
+
 ### 8.10 Platzhalter
 
 Kopf und Fuß haben je drei Felder (`left`, `center`, `right`). **Was darin

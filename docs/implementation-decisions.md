@@ -772,3 +772,15 @@ The image is validated at load time like `logo`, via a shared `_resolve_def_imag
 helper. Header/footer band *colours* are deliberately out of scope — a later
 step gives each band its own background and text colour; until then contrast on
 a dark cover is the user's to manage.
+
+## 45. Band background + text colour live in `layout_band` (§ 8.9)
+
+The header/footer background strip and text colour are produced inside
+`layout_band`, the single function both the blade and document pre-flight paths
+call, rather than as a separate handle mark prepended at each of the four call
+sites — one site would eventually be forgotten (§ 5.1). `layout_band` gained a
+required `sheet_width` (the only fact it lacked for a full-bleed strip); a
+required, not defaulted, parameter so a new caller cannot silently omit it. The
+strip spans the full sheet width but only the band height, not the `gap`, and is
+the band's first mark so the text paints over it (`Layer` is paint-order, not
+sorted). Both fields default `None` — byte-identical to before.
