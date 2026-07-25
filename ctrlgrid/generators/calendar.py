@@ -215,6 +215,8 @@ class CalendarConfig(BaseModel):
         spec = data.get("holidays_file")
         if not spec:
             return data
+        if not isinstance(spec, str):
+            return data  # let the `holidays_file` field report its own type error
         try:
             year = int(data["year"])
         except (KeyError, TypeError, ValueError):
@@ -241,7 +243,11 @@ class CalendarConfig(BaseModel):
         ] + stray
 
         kept = len(imported.entries)
-        line = f"{kept} holidays from {path.name} ({imported.origin})"
+        # The `.ics` origin (X-WR-CALNAME/PRODID) is worth naming; the YAML origin
+        # is just the filename again, so don't double it (§ 7.12).
+        line = f"{kept} holidays from {path.name}"
+        if imported.origin != path.name:
+            line += f" ({imported.origin})"
         if imported.total != kept:
             line += f" — kept {kept} of {imported.total} in {year}"
         if imported.skipped:

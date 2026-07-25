@@ -221,3 +221,21 @@ def test_describe_names_the_file_source(tmp_path):
 def test_describe_keeps_the_plain_line_for_inline_only(tmp_path):
     cfg = _cfg(tmp_path, holidays=[{"date": "2026-01-01", "label": "New Year"}])
     assert "1 holidays" in CalendarGenerator().describe(cfg)
+
+
+def test_non_string_holidays_file_reports_the_field_type_error(tmp_path):
+    # The before-validator runs before field coercion; a non-string spec must not
+    # reach Path() and raise a bare TypeError — pydantic reports the str-field
+    # type error cleanly (non-negotiable #6 / § 12).
+    with pytest.raises(ValidationError, match="holidays_file"):
+        _cfg(tmp_path, holidays_file=123)
+
+
+def test_yaml_report_line_does_not_double_the_filename(tmp_path):
+    (tmp_path / "hol.yaml").write_text(
+        "- date: 2026-01-01\n  label: New Year\n", encoding="utf-8"
+    )
+    cfg = _cfg(tmp_path, holidays_file="hol.yaml")
+    lines = CalendarGenerator().describe(cfg)
+    assert "1 holidays from hol.yaml" in lines
+    assert not any("(hol.yaml)" in line for line in lines)
