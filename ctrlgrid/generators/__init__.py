@@ -25,6 +25,7 @@ from ctrlgrid.generators.grid import GridGenerator
 from ctrlgrid.generators.lines import LinesGenerator
 from ctrlgrid.generators.mandala import MandalaGenerator
 from ctrlgrid.generators.maze import MazeGenerator
+from ctrlgrid.generators.net import NetGenerator
 from ctrlgrid.generators.notebook import NotebookGenerator
 from ctrlgrid.generators.perspective import PerspectiveGenerator
 from ctrlgrid.generators.polar import PolarGenerator
@@ -103,6 +104,7 @@ REGISTRY: dict[str, Generator] = {
         LinesGenerator(),
         MandalaGenerator(),
         MazeGenerator(),
+        NetGenerator(),
         NotebookGenerator(),
         PerspectiveGenerator(),
         PolarGenerator(),
