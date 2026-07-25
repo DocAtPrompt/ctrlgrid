@@ -7,14 +7,17 @@ cover|contain, and independent opt-in header/footer on the title page.
 from __future__ import annotations
 
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 from PIL import Image as PILImage
 from pydantic import ValidationError
 
+from ctrlgrid.document import DocumentPage
 from ctrlgrid.errors import DefinitionError
 from ctrlgrid.generators.calendar import TitlePage
-from ctrlgrid.pages import background_image_rect
+from ctrlgrid.marks import Area, Image, Point, Text
+from ctrlgrid.pages import _build_document, background_image_rect
 
 # A4 portrait in µm.
 W, H = 210_000, 297_000
@@ -97,3 +100,76 @@ def test_bad_background_fit_is_refused(tmp_path):
 def test_header_footer_flags_take_booleans(tmp_path):
     tp = _title(tmp_path, header=True, footer=True)
     assert tp.header is True and tp.footer is True
+
+
+class _Recorder:
+    """A minimal Writer double that records draw() calls in order."""
+
+    def __init__(self):
+        self.drawn = []
+
+    def begin_document(self, meta): pass
+    def begin_page(self, width, height): pass
+    def define_dest(self, key): pass
+    def draw(self, mark): self.drawn.append(mark)
+    def link(self, lower_left, upper_right, target): pass
+    def outline(self, title, *, index): pass
+    def end_page(self): pass
+    def end_document(self): pass
+
+
+def _run(page, tmp_path):
+    """Drive `_build_document` for a single page with a recorder, returning it."""
+    doc = SimpleNamespace(
+        source="t.yaml",
+        pages=SimpleNamespace(embed_def=False),
+        sheet=SimpleNamespace(width=W, height=H),
+        config=object(),
+    )
+    blade = SimpleNamespace(pages=lambda cfg, *, area, q: iter([page]))
+    geometry = SimpleNamespace(
+        origin=SimpleNamespace(x=0, y=0), area=Area(width=W, height=H)
+    )
+    rec = _Recorder()
+    header_marks = [Text(pos=Point(0, H - 1000), content="HDR", size=2000,
+                         family="sans", align="left", color="#000000")]
+    footer_marks = [Text(pos=Point(0, 1000), content="FTR", size=2000,
+                         family="sans", align="left", color="#000000")]
+    _build_document(doc, blade, rec, geometry, header_marks, footer_marks)
+    return rec
+
+
+def _title_page(tmp_path, **kw):
+    _png(tmp_path / "bg.png", 200, 100, transparent=True)
+    return DocumentPage(
+        dest="title", kind="title", marks=(), links=(),
+        background="#123456", background_image=str(tmp_path / "bg.png"), **kw,
+    )
+
+
+def test_colour_is_drawn_before_the_background_image(tmp_path):
+    rec = _run(_title_page(tmp_path, show_header=False, show_footer=False), tmp_path)
+    kinds = [type(m).__name__ for m in rec.drawn]
+    # Polygon (the colour) must precede the Image, so transparency shows colour.
+    assert kinds.index("Polygon") < kinds.index("Image")
+
+
+def test_background_image_rect_is_used(tmp_path):
+    rec = _run(_title_page(tmp_path, background_fit="contain",
+                           show_header=False, show_footer=False), tmp_path)
+    img = next(m for m in rec.drawn if isinstance(m, Image))
+    # 200x100 → aspect 2.0, contain on A4: full width, centred vertically.
+    assert (img.pos.x, img.width, img.height) == (0, 210_000, 105_000)
+
+
+def test_header_shown_footer_hidden_per_flags(tmp_path):
+    rec = _run(_title_page(tmp_path, show_header=True, show_footer=False), tmp_path)
+    texts = [m.content for m in rec.drawn if isinstance(m, Text)]
+    assert "HDR" in texts and "FTR" not in texts
+
+
+def test_default_document_page_shows_both_bands(tmp_path):
+    plain_marks = DocumentPage(dest="d", kind="month", marks=())
+    rec = _run(plain_marks, tmp_path)
+    texts = [m.content for m in rec.drawn if isinstance(m, Text)]
+    assert "HDR" in texts and "FTR" in texts

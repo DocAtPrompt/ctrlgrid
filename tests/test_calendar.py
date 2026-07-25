@@ -228,7 +228,8 @@ class TestOverviewHalvesTitleAndWeek:
             p for p in _graph(cfg(title_page={"title": "2026", "subtitle": "sub"}))[0]
             if p.dest == "title"
         )
-        assert title.plain and title.background is not None and title.links == ()
+        assert not title.show_header and not title.show_footer
+        assert title.background is not None and title.links == ()
 
     def test_a_cover_logo_renders_as_an_image(self, tmp_path: Path) -> None:
         from PIL import Image as PILImage

@@ -64,11 +64,19 @@ class DocumentPage:
     links: tuple[Link, ...] = ()
     title: str | None = None
     background: str | None = None
-    """A full-sheet fill painted under everything — the title page's colour
-    (§ 7). The handle paints it, because only it knows the sheet; the generator
-    just names the colour (§ 3.3)."""
-    plain: bool = False
-    """No header/footer on this page — for the title page, which is a cover."""
+    """A full-sheet colour fill painted under everything — the title page's
+    colour (§ 7). The handle paints it, because only it knows the sheet
+    (§ 3.3); the generator just names the colour."""
+    background_image: str | None = None
+    """A resolved PNG path painted full-sheet over the colour, so transparent
+    areas show the colour through (§ 7.12). Handle-drawn like the colour."""
+    background_fit: str = "cover"
+    """`cover` (fill, crop overflow) or `contain` (fit inside) for the image."""
+    show_header: bool = True
+    """Draw the document's header band on this page (§ 7.12). The title page
+    turns it off unless `title_page.header` opts back in."""
+    show_footer: bool = True
+    """Draw the document's footer band on this page (§ 7.12)."""
 
 
 @runtime_checkable

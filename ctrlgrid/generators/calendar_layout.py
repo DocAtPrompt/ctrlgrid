@@ -184,7 +184,8 @@ def crumb(page: Page, *, title, prev, nxt, up=None):
 
 def title_page(page: Page, cfg) -> DocumentPage:
     """The cover: a full-sheet colour (painted by the handle) with an optional
-    logo, a centred title and subtitle. No nav, no header — `plain` (§ 7)."""
+    logo, a centred title and subtitle. No nav; header/footer only if
+    `title_page` opts in (§ 7.12)."""
     tp = cfg.title_page
     if tp.logo:
         from ctrlgrid.images import load_image
@@ -201,7 +202,9 @@ def title_page(page: Page, cfg) -> DocumentPage:
         page.text(page.W / 2, page.H / 2 + pt(22), tp.subtitle, pt(16), tp.text_color, "center")
     return DocumentPage(
         dest="title", kind="title", marks=tuple(page.marks), links=(),
-        title=tp.title, background=tp.background, plain=True,
+        title=tp.title, background=tp.background,
+        background_image=tp.background_image, background_fit=tp.background_fit,
+        show_header=tp.header, show_footer=tp.footer,
     )
 
 

@@ -27,6 +27,7 @@ from ctrlgrid.impose import Imposition
 from ctrlgrid.marks import (
     Arc,
     Area,
+    Image,
     Mark,
     Point,
     Polygon,
@@ -893,16 +894,18 @@ def _document_preflight(
     context = PageContext(
         index=0, number=1, count=total, name=None, is_even=False, seed_material=b""
     )
-    frame_marks: list[Text] = []
+    header_marks: list[Text] = []
+    footer_marks: list[Text] = []
     if document.header and geometry.header:
-        frame_marks += layout_band(
+        header_marks += layout_band(
             document.header, geometry.header, q=probe, page=context, section="header", extra=extra
         )
     if document.footer and geometry.footer:
-        frame_marks += layout_band(
+        footer_marks += layout_band(
             document.footer, geometry.footer, q=probe, page=context, section="footer", extra=extra
         )
-    return geometry, [], [frame_marks], []
+    # Two entries: [header, footer], so the title page can show either alone.
+    return geometry, [], [header_marks, footer_marks], []
 
 
 def _refuse_writer_cannot_render_document(
@@ -934,7 +937,7 @@ def _refuse_writer_cannot_render_document(
 
 def _build_document(
     document: Document, blade: object, writer: Writer, geometry: Geometry,
-    frame_marks: list[Text],
+    header_marks: list[Text], footer_marks: list[Text],
 ) -> Geometry:
     """Write a document generator's pages (§ 7). Nothing here may raise on user
     input — the pre-flight has already measured and refused (§ 12 point 13).
@@ -942,8 +945,8 @@ def _build_document(
     Each page's marks and links come in area-local coordinates (§ 3.3); the
     handle translates both onto the sheet by the one origin the geometry holds,
     exactly as the blade path does. The destination is defined before the marks,
-    so links from other pages resolve to it. `frame_marks` are the constant
-    header/footer, already in sheet coordinates, drawn on every page.
+    so links from other pages resolve to it. `header_marks`/`footer_marks` are
+    the constant bands, already in sheet coordinates, drawn per page's flags.
     """
     ox, oy = geometry.origin.x, geometry.origin.y
     writer.begin_document(
@@ -952,7 +955,7 @@ def _build_document(
     for index, page in enumerate(blade.pages(document.config, area=geometry.area, q=writer)):
         writer.begin_page(document.sheet.width, document.sheet.height)
         writer.define_dest(page.dest)
-        # A full-sheet fill, painted under everything (§ 7 — the title page).
+        # A full-sheet colour fill, painted under everything (§ 7 — the title).
         if page.background:
             writer.draw(Polygon(
                 points=(
@@ -962,8 +965,21 @@ def _build_document(
                 ),
                 closed=True, weight=0.0, fill_color=page.background,
             ))
-        if not page.plain:
-            for mark in frame_marks:
+        # ...then the background image over it, so its transparent areas show the
+        # colour through (§ 7.12). Validated in the pre-flight, so no raise here.
+        if page.background_image:
+            from ctrlgrid.images import load_image
+
+            image = load_image(page.background_image, field="title_page.background_image")
+            x, y, w, h = background_image_rect(
+                document.sheet.width, document.sheet.height, image.aspect, page.background_fit
+            )
+            writer.draw(Image(pos=Point(x, y), width=w, height=h, source=str(image.path)))
+        if page.show_header:
+            for mark in header_marks:
+                writer.draw(mark)
+        if page.show_footer:
+            for mark in footer_marks:
                 writer.draw(mark)
         for mark in page.marks:
             writer.draw(translate(mark, dx=ox, dy=oy))
@@ -1003,7 +1019,9 @@ def build(document: Document, writer: Writer) -> Geometry:
     # bit of handle furniture it keeps is the optional constant header/footer,
     # measured in the pre-flight and carried in `frames[0]`.
     if is_document_generator(blade):
-        return _build_document(document, blade, writer, geometry, frames[0] if frames else [])
+        header_marks = frames[0] if len(frames) > 0 else []
+        footer_marks = frames[1] if len(frames) > 1 else []
+        return _build_document(document, blade, writer, geometry, header_marks, footer_marks)
 
     plan = sheet_plan(document)
 
