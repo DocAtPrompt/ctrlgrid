@@ -346,6 +346,91 @@ class BorderSpec(Section):
     gap: LengthField = Length(um=0, mm=0.0, raw="0mm")
 
 
+#: The tick ladder of each unit (§ 8.12). Fixed data, not a setting: this is
+#: what a ruler of that unit looks like, and a user who wants another ladder
+#: says so with `step`/`mid_every`/`label_every`. `cm` shares the metric ladder
+#: — only the numbers beside it count differently.
+_RULER_LADDERS: dict[str, tuple[str, str, str]] = {
+    "mm": ("1mm", "5mm", "10mm"),
+    "cm": ("1mm", "5mm", "10mm"),
+    "in": ("0.125in", "0.5in", "1in"),
+}
+
+
+class RulerSpec(Section):
+    """A printed scale along one or more sheet edges (§ 8.12).
+
+    Zero is the pattern area's origin, so the numbers agree with the grid and
+    not with the paper's corner: this is a working scale, and the calibration
+    case already has the cover sheet (§ 8.8). It is drawn *into the margin* and
+    reserves nothing, so switching it on leaves the pattern exactly where it
+    was — the rule § 8.1 states for `border`, restated here.
+
+    `unit` says what the numbers mean; the three intervals say where the ticks
+    are, and each must be a whole multiple of the one below it. Edges are
+    physical (`bottom`/`left`/`top`/`right`) and not `inner`/`outer`: a scale is
+    a thing at the edge of the paper and does not follow the binding the way a
+    margin does (§ 8.1).
+    """
+
+    edges: tuple[Literal["bottom", "left", "top", "right"], ...]
+    unit: Literal["mm", "cm", "in"] = "mm"
+    step: LengthField = Length(um=1000, mm=1.0, raw="1mm")
+    #: `none` leaves the medium tick out; otherwise a length on the ladder.
+    mid_every: LengthField | None = Length(um=5000, mm=5.0, raw="5mm")
+    label_every: LengthField = Length(um=10_000, mm=10.0, raw="10mm")
+    weight: LengthField = Length(um=71, mm=0.0706, raw="0.2pt")
+    color: ColorField = "#000000"
+    font: FontSpec = FontSpec(size=Length(um=2117, mm=2.117, raw="6pt"))
+
+    @model_validator(mode="before")
+    @classmethod
+    def _the_ladder_of_the_unit(cls, data: Any) -> Any:
+        """Fill the intervals from `unit` before the fields are validated, so
+        that afterwards `mid_every is None` means one thing only: no medium
+        tick. `none` is spelt out rather than left empty — an empty key would
+        read as "default" everywhere else in this file."""
+        if not isinstance(data, dict):
+            return data
+        data = dict(data)
+        step, mid, label = _RULER_LADDERS.get(data.get("unit", "mm"), _RULER_LADDERS["mm"])
+        data.setdefault("step", step)
+        data.setdefault("label_every", label)
+        if "mid_every" not in data:
+            data["mid_every"] = mid
+        elif data["mid_every"] == "none":
+            data["mid_every"] = None
+        return data
+
+    @model_validator(mode="after")
+    def _every_rung_sits_on_the_one_below(self) -> RulerSpec:
+        """Refused here, because it needs no page (§ 12 point 13). A numbered
+        tick that sits on no tick of the ladder is the almost-right of § 5.1 —
+        it looks like a scale and measures wrong."""
+        if not self.edges:
+            raise ValueError("a ruler needs at least one edge (§ 8.12)")
+        twice = [edge for edge in self.edges if self.edges.count(edge) > 1]
+        if twice:
+            raise ValueError(f"edge {twice[0]!r} is named twice — once is enough (§ 8.12)")
+        if self.step.um <= 0:
+            raise ValueError(f"ruler step {self.step.raw} must be greater than zero (§ 8.12)")
+
+        for name, rung in (("label_every", self.label_every), ("mid_every", self.mid_every)):
+            if rung is not None and rung.um % self.step.um:
+                raise ValueError(
+                    f"ruler {name} {rung.raw} is not a whole multiple of step "
+                    f"{self.step.raw} — a numbered tick would sit on no tick of the "
+                    f"ladder. Use a multiple of {self.step.raw}, or `{name}: none` "
+                    "(§ 8.12)"
+                )
+        if self.mid_every is not None and self.label_every.um % self.mid_every.um:
+            raise ValueError(
+                f"ruler label_every {self.label_every.raw} is not a whole multiple of "
+                f"mid_every {self.mid_every.raw} (§ 8.12)"
+            )
+        return self
+
+
 class StampSpec(Section):
     """A full-page diagonal overprint (§ 8.6).
 
