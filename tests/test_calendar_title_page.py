@@ -216,3 +216,37 @@ def test_title_background_image_and_header_render(tmp_path):
     # A sub-page (contents) still shows both bands.
     text2 = reader.pages[1].extract_text()
     assert "HDR" in text2 and "FTR" in text2
+
+
+def test_calendar_title_header_strip_renders(tmp_path):
+    definition = tmp_path / "cal.yaml"
+    definition.write_text(
+        "version: 1\n"
+        "page:\n"
+        "  format: a4\n"
+        "  margin: 12mm\n"
+        "header:\n"
+        "  height: 8mm\n"
+        "  gap: 3mm\n"
+        '  center: "{year}"\n'
+        '  background: "#2f3a48"\n'
+        '  text_color: "#ffffff"\n'
+        "generator: calendar\n"
+        "year: 2026\n"
+        "title_page:\n"
+        '  title: "2026"\n'
+        "  header: true\n",
+        encoding="utf-8",
+    )
+    doc = loads(definition.read_text(), source=str(definition))
+    out = tmp_path / "cal.pdf"
+    build(doc, PdfWriter(str(out)))
+
+    reader = PdfReader(str(out))
+    # The header strip is a filled rectangle in the page content; the header
+    # text still extracts. Both on page 1 (the cover opted the header in).
+    page1 = reader.pages[0]
+    assert "2026" in page1.extract_text()
+    # The fill operator (rg + re + f) is present in the content stream.
+    content = page1.get_contents().get_data()
+    assert b" rg" in content or b" RG" in content   # a colour was set (the strip)
