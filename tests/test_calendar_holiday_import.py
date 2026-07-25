@@ -10,8 +10,10 @@ from __future__ import annotations
 import datetime
 
 import pytest
+from pydantic import ValidationError
 
 from ctrlgrid.errors import DefinitionError
+from ctrlgrid.generators.calendar import CalendarConfig
 from ctrlgrid.generators.holiday_import import read_holiday_file
 
 
@@ -145,3 +147,60 @@ def test_non_utf8_file_gives_the_cp1252_hint(tmp_path):
     f.write_bytes(b"- date: 2026-01-01\n  label: Caf\xe9 Day\n")  # é as CP1252
     with pytest.raises(DefinitionError, match="CP1252"):
         read_holiday_file(f, 2026)
+
+
+def _cfg(tmp_path, **kw):
+    return CalendarConfig.model_validate(
+        {"year": 2026, **kw}, context={"base_dir": tmp_path}
+    )
+
+
+def test_holidays_file_is_resolved_relative_to_base_dir_and_imported(tmp_path):
+    (tmp_path / "hol.yaml").write_text(
+        "- date: 2026-01-01\n  label: New Year\n", encoding="utf-8"
+    )
+    cfg = _cfg(tmp_path, holidays_file="hol.yaml")
+    assert {(h.date, h.label) for h in cfg.holidays} == {
+        (datetime.date(2026, 1, 1), "New Year")
+    }
+
+
+def test_inline_and_file_are_merged_inline_wins_on_collision(tmp_path):
+    (tmp_path / "hol.yaml").write_text(
+        "- date: 2026-01-01\n  label: File New Year\n"
+        "- date: 2026-12-25\n  label: Christmas\n",
+        encoding="utf-8",
+    )
+    cfg = _cfg(
+        tmp_path,
+        holidays_file="hol.yaml",
+        holidays=[{"date": "2026-01-01", "label": "Inline New Year"}],
+    )
+    by_date = {h.date: h.label for h in cfg.holidays}
+    assert by_date[datetime.date(2026, 1, 1)] == "Inline New Year"  # inline wins
+    assert by_date[datetime.date(2026, 12, 25)] == "Christmas"
+    assert len(cfg.holidays) == 2
+
+
+def test_holidays_are_sorted_by_date(tmp_path):
+    (tmp_path / "hol.yaml").write_text(
+        "- date: 2026-12-25\n  label: Christmas\n"
+        "- date: 2026-01-01\n  label: New Year\n",
+        encoding="utf-8",
+    )
+    cfg = _cfg(tmp_path, holidays_file="hol.yaml")
+    assert [h.date for h in cfg.holidays] == [
+        datetime.date(2026, 1, 1),
+        datetime.date(2026, 12, 25),
+    ]
+
+
+def test_inline_out_of_year_is_still_refused(tmp_path):
+    with pytest.raises(ValidationError, match="not in 2026"):
+        _cfg(tmp_path, holidays=[{"date": "2027-01-01", "label": "Wrong Year"}])
+
+
+def test_holidays_source_cannot_be_set_by_the_user(tmp_path):
+    # A user value is popped and ignored; no file → no source.
+    cfg = _cfg(tmp_path, holidays_source="forged")
+    assert cfg.holidays_source is None

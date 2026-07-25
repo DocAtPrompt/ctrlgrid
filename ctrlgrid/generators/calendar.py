@@ -18,12 +18,14 @@ from __future__ import annotations
 import calendar as _calendar
 import datetime
 from collections.abc import Iterator
+from pathlib import Path
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from ctrlgrid.document import DocumentPage
 from ctrlgrid.errors import DefinitionError
+from ctrlgrid.generators.holiday_import import read_holiday_file
 from ctrlgrid.marks import Area
 from ctrlgrid.model import ColorField, Section
 from ctrlgrid.writers import WriterQuery
@@ -35,6 +37,22 @@ _DEFAULT_MONTHS = [
     "July", "August", "September", "October", "November", "December",
 ]
 _DEFAULT_WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+
+
+def _inline_date(item) -> datetime.date | None:
+    """The date of an inline holiday entry, or None when the entry is malformed
+    — then pydantic reports it in the user's own terms (§ 12)."""
+    if not isinstance(item, dict) or "date" not in item or "label" not in item:
+        return None
+    value = item["date"]
+    if isinstance(value, datetime.date) and not isinstance(value, datetime.datetime):
+        return value
+    if isinstance(value, str):
+        try:
+            return datetime.date.fromisoformat(value.strip())
+        except ValueError:
+            return None
+    return None
 
 
 class Holiday(Section):
@@ -154,6 +172,10 @@ class CalendarConfig(BaseModel):
     months: tuple[str, ...] | None = None
     weekdays: tuple[str, ...] | None = None
     holidays: tuple[Holiday, ...] = ()
+    holidays_file: str | None = None
+    #: Computed provenance for the report (set by the before-validator, never by
+    #: the user); `describe()` names it. § 7.12.
+    holidays_source: str | None = None
     title_page: TitlePage | None = None
     year_view: YearView = YearView()
     month_view: MonthView = MonthView()
@@ -174,6 +196,58 @@ class CalendarConfig(BaseModel):
         if value is not None and len(value) != 7:
             raise ValueError(f"weekdays needs exactly 7 names, got {len(value)}")
         return value
+
+    @model_validator(mode="before")
+    @classmethod
+    def _import_holidays_file(cls, data, info):
+        """Seam 1 (§ 3.6): read `holidays_file` here, where `base_dir` is in the
+        validation context (like `logo`) and the raw fields are still dicts, so
+        the normal `Holiday` validation runs on the merged result.
+
+        File entries are filtered to the year and merged with the inline list;
+        an inline entry wins on a shared date (hand-authored beats a feed). A
+        computed provenance string goes to `holidays_source` for the report;
+        any user value there is dropped — it is not an input (§ 7.12)."""
+        if not isinstance(data, dict):
+            return data
+        data = dict(data)
+        data.pop("holidays_source", None)  # computed, never user input
+        spec = data.get("holidays_file")
+        if not spec:
+            return data
+        try:
+            year = int(data["year"])
+        except (KeyError, TypeError, ValueError):
+            return data  # let the `year` field report its own error first
+
+        base = (info.context or {}).get("base_dir")
+        path = Path(spec)
+        if base is not None and not path.is_absolute():
+            path = Path(base) / path
+        imported = read_holiday_file(path, year)
+
+        merged: dict[datetime.date, str] = {
+            entry["date"]: entry["label"] for entry in imported.entries
+        }
+        stray = []  # inline entries pydantic should report (bad shape/date)
+        for item in data.get("holidays") or ():
+            date = _inline_date(item)
+            if date is None:
+                stray.append(item)
+            else:
+                merged[date] = item["label"]  # inline overrides the file
+        data["holidays"] = [
+            {"date": date, "label": merged[date]} for date in sorted(merged)
+        ] + stray
+
+        kept = len(imported.entries)
+        line = f"{kept} holidays from {path.name} ({imported.origin})"
+        if imported.total != kept:
+            line += f" — kept {kept} of {imported.total} in {year}"
+        if imported.skipped:
+            line += f", skipped {imported.skipped} recurring/timed events"
+        data["holidays_source"] = line
+        return data
 
     @model_validator(mode="after")
     def _holidays_fall_in_the_year(self) -> CalendarConfig:
