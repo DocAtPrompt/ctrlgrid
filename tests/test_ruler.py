@@ -13,6 +13,7 @@ import pytest
 from pydantic import ValidationError
 
 from ctrlgrid.model import RulerSpec
+from ctrlgrid.ruler import LABEL_GAP, LONG_TICK, Tick, label_text, strip_width, ticks
 
 
 class TestTheSection:
@@ -80,3 +81,50 @@ class TestTheSection:
     def test_an_unknown_key_is_refused(self) -> None:
         with pytest.raises(ValidationError):
             RulerSpec(edges=["bottom"], ticks="every 2mm")
+
+
+class TestTheLadder:
+    def test_ticks_start_at_zero_and_stay_inside_the_area(self) -> None:
+        ruler = RulerSpec(edges=["bottom"])
+        got = ticks(ruler, extent=25_000)
+        assert got[0] == Tick(at=0, kind="label")
+        assert [tick.at for tick in got] == [i * 1000 for i in range(26)]
+        assert [t.at for t in got if t.kind == "label"] == [0, 10_000, 20_000]
+        assert [t.at for t in got if t.kind == "mid"] == [5000, 15_000, 25_000]
+
+    def test_a_tick_past_the_end_is_not_drawn(self) -> None:
+        # The scale measures the area it borders; it does not run into the
+        # corner (§ 8.12).
+        ruler = RulerSpec(edges=["bottom"])
+        assert max(tick.at for tick in ticks(ruler, extent=25_500)) == 25_000
+
+    def test_positions_are_exact_multiples_not_accumulated(self) -> None:
+        # § 3.3: tick 200 is exactly 200 steps, whatever the step.
+        ruler = RulerSpec(edges=["bottom"], unit="in")
+        assert ticks(ruler, extent=200 * 3175)[200].at == 200 * 3175
+
+    def test_the_medium_tick_can_be_absent(self) -> None:
+        ruler = RulerSpec(edges=["bottom"], mid_every="none")
+        assert {tick.kind for tick in ticks(ruler, extent=25_000)} == {"short", "label"}
+
+    def test_millimetre_numbers_count_millimetres(self) -> None:
+        assert label_text(RulerSpec(edges=["bottom"]), at=30_000) == "30"
+
+    def test_centimetre_numbers_count_centimetres(self) -> None:
+        assert label_text(RulerSpec(edges=["bottom"], unit="cm"), at=30_000) == "3"
+
+    def test_inch_numbers_count_inches(self) -> None:
+        assert label_text(RulerSpec(edges=["bottom"], unit="in"), at=2 * 25_400) == "2"
+
+    def test_zero_reads_zero(self) -> None:
+        assert label_text(RulerSpec(edges=["bottom"]), at=0) == "0"
+
+    def test_a_number_states_its_position_exactly(self) -> None:
+        # § 8.12: never rounded — a scale that prints a wrong measure is worse
+        # than no scale at all.
+        ruler = RulerSpec(edges=["bottom"], unit="cm", mid_every="none", label_every="25mm")
+        assert [label_text(ruler, at=at) for at in (25_000, 50_000)] == ["2.5", "5"]
+
+    def test_the_strip_is_tick_plus_gap_plus_cap_height(self) -> None:
+        ruler = RulerSpec(edges=["bottom"])
+        assert strip_width(ruler) == LONG_TICK + LABEL_GAP + ruler.font.size.um * 7 // 10
