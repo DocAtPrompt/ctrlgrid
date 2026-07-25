@@ -55,6 +55,24 @@ def _inline_date(item) -> datetime.date | None:
     return None
 
 
+def _resolve_def_image(value: str | None, info, field: str) -> str | None:
+    """Anchor an image path to the definition (§ 5.2) and check it loads — here,
+    in validation, so a missing or unreadable PNG is refused before page one
+    (§ 12). Shared by the title page's `logo` and `background_image`."""
+    if value is None:
+        return None
+    from pathlib import Path
+
+    from ctrlgrid.images import load_image
+
+    base = (info.context or {}).get("base_dir")
+    path = Path(value)
+    if base is not None and not path.is_absolute():
+        path = Path(base) / path
+    load_image(str(path), field=field)
+    return str(path)
+
+
 class Holiday(Section):
     """One holiday: a date and the label to show on it (§ 7)."""
 
@@ -127,24 +145,20 @@ class TitlePage(Section):
     background: ColorField = "#2f3a48"
     text_color: ColorField = "#ffffff"
     logo: str | None = None
+    background_image: str | None = None
+    background_fit: Literal["cover", "contain"] = "cover"
+    header: bool = False
+    footer: bool = False
 
     @field_validator("logo")
     @classmethod
     def _resolve_logo(cls, value: str | None, info) -> str | None:
-        """Anchor the logo path to the definition (§ 5.2) and check it loads —
-        here, so a missing or unreadable image is refused before page one (§ 12)."""
-        if value is None:
-            return None
-        from pathlib import Path
+        return _resolve_def_image(value, info, "title_page.logo")
 
-        from ctrlgrid.images import load_image
-
-        base = (info.context or {}).get("base_dir")
-        path = Path(value)
-        if base is not None and not path.is_absolute():
-            path = Path(base) / path
-        load_image(str(path), field="title_page.logo")
-        return str(path)
+    @field_validator("background_image")
+    @classmethod
+    def _resolve_background_image(cls, value: str | None, info) -> str | None:
+        return _resolve_def_image(value, info, "title_page.background_image")
 
 
 class WeekView(Section):
