@@ -1,0 +1,59 @@
+# 米字格 mǐzìgé — Chinese character practice paper, "rice grid". A4.
+#
+# A box for each character with both midlines and both diagonals, so the
+# strokes of a character can be placed against a known centre. 20 mm boxes: a
+# common practice size beside 12 mm and 30 mm.
+#
+# Four families, and the two diagonals are the interesting part. A slanted
+# family is spaced *perpendicular* to its lines (§ 7.1), so the diagonals of a
+# 20 mm box are a 45° family spaced 20 / √2 mm apart — every such line runs
+# corner to corner through one box, and the family covers every box. Line 0 of
+# every family goes through the pattern area's origin, which is why the four
+# families meet exactly rather than nearly.
+#
+# 14.14214 mm is √2 / 2 × 20 mm to five decimals: the ratio is irrational, so
+# it is written out far enough that the last diagonal on the sheet is still
+# within a hundredth of a micrometre of its corner. Nothing accumulates —
+# positions are exact multiples of it (§ 3.3), not a running sum.
+#
+# Drop the two diagonal families and this is 田字格 tiánzìgé, the "field grid"
+# beginners start on.
+version: 1
+
+page:
+  format: a4
+  margin: 10mm
+
+pattern:
+  # Whole boxes only: a half box at the edge is not something to write in.
+  snap: cycle
+
+generator: lines
+families:
+  # The boxes and their midlines: a 10 mm cycle in which every second line is
+  # the box edge and the one between it is the midline.
+  - direction: horizontal
+    base_spacing: 10mm
+    base_weight: 0.15pt
+    weight: [2, 1]
+    style: solid
+    color: ["#c86a6a", "#e8b4b4"]
+    governing: true
+
+  - direction: vertical
+    base_spacing: 10mm
+    base_weight: 0.15pt
+    weight: [2, 1]
+    color: ["#c86a6a", "#e8b4b4"]
+    governing: true
+
+  # The diagonals of every box: 20 mm / √2 apart, perpendicular to themselves.
+  - direction: 45deg
+    base_spacing: 14.14214mm
+    base_weight: 0.12pt
+    color: ["#e8b4b4"]
+
+  - direction: 135deg
+    base_spacing: 14.14214mm
+    base_weight: 0.12pt
+    color: ["#e8b4b4"]

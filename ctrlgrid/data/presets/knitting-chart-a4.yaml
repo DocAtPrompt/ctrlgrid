@@ -1,0 +1,53 @@
+# knitting chart paper — proportional to a gauge. A4.
+#
+# A knitted stitch is wider than it is tall, so a chart drawn on square paper
+# lies about the shape of the finished fabric: a circle comes out an oval. Chart
+# paper for knitting therefore has two *different* spacings, one per axis, which
+# is why this preset exists — the cycle model has always had a cycle per axis
+# (§ 4), and here they simply differ.
+#
+# The numbers below are 22 stitches and 30 rows to 4 inches: 22 stitches is the
+# middle of the Craft Yarn Council's range for DK / light worsted yarn (21–24
+# sts in stockinette to 4 in), and 30 rows is the row gauge that commonly goes
+# with it. Row gauge is **not** standardised the way stitch gauge is — no
+# council publishes one — so treat both numbers as a starting point:
+#
+#   knit a swatch, measure it, and put your own gauge here.
+#     one stitch = 101.6mm / (your stitches per 4 in)
+#     one row    = 101.6mm / (your rows per 4 in)
+#
+# Every fifth line is heavier, so a chart can be counted in fives without
+# recounting from the edge.
+version: 1
+
+page:
+  format: a4
+  margin: 12mm
+
+pattern:
+  # Whole blocks of five, so the counting grid is not cut off mid-block.
+  snap: cycle
+
+generator: lines
+families:
+  # Rows: 101.6 mm / 30 = 3.3867 mm per row.
+  - direction: horizontal
+    base_spacing: 3.3867mm
+    base_weight: 0.12pt
+    weight: [1, 1, 1, 1, 2]
+    color: ["#b9c4cf", "#b9c4cf", "#b9c4cf", "#b9c4cf", "#5b6b7d"]
+    governing: true
+
+  # Stitches: 101.6 mm / 22 = 4.6182 mm per stitch.
+  - direction: vertical
+    base_spacing: 4.6182mm
+    base_weight: 0.12pt
+    weight: [1, 1, 1, 1, 2]
+    color: ["#b9c4cf", "#b9c4cf", "#b9c4cf", "#b9c4cf", "#5b6b7d"]
+    governing: true
+
+# A scale along two edges, to check the print and to measure the chart against
+# the swatch (§ 8.12). Zero sits on the first grid line.
+ruler:
+  edges: [bottom, left]
+  unit: cm

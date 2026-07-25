@@ -39,12 +39,13 @@ needs a human *and* the user has chosen to defer PyPI for now (see *Not done*).
 uv sync --extra dev && uv run pytest && uv run ruff check .
 ```
 
-1080 tests, all green, ruff clean. Sixty-odd commits on `main`, linear history,
+1081 tests, all green, ruff clean. Sixty-odd commits on `main`, linear history,
 pushed to **[github.com/DocAtPrompt/ctrlgrid](https://github.com/DocAtPrompt/ctrlgrid)**
-(public); CI runs green there on Linux (3.11–3.13), macOS and Windows. Twelve
+(public); CI runs green there on Linux (3.11–3.13), macOS and Windows. Fifteen
 presets — one per generator (`lines`, `dots`, `polar`, `form`, `maze`,
-`perspective`, `mandala`, `staves`, `grid`, `tiling`) plus `calendar-a4` and
-`calligraphy-a4` — and a
+`perspective`, `mandala`, `staves`, `grid`, `tiling`), `calendar-a4`, and four
+papers that are all `lines` with different cycles (`calligraphy-a4`, `seyes-a4`,
+`mizige-a4`, `knitting-chart-a4`) — and a
 rendered
 **example gallery** in [`examples/`](../examples/) — one A4 sheet per generator plus
 a multi-page maze booklet, a cover sheet and the calendar, each an ordinary
@@ -97,6 +98,15 @@ says so.
 | pulled forward into M1 | format table, presets, `check`, overwrite protection, placeholders — the M1 acceptance criteria needed them |
 
 ### Not done
+
+**The media check does not reach a document generator.** § 12.1 samples a
+blade's marks against the medium, and `calendar` has no single pattern area to
+sample — it owns its pages. So `calendar-a4` is the one preset
+`test_every_shipped_preset_is_clean_on_its_own_medium` skips, and the skip says
+so in place rather than passing quietly. Fixing it means sampling a document's
+pages the way the capability pre-flight samples one page's marks; small, and
+nobody has needed it yet because the calendar is drawn for paper and pen tablets
+at weights well above the threshold.
 
 **Two small edges of M5 remain**, and each names why:
 

@@ -20,6 +20,7 @@ from pathlib import Path
 
 import pytest
 
+from ctrlgrid.document import is_document_generator
 from ctrlgrid.errors import DefinitionError
 from ctrlgrid.loader import loads
 from ctrlgrid.media import media_findings
@@ -139,6 +140,24 @@ class TestPaperUsesAssumedDpi:
 
         document = load_preset("millimeter-a4")
         assert media_findings(document, Q) == []
+
+    def test_every_shipped_preset_is_clean_on_its_own_medium(self) -> None:
+        # A preset is documentation (§ 9.3), and one that warns about itself
+        # teaches the wrong thing. This caught a 0.1pt stroke — 0.83px at
+        # 600 dpi — in two presets on the day it was written.
+        from ctrlgrid.generators import get
+        from ctrlgrid.loader import load_preset, preset_names
+
+        for name in preset_names():
+            document = load_preset(name)
+            if is_document_generator(get(document.generator)):
+                # The media check samples a blade's marks, and a document
+                # generator has no single pattern area to sample — it owns its
+                # pages. So `calendar-a4` is not covered here, and nothing else
+                # covers it either: § 12.1 does not reach document generators
+                # yet. Recorded rather than quietly skipped.
+                continue
+            assert media_findings(document, Q) == [], f"{name} warns about itself"
 
 
 class TestStrict:

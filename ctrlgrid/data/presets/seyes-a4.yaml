@@ -1,0 +1,45 @@
+# séyès — the French school ruling ("grands carreaux"). A4.
+#
+# The standard exercise-book paper in French schools, and a good demonstration
+# of the cycle model (§ 4): the whole ruling is two families, because the fine
+# lines and the strong ones are one cycle, not two kinds of line.
+#
+# The measures come from Wikipedia's "Ruled paper" (Seyès): heavy vertical
+# lines 8 mm apart, beginning 16 mm from the left-hand edge, and three lighter
+# lines 2 mm apart between each pair of heavy lines. So the horizontal ruling
+# is a 2 mm cycle in which every fourth line is the strong one — an 8 mm band
+# of four 2 mm rows, which is what French cursive is taught on.
+#
+# The margin rule is the red line French copies carry at the left; it is a
+# family of exactly one line (`count: 1`), which is what § 7.1 has `count` for.
+version: 1
+
+page:
+  format: a4
+  # 8 mm of paper margin plus the 8 mm offset below puts the margin rule 16 mm
+  # from the sheet's left edge, where a French copy has it.
+  margin: 8mm
+
+generator: lines
+families:
+  # The ruling: 2 mm rows, every fourth line strong. One cycle, not two families.
+  - direction: horizontal
+    base_spacing: 2mm
+    base_weight: 0.12pt
+    weight: [2.2, 1, 1, 1]
+    color: ["#7a9ec4", "#b9cee3", "#b9cee3", "#b9cee3"]
+
+  # The verticals: 8 mm apart, starting at the margin rule.
+  - direction: vertical
+    base_spacing: 8mm
+    offset: 8mm
+    base_weight: 0.12pt
+    color: ["#b9cee3"]
+
+  # The margin rule — one line, in red, where the vertical ruling begins.
+  - direction: vertical
+    base_spacing: 8mm
+    offset: 8mm
+    count: 1
+    base_weight: 0.3pt
+    color: ["#d24a4a"]
