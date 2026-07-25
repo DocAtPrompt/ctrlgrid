@@ -12,7 +12,8 @@ from __future__ import annotations
 import pytest
 from pydantic import ValidationError
 
-from ctrlgrid.frame import ruler_marks
+from ctrlgrid.errors import DefinitionError
+from ctrlgrid.frame import check_rulers, ruler_marks
 from ctrlgrid.loader import loads
 from ctrlgrid.marks import Layer, Point, Segment, Text
 from ctrlgrid.model import RulerSpec
@@ -237,3 +238,58 @@ class TestTheMarks:
 
     def test_it_draws_nothing_when_there_is_no_ruler(self) -> None:
         assert ruler_marks(None, geometry(document()), q=Q) == []
+
+
+class TestTheRefusals:
+    def test_a_margin_too_narrow_names_the_edge_and_both_measures(self) -> None:
+        # § 8.2: nothing is shrunk to make a ruler fit. The message has to let
+        # the user act, which means the millimetres (§ 12).
+        doc = document(page="  margin: 4mm\n")
+        with pytest.raises(DefinitionError) as excinfo:
+            check_rulers(RulerSpec(edges=["left"]), geometry(doc), doc, q=Q)
+        message = str(excinfo.value)
+        assert "left" in message and "4.0mm" in message
+
+    def test_the_leftover_of_a_shrunken_area_counts_as_room(self) -> None:
+        # The scale is measured against the area the pattern actually got, not
+        # against the margin: `remainder` may have left it more room (§ 8.5).
+        # 4 mm of margin plus half the 9 mm leftover is enough at the bottom,
+        # while the same 4 mm on the left — where nothing was left over — is
+        # not, and that is the assertion above.
+        doc = document(page="  margin: 4mm\n")
+        check_rulers(RulerSpec(edges=["bottom"]), geometry(doc), doc, q=Q)
+
+    def test_a_band_in_the_way_is_named_as_the_cause(self) -> None:
+        doc = document(
+            page="  margin: 20mm\n",
+            blocks="header:\n  height: 8mm\n  gap: 2mm\n  center: hi\n",
+        )
+        with pytest.raises(DefinitionError) as excinfo:
+            check_rulers(RulerSpec(edges=["top"]), geometry(doc), doc, q=Q)
+        assert "header" in str(excinfo.value)
+
+    def test_the_other_edges_are_unaffected_by_that_band(self) -> None:
+        doc = document(
+            page="  margin: 20mm\n",
+            blocks="header:\n  height: 8mm\n  gap: 2mm\n  center: hi\n",
+        )
+        check_rulers(RulerSpec(edges=["bottom", "left", "right"]), geometry(doc), doc, q=Q)
+
+    def test_numbers_that_would_collide_are_refused_with_the_measured_width(self) -> None:
+        doc = document(page="  margin: 20mm\n")
+        ruler = RulerSpec(
+            edges=["bottom"], mid_every="none", label_every="2mm",
+            font={"size": "12pt"},
+        )
+        with pytest.raises(DefinitionError) as excinfo:
+            check_rulers(ruler, geometry(doc), doc, q=Q)
+        assert "2mm" in str(excinfo.value)
+
+    def test_a_ruler_that_fits_raises_nothing(self) -> None:
+        doc = document(page="  margin: 20mm\n")
+        check_rulers(
+            RulerSpec(edges=["bottom", "left", "top", "right"]), geometry(doc), doc, q=Q
+        )
+
+    def test_no_ruler_raises_nothing(self) -> None:
+        check_rulers(None, geometry(document()), document(), q=Q)

@@ -30,6 +30,7 @@ from ctrlgrid.ruler import (
     LABEL_GAP,
     label_text,
     number_height,
+    strip_width,
     tick_length,
     ticks,
 )
@@ -241,6 +242,68 @@ def ruler_marks(ruler: RulerSpec | None, geometry: Geometry, *, q: WriterQuery) 
                 )
             )
     return marks
+
+
+def _free_strip(edge: str, geometry: Geometry, sheet: Sheet) -> tuple[Um, str | None]:
+    """What stands between the pattern area's edge and the sheet's, and what
+    ends the space — a band, or nothing but the paper (§ 8.12)."""
+    origin, area = geometry.origin, geometry.area
+    if edge == "bottom":
+        if geometry.footer is not None:
+            return origin.y - geometry.footer.top, "footer"
+        return origin.y, None
+    if edge == "top":
+        top = origin.y + area.height
+        if geometry.header is not None:
+            return geometry.header.bottom - top, "header"
+        return sheet.height - top, None
+    if edge == "left":
+        return origin.x, None
+    return sheet.width - (origin.x + area.width), None
+
+
+def check_rulers(
+    ruler: RulerSpec | None, geometry: Geometry, document, *, q: WriterQuery
+) -> None:
+    """Fit or refuse, before page one (§ 12 point 13, § 8.2).
+
+    Nothing is ever shrunk, clipped or moved to make a ruler fit. The message
+    names the edge, the millimetres it needed and the millimetres there are —
+    and the band, when a band is what took them.
+    """
+    if ruler is None:
+        return
+
+    needed = strip_width(ruler, q=q)
+    for edge in ruler.edges:
+        free, cause = _free_strip(edge, geometry, document.sheet)
+        if needed > free:
+            because = f", where the {cause} band ends" if cause else ""
+            raise DefinitionError(
+                f"the {edge} ruler needs {_mm(needed)} between the pattern area and the "
+                f"edge of the sheet, and there is {_mm(max(free, 0))}{because} — widen "
+                "the margin or set a smaller `ruler.font.size` (§ 8.12)",
+                field="ruler",
+            )
+
+    # Two numbers that overlap read as one wrong number, so the widest is
+    # measured rather than assumed (§ 10.2) — the labels are digits, and "100"
+    # is what has to fit, not "0".
+    extent = max(geometry.area.width, geometry.area.height)
+    widest = max(
+        q.text_width(
+            label_text(ruler, at=tick.at), family=ruler.font.family, size=ruler.font.size.um
+        )
+        for tick in ticks(ruler, extent=extent)
+        if tick.kind == "label"
+    )
+    if widest > ruler.label_every.um:
+        raise DefinitionError(
+            f"the ruler's numbers are up to {_mm(widest)} wide and stand "
+            f"{ruler.label_every.raw} apart, so they would run into one another — label "
+            "further apart or set a smaller `ruler.font.size` (§ 8.12)",
+            field="ruler.label_every",
+        )
 
 
 def stamp_mark(stamp: StampSpec | None, sheet: Sheet, *, q: WriterQuery) -> Text | None:
