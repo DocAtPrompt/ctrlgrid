@@ -572,3 +572,42 @@ class TestMarkedDays:
 
     def test_an_unmarked_weekday_stays_plain(self) -> None:
         assert self._fills(self._page("day-2026-05-04")) == set()
+
+
+class TestContentsColourKey:
+    """The contents page's optional colour key: a patch and what it stands for,
+    written by the user because the calendar knows colours, not meanings (§ 7)."""
+
+    KEY = [
+        {"color": "#fce9e4", "label": "Public holidays"},
+        {"color": "#ffd9ec", "label": "Birthdays"},
+    ]
+
+    def _contents(self, **kw):
+        pages, _dests, _edges = _graph(cfg(**kw))
+        return next(p for p in pages if p.dest == "index")
+
+    def _patches(self, page) -> set[str]:
+        return {m.fill_color for m in page.marks
+                if isinstance(m, Polygon) and m.fill_color}
+
+    def test_there_is_no_key_by_default(self) -> None:
+        page = self._contents()
+        assert self._patches(page) == set()
+        assert not any(isinstance(m, Text) and m.content == "Birthdays" for m in page.marks)
+
+    def test_the_key_shows_a_patch_and_its_label(self) -> None:
+        page = self._contents(legend=self.KEY)
+        assert self._patches(page) == {"#fce9e4", "#ffd9ec"}
+        labels = {m.content for m in page.marks if isinstance(m, Text)}
+        assert {"Public holidays", "Birthdays"} <= labels
+
+    def test_a_key_line_without_a_colour_is_refused(self) -> None:
+        with pytest.raises(ValidationError):
+            cfg(legend=[{"label": "Birthdays"}])
+
+    def test_the_key_counts_towards_the_page_fitting(self) -> None:
+        # It is part of the block, so it can be what pushes the page over.
+        many = [{"color": "#ffd9ec", "label": f"Kind {i}"} for i in range(40)]
+        with pytest.raises(DefinitionError, match="contents page needs"):
+            CalendarGenerator().check(cfg(legend=many), area=AREA, q=Q)

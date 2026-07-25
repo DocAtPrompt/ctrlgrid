@@ -83,6 +83,25 @@ class Holiday(Section):
     color: ColorField | None = None
 
 
+class LegendEntry(Section):
+    """One line of the contents page's colour key (§ 7, opt-in).
+
+    A colour on a marked day says nothing by itself; this is where the user says
+    what it means. Written out rather than inferred — the calendar cannot know
+    that pink is a birthday, and guessing is what § 5.1 refuses to do.
+    """
+
+    color: ColorField
+    label: str
+
+    @field_validator("color")
+    @classmethod
+    def _a_line_of_the_key_needs_a_colour(cls, value: str | None) -> str:
+        if value is None:
+            raise ValueError("a legend line needs a colour to stand for (§ 7)")
+        return value
+
+
 class DayBlock(Section):
     """One block on the day page — the day is an ordered list of these (§ 7).
 
@@ -196,6 +215,9 @@ class CalendarConfig(BaseModel):
     #: The fill for a marked day that names no colour of its own (§ 7). It beats
     #: the weekend shade, because a marked day is the more particular fact.
     holiday_color: ColorField = "#fce9e4"
+    #: The colour key on the contents page: what each marked-day colour means.
+    #: Empty means no key — the calendar never invents the meanings (§ 7).
+    legend: tuple[LegendEntry, ...] = ()
     #: Computed provenance for the report (set by the before-validator, never by
     #: the user); `describe()` names it. § 7.12.
     holidays_source: str | None = None
@@ -396,8 +418,10 @@ class CalendarGenerator:
         from ctrlgrid.generators import calendar_layout as layout
 
         toc = self._notes_index_toc(cfg, layout, area)
-        groups = 2 + (1 if toc else 0)          # overviews, months, notes
-        needed = layout.CONTENTS_NAV + layout.contents_height(15 + len(toc), groups)
+        # overviews, months, notes, and the colour key when there is one
+        groups = 2 + (1 if toc else 0) + (1 if cfg.legend else 0)
+        entries = 15 + len(toc) + len(cfg.legend)
+        needed = layout.CONTENTS_NAV + layout.contents_height(entries, groups)
         if needed > area.height:
             raise DefinitionError(
                 f"the contents page needs about {round(needed / 1000)} mm of height and the "

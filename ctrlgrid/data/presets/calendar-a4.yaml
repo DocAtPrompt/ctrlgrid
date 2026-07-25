@@ -56,6 +56,12 @@ holidays:
   # - { date: 2026-05-03, label: "Mama's birthday", color: "#ffd9ec" }
   # holidays_file: holidays.ics   # or a YAML list — see § 7.12
 
+# What the colours mean. Optional: without it the contents page shows no key.
+# The calendar knows the colours, never their meanings — so you name them.
+# legend:
+#   - { color: "#fce9e4", label: "Public holidays" }
+#   - { color: "#ffd9ec", label: "Birthdays" }
+
 # A cover: a full-page colour with a centred title and subtitle. Drop it for no
 # title page.
 title_page:

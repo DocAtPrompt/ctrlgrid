@@ -233,6 +233,9 @@ CONTENTS_NAV = pt(14)         # the nav strip's own height, above everything
 _CONTENTS_TITLE_GAP = pt(34)  # title top → first entry top
 _CONTENTS_LINE = pt(22)       # one entry to the next
 _CONTENTS_GROUP_GAP = pt(14)  # the whitespace between two groups
+#: The colour key's patch and the air between it and its label.
+_KEY_PATCH = pt(9)
+_KEY_GAP = pt(6)
 
 
 def contents_height(entries: int, groups: int) -> int:
@@ -257,6 +260,10 @@ def contents_page(page: Page, cfg, n: Nav, months, notes_index) -> DocumentPage:
     target on a pen device. The three groups (overviews, months, notes) are set
     apart by whitespace rather than by rules, because they are already distinct
     in kind and a line would be ink that says nothing (§ 7).
+
+    An optional fourth group is the colour key: a patch and what it stands for.
+    It is the one place the marked-day colours are explained, and it is written
+    by the user — the calendar knows the colours, never their meanings.
     """
     nav(page, n)
     groups = [
@@ -271,20 +278,26 @@ def contents_page(page: Page, cfg, n: Nav, months, notes_index) -> DocumentPage:
     groups = [group for group in groups if group]
 
     size = pt(12)
-    # The column is as wide as its widest entry and sits in the middle of the
+    legend = list(cfg.legend)
+    # The column is as wide as its widest line and sits in the middle of the
     # sheet — measured, never guessed, so a translated month name still centres.
-    width = max(
+    # A key line is its patch, the gap, and its label.
+    widths = [
         page.q.text_width(label, family="sans", size=round(size))
         for group in groups
         for label, _ in group
-    )
-    left = round((page.W - width) / 2)
+    ]
+    widths += [
+        _KEY_PATCH + _KEY_GAP + page.q.text_width(e.label, family="sans", size=round(size))
+        for e in legend
+    ]
+    left = round((page.W - max(widths)) / 2)
 
     # Centred vertically between the nav strip and the foot of the area, so the
     # air falls evenly above and below instead of pooling at the bottom. The
     # pre-flight has already refused a block too tall to sit here (§ 8.2).
-    entries = sum(len(group) for group in groups)
-    block = contents_height(entries, len(groups))
+    entries = sum(len(group) for group in groups) + len(legend)
+    block = contents_height(entries, len(groups) + (1 if legend else 0))
     top = CONTENTS_NAV + max(0, round((page.H - CONTENTS_NAV - block) / 2))
 
     page.text(round(page.W / 2), top, "Contents", pt(20), INK, "center")
@@ -294,6 +307,16 @@ def contents_page(page: Page, cfg, n: Nav, months, notes_index) -> DocumentPage:
             top += _CONTENTS_GROUP_GAP   # the whitespace between the groups
         for label, target in group:
             page.link_text(left, top, label, target, size)
+            top += _CONTENTS_LINE
+    if legend:
+        top += _CONTENTS_GROUP_GAP
+        for entry in legend:
+            # The patch is centred on the cap, so it reads as part of the line.
+            # It is outlined: a pale fill on white is otherwise hard to find, and
+            # the palest colours are exactly the ones a calendar wants.
+            page.box(left, top + (size - _KEY_PATCH) / 2, _KEY_PATCH, _KEY_PATCH,
+                     0.2, GUIDE, entry.color)
+            page.text(left + _KEY_PATCH + _KEY_GAP, top, entry.label, size, INK)
             top += _CONTENTS_LINE
     return page.done("index", "index", "Contents")
 

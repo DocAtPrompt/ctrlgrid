@@ -1194,7 +1194,11 @@ weil der markierte Tag die besondere Aussage ist. Gezeigt wird sie überall
 *hinter* dem Tag: als Zellfüllung in der Halbjahrestabelle, als Zeilenfüllung auf
 der Monatsseite, als Fläche hinter der Zahl in der Ganzjahresübersicht (die
 bewusst keine Zellrahmen hat) und als Fläche hinter der Bezeichnung auf der
-Tagesseite. Damit ist § 7.12 vollständig.
+Tagesseite. Was eine Farbe *bedeutet*, weiß nur der Nutzer: eine optionale
+**Farblegende** (`legend`, je Zeile `color` und `label`) steht als vierte Gruppe
+auf dem Inhaltsverzeichnis, wird mitgezählt, wenn geprüft wird, ob die Seite
+passt, und bleibt leer, wenn keine angegeben ist — der Kalender erfindet keine
+Bedeutungen. Damit ist § 7.12 vollständig.
 
 ---
 
