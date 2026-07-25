@@ -429,16 +429,28 @@ def _half_table(page: Page, cfg, months, top, h, *, first_month: int) -> None:
     short month's column simply ends — no empty boxes for the missing days
     (§ 7). Weekends shaded, the month header and day cells link."""
     day_col = mm(7)
-    col_w = (page.W - day_col) / 6
+    both = cfg.year_view.day_numbers == "both"
+    # Six month columns share what the reference column(s) leave.
+    col_w = (page.W - day_col - (day_col if both else 0)) / 6
     row_h = h / 32  # one header row + 31 day rows
     shade = cfg.year_view.weekend_shade
-    # left reference column of day numbers 1..31
+    size = pt(6.5)
+
+    def in_row(row: int, text_size: float) -> int:
+        """The cap top that puts text in the middle of its row, whatever its
+        size. A fixed inset put the number at the top of an 8 mm row instead."""
+        return round(top + row_h * row + (row_h - text_size) / 2)
+
+    # The reference column of day numbers 1..31, on the left and — when the table
+    # is wide enough to lose the row on the way across — on the right as well.
     for d in range(1, 32):
-        page.text(pt(1), round(top + row_h * d + pt(1)), str(d), pt(6.5), INK)
+        page.text(pt(1), in_row(d, size), str(d), size, INK)
+        if both:
+            page.text(page.W - pt(1), in_row(d, size), str(d), size, INK, "right")
     for c in range(6):
         month = first_month + c
         cx = day_col + c * col_w
-        page.link_text(round(cx + pt(2)), round(top + pt(1)),
+        page.link_text(round(cx + pt(2)), in_row(0, pt(9)),
                        months[month - 1][:3], f"month-{month:02d}", pt(9))
         ndays = _month_length(cfg.year, month)
         for d in range(1, ndays + 1):

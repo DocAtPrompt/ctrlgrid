@@ -25,7 +25,7 @@ from ctrlgrid.generators.calendar import (
 )
 from ctrlgrid.generators.calendar_layout import pt
 from ctrlgrid.loader import loads
-from ctrlgrid.marks import Area, Text
+from ctrlgrid.marks import Area, Polygon, Text
 from ctrlgrid.pages import build
 from ctrlgrid.writers.pdf import PdfWriter
 
@@ -482,3 +482,48 @@ class TestYearOverviewGrid:
         narrow = Area(width=100_000, height=277_000)
         with pytest.raises(DefinitionError, match="full-year overview needs"):
             CalendarGenerator().check(cfg(), area=narrow, q=Q)
+
+
+class TestHalfYearTable:
+    """The half-year table: numbers that sit in their row, on one edge or both."""
+
+    def _half(self, **kw):
+        pages, _dests, _edges = _graph(cfg(**kw))
+        return next(p for p in pages if p.dest == "half-1")
+
+    def _reference(self, page) -> dict[str, Text]:
+        """The 1..31 column on the left edge."""
+        return {
+            t.content: t
+            for t in page.marks
+            if isinstance(t, Text) and t.size == pt(6.5) and t.align != "right"
+        }
+
+    def test_the_day_number_sits_in_the_middle_of_its_row(self) -> None:
+        page = self._half()
+        numbers = self._reference(page)
+        # The ruled cells of the first month column, top row first.
+        cells = [m for m in page.marks if isinstance(m, Polygon) and m.weight > 0]
+        left = min(min(p.x for p in cell.points) for cell in cells)
+        january = sorted(
+            (c for c in cells if min(p.x for p in c.points) == left),
+            key=lambda c: -max(p.y for p in c.points),
+        )
+        for day, cell in enumerate(january, start=1):
+            ys = [p.y for p in cell.points]
+            mark = numbers[str(day)]
+            middle = (min(ys) + max(ys)) / 2
+            assert min(ys) < mark.pos.y < max(ys)          # inside its own row
+            assert abs((mark.pos.y + mark.size / 2) - middle) < pt(2)   # and centred
+
+    def test_the_numbers_can_be_shown_on_both_edges(self) -> None:
+        page = self._half(year_view={"day_numbers": "both"})
+        both = [t for t in page.marks
+                if isinstance(t, Text) and t.content == "31" and t.size == pt(6.5)]
+        assert len(both) == 2
+
+    def test_by_default_the_numbers_are_on_the_left_only(self) -> None:
+        page = self._half()
+        only = [t for t in page.marks
+                if isinstance(t, Text) and t.content == "31" and t.size == pt(6.5)]
+        assert len(only) == 1

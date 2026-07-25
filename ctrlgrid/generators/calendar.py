@@ -127,6 +127,9 @@ class YearView(Section):
 
     weekend_shade: ColorField = "#f0f2f5"
     cell_link: Literal["day", "month", "none"] = "day"
+    #: The 1..31 reference column: on the left, or on both edges — six month
+    #: columns are wide enough that the eye loses the row on the way across.
+    day_numbers: Literal["left", "both"] = "left"
 
 
 class MonthView(Section):
