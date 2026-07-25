@@ -745,3 +745,16 @@ images.
   direct dependency would install a second copy whose exception classes typer
   never raises, so `cli.py` avoids needing it at all — the preset-as-command
   dispatch overrides `TyperGroup.parse_args` instead.
+
+## 43. Holiday file import loads in a before-validator (§ 7.12)
+
+`holidays_file` resolves in a `CalendarConfig` `model_validator(mode="before")`,
+not a loader function like `read_names`. Reason: `read_names` is CLI-flag-driven
+(`--names`), holidays are def-driven like `logo`; the before-validator is where
+`base_dir` is in the validation context and the raw fields are still dicts, so
+the normal `Holiday` validation runs on the merged result. The `.ics` parser is
+hand-written and deliberately narrow — concrete `VALUE=DATE` events only;
+recurring/timed events are skipped and counted, never silently dropped (§ 5.1).
+Merge rule: inline wins on a shared date (hand-authored beats a feed). The
+UTF-8/CP1252 decode is replicated from `read_names` rather than imported, to
+avoid a generator→loader import cycle; the shared contract is the message text.

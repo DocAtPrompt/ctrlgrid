@@ -29,9 +29,9 @@ planner PDF and the first *document generator* (owns pages, not one pattern
 area). It brought two clean new mechanisms (a `link` writer capability like
 `outline`, and a document-mode page loop in `pages.py`) and is **done through all
 its views** (title, contents, full-year overview of twelve mini-months, half-year
-1 & 2, months, opt-in weeks, days, notes) — only importing holidays from a *file*
-is left (an inline list works). Only M5's two device edges are otherwise left
-(see *Not done*).
+1 & 2, months, opt-in weeks, days, notes) — and holidays now import from a file
+too (`holidays_file`, YAML or `.ics`, § 7.12) — the calendar is complete. Only
+M5's two device edges are otherwise left (see *Not done*).
 0.1.0 is the version in the code; nothing has been released, because releasing
 needs a human *and* the user has chosen to defer PyPI for now (see *Not done*).
 
@@ -86,7 +86,7 @@ and a PNG preview, guarded by `test_every_example_validates`.
 | post-M9 `pattern.align` | anchor at `bottom-left` (default) / `top-left` / … — a `mirror_y` reflection re-anchors the cycle so the incomplete block moves corners (§ 8.5) |
 | post-M9 `--embed-def` | the PDF carries its own source: the def's exact bytes as an `EmbeddedFile` in the catalog's `/Names /EmbeddedFiles` tree, built by hand (reportlab has no filespec support), deterministic, PDF-only — PNG refuses it by name via the `attachment` capability (§ 8.8, § 10.2) |
 | post-M9 examples | rendered gallery in `examples/`, one per generator + multi-page + cover, `test_every_example_validates` guards it |
-| post-M9 `calendar` | a linked, write-on planner PDF (§ 7) — the first **document generator**: it owns heterogeneous, cross-linked pages (Index, Year two-table, Month day-list, configurable Day blocks, paginated Notes-index, Notes) instead of one pattern area. Two new mechanisms modelled on `outline`: a **`link` capability** (writer method + capability, PDF-only, PNG refused; links drawn as underlined Text) and a **document-mode page loop** in `pages.py`. Dates deterministic from the year, names from the def (English default), one-page-per-view fit-or-refuse. Pages: an opt-in **title** page (full-sheet colour via a new `DocumentPage.background`/`plain`, optional `logo` resolved def-relative via a new `base_dir` in the config context), a **contents** hub, a **full-year overview** (twelve mini-months, three across, numbers as links, no cell boxes), **half-year 1 & 2** tables (short months' columns end — no empty cells), months, days, opt-in **weeks** (`week_start`-aligned), and notes. `{year}` header placeholder. Only the holiday *file* import is left (inline works) |
+| post-M9 `calendar` | a linked, write-on planner PDF (§ 7) — the first **document generator**: it owns heterogeneous, cross-linked pages (Index, Year two-table, Month day-list, configurable Day blocks, paginated Notes-index, Notes) instead of one pattern area. Two new mechanisms modelled on `outline`: a **`link` capability** (writer method + capability, PDF-only, PNG refused; links drawn as underlined Text) and a **document-mode page loop** in `pages.py`. Dates deterministic from the year, names from the def (English default), one-page-per-view fit-or-refuse. Pages: an opt-in **title** page (full-sheet colour via a new `DocumentPage.background`/`plain`, optional `logo` resolved def-relative via a new `base_dir` in the config context), a **contents** hub, a **full-year overview** (twelve mini-months, three across, numbers as links, no cell boxes), **half-year 1 & 2** tables (short months' columns end — no empty cells), months, days, opt-in **weeks** (`week_start`-aligned), and notes. `{year}` header placeholder. Holidays come inline **or from a file** (`holidays_file`: a YAML list or a concrete-dated `.ics`, resolved against `base_dir` like `logo`, filtered to the year, merged with inline — inline wins on a date clash; `.ics` recurring/timed events skipped and counted; source named in the run report). **§ 7.12 is complete.** |
 | pulled forward into M1 | format table, presets, `check`, overwrite protection, placeholders — the M1 acceptance criteria needed them |
 
 ### Not done
@@ -173,7 +173,7 @@ work around it.
 
 **Where the specification was genuinely silent**, the resolution is recorded in
 [`implementation-decisions.md`](implementation-decisions.md) —
-forty-two of them so far, each with the section it belongs to and the
+forty-three of them so far, each with the section it belongs to and the
 reasoning. Read it before changing a default; several look arbitrary and are not.
 
 ## Language split

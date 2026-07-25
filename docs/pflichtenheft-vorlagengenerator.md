@@ -1160,8 +1160,13 @@ Seiten: optionales **Titelblatt** (Vollflächenfarbe über ein neues
 (Nabe), eine minimale **Ganzjahresübersicht** (nur Zahlen als unterstrichene
 Links, keine Boxen, alles auf einer Seite), **Halbjahr 1 & 2** als Tabellen,
 Monate, Tage, optional **Wochen** (an `week_start` ausgerichtet, nicht ISO) und
-Notizen. `{year}` als Kopf-Platzhalter. Offen bleibt nur der
-Feiertags-**Datei**import (Inline-Liste funktioniert).
+Notizen. `{year}` als Kopf-Platzhalter. Feiertage kommen **inline oder aus
+einer Datei** (`holidays_file`, YAML-Liste oder konkret-datiertes `.ics`),
+gegen `base_dir` aufgelöst wie `logo`, aufs Jahr gefiltert und mit der
+Inline-Liste vereint (Inline gewinnt bei Datumsgleichheit). Wiederkehrende
+(`RRULE`) und terminierte (DATE-TIME) `.ics`-Events werden **gezählt
+übersprungen**, nie still verschluckt; die Quelle nennt der Laufbericht
+(`X-WR-CALNAME`/`PRODID`), nichts im PDF. Damit ist § 7.12 vollständig.
 
 ---
 
