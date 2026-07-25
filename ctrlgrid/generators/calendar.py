@@ -228,8 +228,13 @@ class CalendarConfig(BaseModel):
             path = Path(base) / path
         imported = read_holiday_file(path, year)
 
-        merged: dict[datetime.date, str] = {
-            entry["date"]: entry["label"] for entry in imported.entries
+        # File entries become clean {date, label} dicts; inline entries are kept
+        # verbatim so `Holiday`'s extra="forbid" still refuses a typo'd key —
+        # stripping them here would make validation depend on whether a file is
+        # present (§ 12, fail loudly).
+        merged: dict[datetime.date, dict] = {
+            entry["date"]: {"date": entry["date"], "label": entry["label"]}
+            for entry in imported.entries
         }
         stray = []  # inline entries pydantic should report (bad shape/date)
         for item in data.get("holidays") or ():
@@ -237,10 +242,8 @@ class CalendarConfig(BaseModel):
             if date is None:
                 stray.append(item)
             else:
-                merged[date] = item["label"]  # inline overrides the file
-        data["holidays"] = [
-            {"date": date, "label": merged[date]} for date in sorted(merged)
-        ] + stray
+                merged[date] = item  # inline overrides the file, extras and all
+        data["holidays"] = [merged[date] for date in sorted(merged)] + stray
 
         kept = len(imported.entries)
         # The `.ics` origin (X-WR-CALNAME/PRODID) is worth naming; the YAML origin

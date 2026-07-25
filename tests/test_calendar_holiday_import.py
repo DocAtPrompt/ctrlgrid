@@ -267,3 +267,18 @@ def test_imported_holiday_appears_on_the_month_page(tmp_path):
     reader = PdfReader(str(out))
     text = "".join(page.extract_text() for page in reader.pages)
     assert "Epiphany" in text
+
+
+def test_inline_extra_key_is_still_refused_with_a_file(tmp_path):
+    # extra="forbid" on Holiday must hold whether or not a file is present: the
+    # merge preserves the original inline dict, so a typo'd key still fails
+    # loudly (§ 12) instead of being silently stripped.
+    (tmp_path / "hol.yaml").write_text(
+        "- date: 2026-06-01\n  label: File Day\n", encoding="utf-8"
+    )
+    with pytest.raises(ValidationError):
+        _cfg(
+            tmp_path,
+            holidays_file="hol.yaml",
+            holidays=[{"date": "2026-01-01", "label": "X", "recurring": True}],
+        )
