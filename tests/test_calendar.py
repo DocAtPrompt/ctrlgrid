@@ -690,3 +690,29 @@ class TestWeekPageDateColumns:
         )
         fills = {m.fill_color for m in page.marks if isinstance(m, Polygon) and m.fill_color}
         assert "#ffd9ec" in fills
+
+
+class TestDayScheduleHours:
+    """The schedule block's hours: right-aligned by measuring, not by padding."""
+
+    def _hours(self) -> list[Text]:
+        pages, _dests, _edges = _graph(cfg(day={"blocks": [
+            {"type": "schedule", "from": 7, "to": 22, "height": "100%"}
+        ]}))
+        day = next(p for p in pages if p.dest == "day-2026-05-03")
+        return [m for m in day.marks if isinstance(m, Text) and m.size == pt(7)]
+
+    def test_every_hour_is_drawn(self) -> None:
+        assert [t.content for t in self._hours()] == [str(h) for h in range(7, 22)]
+
+    def test_the_hours_carry_no_padding(self) -> None:
+        # ` 7` was padded to the width of `10`, but a space is half a digit wide,
+        # so the two never lined up. The label is the number and nothing else.
+        assert all(t.content == t.content.strip() for t in self._hours())
+
+    def test_the_hours_share_one_right_edge(self) -> None:
+        edges = {
+            t.pos.x + Q.text_width(t.content, family="sans", size=t.size)
+            for t in self._hours()
+        }
+        assert len(edges) == 1

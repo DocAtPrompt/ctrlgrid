@@ -700,10 +700,19 @@ def _draw_block(page: Page, b, top, h) -> None:
     if b.type == "schedule":
         hours = b.end_hour - b.start_hour
         rh = (h - pt(2)) / max(1, hours)
-        for i in range(hours):
+        size = pt(7)
+        labels = [str(b.start_hour + i) for i in range(hours)]
+        # Right-aligned by measuring. Padding with a space does not align them:
+        # a space is half a digit wide, so ` 7` used to end 0.7 mm short of `10`.
+        widths = {s: page.q.text_width(s, family="sans", size=round(size)) for s in labels}
+        num_right = pt(1) + max(widths.values())
+        # The rule starts just past the hours, not at a guessed inset, so an
+        # all-single-digit span (7–9) does not leave a wide empty gutter.
+        rule_left = num_right + mm(3)
+        for i, label in enumerate(labels):
             ry = inner + i * rh
-            page.text(pt(1), round(ry), f"{b.start_hour + i:>2}", pt(7), INK)
-            page.hline(mm(9), page.W, ry + rh - pt(1), 0.2, FAINT)
+            page.text(num_right - widths[label], round(ry), label, size, INK)
+            page.hline(rule_left, page.W, ry + rh - pt(1), 0.2, FAINT)
     elif b.type == "todo":
         rows = b.rows or max(1, int((h - pt(2)) // mm(8)))
         rh = (h - pt(2)) / rows
