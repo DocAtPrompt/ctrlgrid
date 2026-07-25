@@ -36,6 +36,7 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from ctrlgrid.axes import AxisPeriod
+from ctrlgrid.clip import clip_to_area
 from ctrlgrid.errors import DefinitionError
 from ctrlgrid.generators.common import HAIRLINE
 from ctrlgrid.marks import Area, Layer, Mark, Point, Segment
@@ -170,7 +171,7 @@ class PerspectiveGenerator:
         here, before page one, and never left as a silently empty sheet.
         """
         for index, vp in enumerate(cfg.vanishing_points or ()):
-            if not any(_clip(point, foot, area) for point, foot in _rays(vp, area)):
+            if not any(clip_to_area(point, foot, area) for point, foot in _rays(vp, area)):
                 edge = vp.base if vp.base is not None else _base_edge(vp, area)
                 raise DefinitionError(
                     f"vanishing point {index + 1} at ({vp.at[0]}, {vp.at[1]}) has no ray "
@@ -204,7 +205,7 @@ class PerspectiveGenerator:
 
     def _fan(self, vp: VanishingPoint, area: Area) -> Iterator[Segment]:
         for point, foot in _rays(vp, area):
-            clipped = _clip(point, foot, area)
+            clipped = clip_to_area(point, foot, area)
             if clipped is None:
                 # A corner ray can graze the edge and never enter; it is simply
                 # absent, not an error. `check` has already made sure at least
@@ -282,39 +283,3 @@ def _rays(vp: VanishingPoint, area: Area) -> list[tuple[Point, Point]]:
             y = round(along * area.height)
         feet.append(Point(x, y))
     return [(point, foot) for foot in feet]
-
-
-def _clip(a: Point, b: Point, area: Area) -> tuple[Point, Point] | None:
-    """The part of segment `a`–`b` inside the area, or None if it never enters.
-
-    Liang–Barsky, in exact rationals so the two clipped ends are each rounded
-    once from their true position (§ 8.2 forbids accumulated drift). A segment
-    that only touches the boundary at a single point returns None: a ray of zero
-    length is not a mark.
-    """
-    dx, dy = b.x - a.x, b.y - a.y
-    limits = (
-        (-dx, a.x - 0),  # left:   x >= 0
-        (dx, area.width - a.x),  # right:  x <= width
-        (-dy, a.y - 0),  # bottom: y >= 0
-        (dy, area.height - a.y),  # top:    y <= height
-    )
-    t0, t1 = Fraction(0), Fraction(1)
-    for p, q in limits:
-        if p == 0:
-            if q < 0:  # parallel to this edge and wholly outside it
-                return None
-            continue
-        r = Fraction(q, p)
-        if p < 0:
-            if r > t0:
-                t0 = r
-        else:
-            if r < t1:
-                t1 = r
-    if t0 >= t1:
-        return None
-    return (
-        Point(a.x + round(t0 * dx), a.y + round(t0 * dy)),
-        Point(a.x + round(t1 * dx), a.y + round(t1 * dy)),
-    )
