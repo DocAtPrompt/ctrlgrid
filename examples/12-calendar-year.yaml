@@ -1,0 +1,87 @@
+# calendar — a linked, write-on year planner (§ 7.12). A4, for an e-ink pen
+# tablet or for paper.
+#
+# The one example here that is not a single sheet. `calendar` is a *document*
+# generator: it owns its pages instead of filling one pattern area, and this
+# definition builds 405 of them — a cover, a contents page, the whole year on
+# one sheet, two half-year tables, twelve months, every day, and three note
+# pads, all cross-linked. Tap a date and land on that day; tap a note number
+# and land on that note.
+#
+# That is also why no `.pdf` sits beside this file the way it does for every
+# other example: it weighs about 1.6 MB, and one command rebuilds it —
+#
+#     ctrlgrid -d examples/12-calendar-year.yaml -o calendar.pdf
+#
+# Add `week_view:` (see the `calendar-a4` preset) for one page per week; that is
+# 53 pages more.
+version: 1
+
+page:
+  format: a4
+  margin: 12mm
+
+# Constant on every page. `{year}` is filled in by the calendar; there are no
+# page numbers, because a linked document is not read in order. The band takes
+# its own colour, so the header reads as a spine rather than as floating text.
+header:
+  height: 8mm
+  gap: 3mm
+  font: { size: 9pt }
+  background: "#2f3a48"
+  text_color: "#ffffff"
+  center: "{year}"
+  right: "Ada Lovelace"
+
+generator: calendar
+year: 2026
+week_start: monday
+
+# Marked days — public holidays, birthdays and anniversaries are the same thing
+# to the calendar, and their colour is what tells them apart. An entry without
+# its own `color` takes `holiday_color`.
+holiday_color: "#fce9e4"
+holidays:
+  - { date: 2026-01-01, label: New Year }
+  - { date: 2026-04-06, label: Easter Monday }
+  - { date: 2026-05-03, label: "Mama's birthday", color: "#ffd9ec" }
+  - { date: 2026-12-25, label: Christmas }
+  # Or import them: `holidays_file: holidays.ics` — a YAML list or a
+  # concrete-dated .ics, filtered to `year`; an inline entry wins on a clash.
+
+# What those colours mean. The calendar knows the colours, never their meanings,
+# so the key is written out here — it appears on the contents page.
+legend:
+  - { color: "#fce9e4", label: "Public holidays" }
+  - { color: "#ffd9ec", label: "Birthdays" }
+
+# The cover: a full-sheet colour with a centred title and subtitle. `logo:` puts
+# a PNG above them, `background_image:` covers the sheet with one.
+title_page:
+  title: "2026"
+  subtitle: "Ada Lovelace"
+  background: "#2f3a48"
+  text_color: "#ffffff"
+
+# The two half-year tables. Six month columns are wide enough that the eye loses
+# the row on the way across, so the 1…31 column is repeated on both edges.
+year_view: { weekend_shade: "#f0f2f5", cell_link: day, day_numbers: both }
+
+# The month page: every day of the month as a row, with a writing surface.
+month_view: { weekend_shade: "#f0f2f5", surface: lines }
+
+# The day page — an ordered list of blocks. Reorder, resize, drop or repeat.
+# `half_hours` rules the half hours too; the hour line then steps up a shade so
+# the half stays subordinate.
+day:
+  blocks:
+    - { type: schedule, from: 8, to: 20, height: 55%, surface: lines, half_hours: true }
+    - { type: todo,     rows: 6,         height: 20% }
+    - { type: notes,    height: rest,    surface: grid }
+
+# Three pads, each with its own surface, its own numbering from 1 and its own
+# index; the indexes link to one another.
+notes:
+  - { count: 8, surface: lines, label: "Journal" }
+  - { count: 6, surface: grid,  label: "Sums" }
+  - { count: 6, surface: dots,  label: "Sketches" }

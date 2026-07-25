@@ -6,10 +6,11 @@
 
 Generate **dimensionally accurate** PDF templates from a small definition file:
 grid paper, ruled paper, dot grids, staff paper, mazes, polar targets, tilings,
-fillable forms, perspective grids and mandalas — for paper formats **and** for
-e-ink tablets.
+fillable forms, perspective grids and mandalas — plus a **linked, write-on
+calendar** — for paper formats **and** for e-ink tablets.
 
-> **Status: M1–M9 complete (M5 core).** All ten generators of the table
+> **Status: M1–M9 complete (M5 core), plus the calendar.** All ten generators of
+> the table
 > below work, and the dimensional test described below measures `lines` out of
 > a finished PDF on every commit. The handle around them is finished — multi-page output, headers
 > and footers, name lists, snapping, remainder handling, double-sided margins,
@@ -27,6 +28,7 @@ e-ink tablets.
 >
 > ```bash
 > ctrlgrid millimeter-a4 --pages 30 -o grid.pdf
+> ctrlgrid calendar-a4 -o 2026.pdf            # a whole linked year planner
 > ctrlgrid millimeter-a4 --names class3b.txt      # a sheet per name
 > ctrlgrid -d my-def.yaml --stamp DRAFT
 > ctrlgrid millimeter-a4 --cover              # + a calibration first sheet
@@ -46,9 +48,9 @@ e-ink tablets.
 
 ## Examples
 
-A gallery of A4 examples — one per generator, plus a multi-page maze booklet —
-is in [`examples/`](examples/README.md), each an ordinary definition file you
-can copy and bend.
+A gallery of A4 examples — one per generator, plus a multi-page maze booklet and
+a whole linked calendar — is in [`examples/`](examples/README.md), each an
+ordinary definition file you can copy and bend.
 
 ## The one promise
 
@@ -130,10 +132,60 @@ planned.
 | `perspective` | one-, two- and three-point vanishing-point grids |
 | `mandala` | rotationally symmetric templates: rings, rosettes, star polygons |
 
+Each of those fills **one page**, as many times as you ask for. `calendar` is the
+exception — it produces a whole linked document, and has its own section below.
+
 The interesting part is the **cycle model**: spacing, stroke weight, size, dash
 pattern and colour each follow their own repeating list, and the lists may have
 different lengths. "Every fifth line heavier and blue, every third dashed" is one
 definition, not a special case.
+
+## A linked, write-on calendar
+
+```bash
+ctrlgrid calendar-a4 -o 2026.pdf
+```
+
+`calendar` is the one generator that is not a sheet: it owns a whole **document**
+— a cover, a contents page, the year on one sheet as twelve mini-months, two
+half-year tables, twelve months, one page per day, opt-in week pages and as many
+note pads as you like. Every date is an internal PDF link, so on a pen tablet you
+tap a date and land on that day, tap a note number and land on that note. About
+400 pages from one definition, in a second, and the same definition always gives
+the same PDF.
+
+```yaml
+generator: calendar
+year: 2026
+week_start: monday
+months: [Januar, Februar, …]        # your language; English if omitted
+holidays: [{ date: 2026-12-25, label: Weihnachten }]
+holidays_file: feiertage.ics        # or a YAML list — merged with the above
+day:
+  blocks:                           # an ordered list: reorder, resize, repeat
+    - { type: schedule, from: 8, to: 20, height: 55%, half_hours: true }
+    - { type: todo,     rows: 6,         height: 20% }
+    - { type: notes,    height: rest,    surface: grid }
+notes:
+  - { count: 20, surface: lines, label: "Journal" }
+  - { count: 10, surface: dots,  label: "Sketches" }
+```
+
+<p align="center">
+  <img src="examples/previews/12-calendar-month.png" width="230" alt="a month page: every date links to its day">
+  <img src="examples/previews/12-calendar-day.png" width="230" alt="a day page: schedule, tick boxes, squared notes">
+</p>
+
+Marked days carry their own colour — a birthday is not a public holiday — and a
+`legend` on the contents page says what each colour means, because the calendar
+knows the colours and never their meanings. Names come from your definition, so
+the calendar adds no language of its own. It is **PDF only**: links and text
+cannot live in a PNG, and the run is refused rather than quietly stripped of its
+links.
+
+The whole example is [`examples/12-calendar-year.yaml`](examples/12-calendar-year.yaml);
+the preset is `ctrlgrid show calendar-a4`, and [`HANDBOOK.md`](HANDBOOK.md)
+documents every option.
 
 ## Definition files
 

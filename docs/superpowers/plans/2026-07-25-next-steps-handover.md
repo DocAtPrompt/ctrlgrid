@@ -48,7 +48,23 @@ you add a content-sized layout, add its refusal too — that is the pattern.
 
 ---
 
-## Phase 0 — the online presence (do this first)
+## Phase 0 — the online presence (done, 2026-07-25)
+
+> **Done in the session after this handover.** The README has a
+> *"A linked, write-on calendar"* section of its own; `examples/12-calendar-year.yaml`
+> is the worked example (405 pages, a day and a month preview, no committed PDF
+> — 1.6 MB, one command rebuilds it); the handbook's calendar section was
+> rewritten to cover everything below, and the band colours went into its
+> header/footer section where they belong.
+>
+> **The gallery refresh was not needed** — that guess was wrong, and checking
+> was cheap: every committed example PDF was rebuilt and compared byte for byte,
+> and all thirteen matched (the maze booklet with its documented `--seed 4711`).
+> Band colours and the nav strip are calendar-only or default-off, so no blade
+> sheet changed. The paragraph below is kept as written; only this note corrects
+> it.
+
+
 
 A visitor arriving from that star sees the README and the gallery. Both are
 behind. **Two gaps found by inspection, both verified:**

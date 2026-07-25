@@ -431,6 +431,20 @@ header:
   left: { image: logo.png, height: 10mm }
 ```
 
+A band can carry **its own colours** — a full-width strip behind it and a text
+colour. Both are off by default, so a definition without them draws exactly what
+it drew before. The strip is the height of the band, never more: it stops where
+`gap` begins, so the pattern area keeps its white.
+
+```yaml
+header:
+  height: 8mm
+  gap: 3mm
+  background: "#2f3a48"     # the strip
+  text_color: "#ffffff"     # the text on it (default black)
+  center: "{page}"
+```
+
 ### Border, background, hole marks, stamp
 
 ```yaml
@@ -805,59 +819,103 @@ year: 2026
 week_start: monday          # or sunday
 months:   [January, …]      # 12 names; English if omitted
 weekdays: [Mon, Tue, …]     # 7 names; English if omitted
+holiday_color: "#fce9e4"    # the fill for a marked day with no colour of its own
 holidays:
   - { date: 2026-12-25, label: Christmas }
+  - { date: 2026-05-03, label: "Mama's birthday", color: "#ffd9ec" }
+holidays_file: holidays.ics      # or a YAML list — merged with the inline ones
+legend:                          # what the colours mean, on the contents page
+  - { color: "#fce9e4", label: "Public holidays" }
+  - { color: "#ffd9ec", label: "Birthdays" }
 title_page: { title: "2026", subtitle: "your name", background: "#2f3a48" }  # opt-in; +logo
-year_view:  { weekend_shade: "#f0f2f5", cell_link: day }   # the half-year tables
+year_view:  { weekend_shade: "#f0f2f5", cell_link: day, day_numbers: both }
 month_view: { weekend_shade: "#f0f2f5", surface: lines }
 week_view:  { surface: lines, tasks: true }   # opt-in: one page per week
 day:
   blocks:                   # an ordered list — reorder, resize, repeat
-    - { type: schedule, from: 7, to: 22, height: 55%, surface: lines }
+    - { type: schedule, from: 7, to: 22, height: 55%, surface: lines, half_hours: true }
     - { type: todo,     rows: 8,          height: 20% }
     - { type: notes,    height: rest,     surface: grid }
-notes: { count: 20, surface: dots }        # blank | lines | dots | grid
+notes:                      # one pad, or a list of them
+  - { count: 20, surface: dots, label: "Sketches" }   # blank | lines | dots | grid
 ```
 
 The page types, each **exactly one page** (if a view is small, use the device's
 zoom — nothing scrolls or scales):
 
-- **Title** (opt-in via `title_page`) — a cover: a full-page colour with a
-  centred title and subtitle, and an optional `logo` (a PNG above the title;
-  the path is relative to the definition file).
-- **Contents** — the table of contents: links to the overviews, the months and
-  the note indices.
+- **Title** (opt-in via `title_page`) — a cover: a full-sheet `background`
+  colour with a centred title and subtitle in `text_color`, an optional `logo`
+  (a PNG above the title) and an optional `background_image` (a PNG over the
+  whole sheet; `background_fit: cover` fills and crops, `contain` fits it
+  inside, and transparent areas show the colour through). Both paths are
+  relative to the definition file. The header and footer bands are off on the
+  cover; `header: true` / `footer: true` put them back, each on its own.
+- **Contents** — links to the overviews, the months and the note indices, one
+  centred column with the groups separated by whitespace. `legend` adds a colour
+  key at the foot of it — a swatch and your words for it.
 - **Full-year overview** — the whole year on one page as twelve mini-months,
   three across, numbers only: a day number jumps to its day, a month name to its
-  month.
+  month, and the week number beside each row jumps to its week when week pages
+  exist.
 - **Half-year 1 & 2** — two month-column × day-row tables (Jan–Jun, Jul–Dec); a
-  month header jumps to its month, a day cell to its day. Short months' columns
-  simply end — no empty cells.
-- **Month** — a list of every day; the date links to its day page, holidays are
-  labelled, weekends shaded.
+  month header jumps to its month, a day cell to its day (`cell_link: day |
+  month | none`). Short months' columns simply end — no empty cells. Six columns
+  are wide enough that the eye loses the row on the way across, so
+  `day_numbers: both` repeats the 1…31 column on the right edge as well.
+- **Month** — a list of every day; the weekday and the date link to the day
+  page, marked days are labelled and filled, weekends shaded.
 - **Day** — your ordered `blocks` (a timed `schedule`, a `todo` list, `notes`),
-  each with a writing `surface` (`blank` / `lines` / `dots` / `grid`).
+  each with a writing `surface` (`blank` / `lines` / `dots` / `grid`) and a
+  `height` in per cent or `rest`. A `schedule` takes `from`/`to` hours, and
+  `half_hours: true` rules the half hours too — the hour line then steps up a
+  shade so the half stays subordinate. Leave `day:` out entirely and a day is
+  one lined page.
 - **Week** (opt-in via `week_view`) — one page per week (~53), seven day
   sections in `week_start` order with a writing surface and a tasks column; each
   date jumps to its day page. Weeks that straddle the year edge show the
   outside days without a link.
-- **Notes** — a numbered index that links to note pages, and the note pages
-  themselves. A large `count` paginates the index over several sheets.
+- **Notes** — `notes:` takes one pad or a **list** of them: lined pages to write
+  on, squared ones to reckon on, dotted ones to sketch on. Each pad has its own
+  `count`, `surface` and `label`, numbers its pages from 1, and gets its own
+  index — you reach for "Sketches 3", not for "note 23". The indexes link to one
+  another, and a long pad paginates its index over several sheets.
 
-Every page carries a small nav strip (Index · Year · Month · Notes) as
-underlined text — a link is just underlined text plus its tap box, to save space
-and bytes.
+Every page carries a small nav strip (Index · Year · Month · Notes) at the right
+edge as underlined text — a link is just underlined text plus its tap box, to
+save space and bytes.
+
+**Marked days** are not only public holidays: a birthday or an anniversary is
+the same thing to the calendar, and `color` per entry is what tells them apart —
+an entry without one takes `holiday_color`. The mark shows in all five views.
+`legend` is how the meanings get named; the calendar knows the colours and never
+what they stand for, so a legend line without a colour is refused rather than
+guessed at.
+
+**Holidays from a file.** `holidays_file` reads either a YAML list of
+`{ date, label }` or an `.ics` with concrete dates — a public-holiday feed
+exported from a calendar app, for instance. The path is relative to the
+definition file. Entries are filtered to `year` and merged with the inline list,
+where **an inline entry wins** on a shared date: hand-authored beats a feed.
+Recurring or timed `.ics` events are skipped and counted, and the run report
+names the source and how many entries survived.
 
 Names come from your definition (English by default), so the calendar adds no
 language of its own. Dates are computed from `year`, so the same definition
 always gives the same PDF. The optional header is constant on every page — set
 `header: { center: "{year}", right: "your name" }` for the year and a
-personalization (no page numbers). It is **PDF only**: on PNG the run is refused,
-because links and text cannot live in a PNG.
+personalization (no page numbers), and give the band a `background` and
+`text_color` (§ 10) if you want it to read as a spine. It is **PDF only**: on
+PNG the run is refused, because links and text cannot live in a PNG.
 
-Preset: `calendar-a4` (`ctrlgrid show calendar-a4`), which turns on every view.
-The only thing not yet built is importing holidays from a *file* — an inline
-list works.
+Nothing is ever scaled to fit, so a view that cannot fit its page is refused
+before page one, naming the millimetres it needed: a contents column longer than
+the sheet, a mini-month wider than a third of the width, a month whose 31 rows
+would fall below a readable size, day blocks whose fixed heights add up past
+100 %.
+
+Preset: `calendar-a4` (`ctrlgrid show calendar-a4`), which turns on every view;
+worked example: [`12-calendar-year.yaml`](examples/12-calendar-year.yaml) — 405
+pages, and the one example that ships without its PDF.
 
 ---
 

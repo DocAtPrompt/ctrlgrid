@@ -46,8 +46,11 @@ presets — one per generator (`lines`, `dots`, `polar`, `form`, `maze`,
 `perspective`, `mandala`, `staves`, `grid`, `tiling`) plus `calendar-a4` — and a
 rendered
 **example gallery** in [`examples/`](../examples/) — one A4 sheet per generator plus
-a multi-page maze booklet and a cover sheet, each an ordinary definition, its PDF
-and a PNG preview, guarded by `test_every_example_validates`.
+a multi-page maze booklet, a cover sheet and the calendar, each an ordinary
+definition, its PDF and a PNG preview, guarded by `test_every_example_validates`.
+The calendar example (`12-calendar-year.yaml`) is the one without a committed
+PDF: 405 pages and 1.6 MB, rebuilt in about a second, and the file's own comment
+says so.
 
 ### Done
 
@@ -306,9 +309,15 @@ this project runs on — claims are backed by a command's output, never asserted
 
 A handover written at the end of the 2026-07-25 session names the order:
 [`docs/superpowers/plans/2026-07-25-next-steps-handover.md`](superpowers/plans/2026-07-25-next-steps-handover.md).
-Phase 0 is the **online presence** — the README does not mention the calendar,
-there is no calendar example, and the handbook's calendar section predates the
-whole beautification pass. Then an edge ruler, angled line families (which
+**Phase 0 — the online presence — is done:** the README has its own calendar
+section, `examples/12-calendar-year.yaml` is the worked example (405 pages, two
+previews, no committed PDF), and the handbook's calendar section now covers
+`holidays_file`, marked-day colours, `legend`, the title page's image and bands,
+`day_numbers`, `half_hours` and note pads — with the band colours documented
+where they belong, in the header/footer section. The gallery itself needed no
+rebuild: every committed example PDF was regenerated and compared byte for byte,
+and all thirteen matched (the maze booklet with its documented `--seed 4711`).
+Next is an edge ruler, angled line families (which
 calligraphy guides *and* origami pre-creasing both need), international presets,
 and a `notebook` document generator; then fold notation and a parametric `net`.
 A specific paper aeroplane was considered and **refused**: it is a drawing, not
