@@ -78,6 +78,14 @@ class DocumentPage:
     show_footer: bool = True
     """Draw the document's footer band on this page (§ 7.12)."""
 
+    placeholders: tuple[tuple[str, str], ...] = ()
+    """Per-page band placeholders, as pairs (§ 8.10, § 7.13).
+
+    `{section}` in a notebook is the case: only the generator knows which
+    section a page belongs to, while only the handle knows its number. Pairs
+    rather than a mapping so the page stays frozen and hashable, like every
+    other mark-carrying value in this codebase (§ 3.3)."""
+
 
 @runtime_checkable
 class DocumentGenerator(Protocol):
@@ -101,6 +109,16 @@ class DocumentGenerator(Protocol):
 
     def pages(self, cfg: BaseModel, *, area: Area, q: WriterQuery) -> Iterator[DocumentPage]:
         """The document's pages, in order — the seam the handle drives."""
+        ...
+
+    def page_count(self, cfg: BaseModel, *, area: Area) -> int:
+        """How many pages there will be, without drawing any.
+
+        The run report names it (§ 11.3) and `{page_count}` prints it (§ 8.10),
+        so it is part of the seam rather than a convenience: a document that
+        could only answer by generating every page would have to generate them
+        twice.
+        """
         ...
 
 

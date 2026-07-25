@@ -25,6 +25,7 @@ from ctrlgrid.marks import Area, Point, Text
 from ctrlgrid.pages import build
 from ctrlgrid.writers.pdf import PdfWriter
 from ctrlgrid.writers.png import PngWriter
+from tests.pdfread import text_on
 
 _SIZE = round(13 * 25400 / 72)  # 13 pt in micrometres
 
@@ -52,14 +53,20 @@ class _TwoPageDoc:
     def check(self, cfg: _DocConfig, *, area: Area, q: object) -> None:
         return None
 
+    def page_count(self, cfg: _DocConfig, *, area: Area) -> int:
+        return 2
+
     def generate(self, cfg, *, area, page, q):  # never called for a document
         raise AssertionError("a document generator produces pages, not marks")
 
     def pages(self, cfg: _DocConfig, *, area: Area, q: object) -> Iterator[DocumentPage]:
-        for dest, other, title in (("one", "two", "One"), ("two", "one", "Two")):
+        for dest, other, title, part in (
+            ("one", "two", "One", "first"), ("two", "one", "Two", "second"),
+        ):
             yield DocumentPage(
                 dest=dest,
                 kind="test",
+                placeholders=(("part", part),),
                 marks=(
                     Text(pos=Point(0, area.height - _SIZE), content=f"Page {dest}", size=_SIZE),
                 ),
@@ -128,3 +135,52 @@ class TestPngIsRefused:
         with pytest.raises((DefinitionError, CtrlGridError)) as excinfo:
             build(doc, PngWriter(tmp_path / "out.png"))
         assert "link" in str(excinfo.value)
+
+
+class TestBandsArePerPage:
+    """§ 8.10: placeholders are filled per page — and the document path used to
+    be the exception, laying its bands out once and stamping them everywhere.
+
+    A calendar is navigated by tapping and wants no page numbers, which is why
+    nobody noticed; a notebook is flipped through and does (§ 7.13).
+    """
+
+    HEADER = (
+        "version: 1\npage: {format: a4, margin: 10mm}\n"
+        "header:\n  height: 8mm\n  gap: 2mm\n  center: '{page} / {page_count}'\n"
+        "generator: _testdoc\n"
+    )
+
+    def test_the_page_number_counts_up(self, registered, tmp_path: Path) -> None:
+        path = tmp_path / "d.pdf"
+        build(loads(self.HEADER, source="test"), PdfWriter(path))
+        assert "1 / 2" in text_on(path, 0)
+        assert "2 / 2" in text_on(path, 1)
+
+    def test_a_page_may_supply_its_own_placeholder(self, registered, tmp_path: Path) -> None:
+        # `{section}` is the notebook's case: only the generator knows which
+        # section a page belongs to, only the handle knows its number.
+        definition = (
+            "version: 1\npage: {format: a4, margin: 10mm}\n"
+            "header:\n  height: 8mm\n  gap: 2mm\n  left: '{part}'\n"
+            "generator: _testdoc\n"
+        )
+        path = tmp_path / "d.pdf"
+        build(loads(definition, source="test"), PdfWriter(path))
+        assert "first" in text_on(path, 0)
+        assert "second" in text_on(path, 1)
+
+    def test_a_band_without_a_per_page_placeholder_is_the_same_on_every_page(
+        self, registered, tmp_path: Path
+    ) -> None:
+        # The calendar's case, and the reason this change is invisible there:
+        # constant text lays out to the same marks on every page.
+        definition = (
+            "version: 1\npage: {format: a4, margin: 10mm}\n"
+            "header:\n  height: 8mm\n  gap: 2mm\n  center: 'constant'\n"
+            "generator: _testdoc\n"
+        )
+        path = tmp_path / "d.pdf"
+        build(loads(definition, source="test"), PdfWriter(path))
+        assert text_on(path, 0).count("constant") == 1
+        assert text_on(path, 1).count("constant") == 1

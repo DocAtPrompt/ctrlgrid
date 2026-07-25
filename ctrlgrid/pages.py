@@ -40,7 +40,9 @@ from ctrlgrid.marks import (
 from ctrlgrid.model import Band, Margin, PatternSpec
 from ctrlgrid.writers import Attachment, DocumentMeta, Writer, WriterQuery
 
-if TYPE_CHECKING:  # `loader` imports `Sheet` from here, so the arrow points one way
+if TYPE_CHECKING:
+    # `loader` imports `Sheet` from here, so the arrow points one way.
+    from ctrlgrid.document import DocumentPage
     from ctrlgrid.loader import Document
 
 
@@ -888,8 +890,6 @@ def _document_preflight(
     same tuple shape as `preflight` so `check` and `build` share one entry point;
     the three page-loop lists are empty because a document does not use them.
     """
-    from ctrlgrid.frame import layout_band
-
     probe = _metrics_oracle(q)
     geometry = Geometry.of(
         document.sheet,
@@ -911,31 +911,78 @@ def _document_preflight(
     findings = media_findings(document, probe, strict=document.strict)
     geometry = replace(geometry, notices=geometry.notices + tuple(findings))
 
-    # The optional header/footer are constant across a document (§ 7), so they
-    # are measured once here — against a context whose count is the real page
-    # total, and with the generator's own placeholders (`{year}`). Measured in
-    # the pre-flight so a header that does not fit is refused before page one.
-    extra = blade.placeholders(document.config) if hasattr(blade, "placeholders") else {}
-    total = blade.page_count(document.config, area=geometry.area) if hasattr(
-        blade, "page_count"
-    ) else 1
-    context = PageContext(
-        index=0, number=1, count=total, name=None, is_even=False, seed_material=b""
+    # The bands are laid out **per page** when they are written (§ 8.10:
+    # placeholders are filled per page, and this path was the one exception).
+    # So they are measured per page here too: with `{page}` and `{section}` in
+    # them it is the last page that overflows, not the first, and § 12 point 13
+    # allows no half-written document. Skipped outright when the document has
+    # no bands, which is the common case and the whole cost.
+    if document.header is not None or document.footer is not None:
+        total = _document_page_total(blade, document, geometry)
+        for index, page in enumerate(
+            blade.pages(document.config, area=geometry.area, q=probe)
+        ):
+            document_bands(
+                document, geometry, blade, _document_context(index, total), q=probe, page=page
+            )
+    return geometry, [], [], []
+
+
+def _document_page_total(blade: object, document: Document, geometry: Geometry) -> int:
+    """How many pages the document will have (§ 8.10's `{page_count}`).
+
+    Part of the document seam, not a convenience: asking the generator is the
+    only way that does not generate every page twice.
+    """
+    if not hasattr(blade, "page_count"):
+        raise AssertionError(
+            f"the document generator `{blade.name}` has no `page_count` — it is part "
+            "of the seam (§ 7), because {page_count} and the run report both need it"
+        )
+    return blade.page_count(document.config, area=geometry.area)
+
+
+def _document_context(index: int, total: int) -> PageContext:
+    """The page context a document's bands are filled against (§ 8.10)."""
+    return PageContext(
+        index=index, number=index + 1, count=total, name=None, is_even=index % 2 == 1,
+        seed_material=b"",
     )
+
+
+def document_bands(
+    document: Document,
+    geometry: Geometry,
+    blade: object,
+    context: PageContext,
+    *,
+    q: WriterQuery,
+    page: DocumentPage | None = None,
+) -> tuple[list[Text], list[Text]]:
+    """The header and footer of one document page (§ 7, § 8.10).
+
+    Two kinds of placeholder meet here: the generator's document-wide ones
+    (`{year}`) and the page's own (`{section}`) — only the generator knows
+    which section a page belongs to, and only the handle knows its number.
+    """
+    from ctrlgrid.frame import layout_band
+
+    extra = dict(blade.placeholders(document.config)) if hasattr(blade, "placeholders") else {}
+    if page is not None:
+        extra.update(dict(page.placeholders))
     header_marks: list[Text] = []
     footer_marks: list[Text] = []
     if document.header and geometry.header:
         header_marks += layout_band(
-            document.header, geometry.header, q=probe, page=context,
+            document.header, geometry.header, q=q, page=context,
             section="header", sheet_width=document.sheet.width, extra=extra,
         )
     if document.footer and geometry.footer:
         footer_marks += layout_band(
-            document.footer, geometry.footer, q=probe, page=context,
+            document.footer, geometry.footer, q=q, page=context,
             section="footer", sheet_width=document.sheet.width, extra=extra,
         )
-    # Two entries: [header, footer], so the title page can show either alone.
-    return geometry, [], [header_marks, footer_marks], []
+    return header_marks, footer_marks
 
 
 def _refuse_writer_cannot_render_document(
@@ -967,7 +1014,6 @@ def _refuse_writer_cannot_render_document(
 
 def _build_document(
     document: Document, blade: object, writer: Writer, geometry: Geometry,
-    header_marks: list[Text], footer_marks: list[Text],
 ) -> Geometry:
     """Write a document generator's pages (§ 7). Nothing here may raise on user
     input — the pre-flight has already measured and refused (§ 12 point 13).
@@ -982,7 +1028,16 @@ def _build_document(
     writer.begin_document(
         DocumentMeta(title=f"ctrlgrid {document.source}", attachment=_attachment(document))
     )
+    # Bands are *measured* with the metrics oracle, never with the writer: the
+    # numbers are the same either way (§ 10.2), and a writer that cannot answer
+    # would break a path the pre-flight already approved.
+    probe = _metrics_oracle(writer)
+    total = _document_page_total(blade, document, geometry)
     for index, page in enumerate(blade.pages(document.config, area=geometry.area, q=writer)):
+        context = _document_context(index, total)
+        header_marks, footer_marks = document_bands(
+            document, geometry, blade, context, q=probe, page=page
+        )
         writer.begin_page(document.sheet.width, document.sheet.height)
         writer.define_dest(page.dest)
         # A full-sheet colour fill, painted under everything (§ 7 — the title).
@@ -1045,13 +1100,10 @@ def build(document: Document, writer: Writer) -> Geometry:
     blade = generators.get(document.generator)
 
     # § 7: a document generator owns its own heterogeneous, linked pages, so it
-    # takes a separate write path — no cover, no imposition, no cycle. The one
-    # bit of handle furniture it keeps is the optional constant header/footer,
-    # measured in the pre-flight and carried in `frames[0]`.
+    # takes a separate write path — no cover, no imposition, no cycle. It keeps
+    # the optional header/footer, laid out per page as it writes (§ 8.10).
     if is_document_generator(blade):
-        header_marks = frames[0] if len(frames) > 0 else []
-        footer_marks = frames[1] if len(frames) > 1 else []
-        return _build_document(document, blade, writer, geometry, header_marks, footer_marks)
+        return _build_document(document, blade, writer, geometry)
 
     plan = sheet_plan(document)
 

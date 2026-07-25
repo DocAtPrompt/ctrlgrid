@@ -18,7 +18,7 @@ from ctrlgrid.document import DocumentPage
 from ctrlgrid.errors import DefinitionError
 from ctrlgrid.generators.calendar import TitlePage
 from ctrlgrid.loader import loads
-from ctrlgrid.marks import Area, Image, Point, Text
+from ctrlgrid.marks import Area, Image, Text
 from ctrlgrid.pages import _build_document, background_image_rect, build
 from ctrlgrid.writers.pdf import PdfWriter
 
@@ -114,6 +114,11 @@ class _Recorder:
     def begin_document(self, meta): pass
     def begin_page(self, width, height): pass
     def define_dest(self, key): pass
+    def capabilities(self):
+        # Not a metrics oracle: `_build_document` asks for one and gets a real
+        # PdfWriter, so this recorder only has to record.
+        return set()
+
     def draw(self, mark): self.drawn.append(mark)
     def link(self, lower_left, upper_right, target): pass
     def outline(self, title, *, index): pass
@@ -122,23 +127,37 @@ class _Recorder:
 
 
 def _run(page, tmp_path):
-    """Drive `_build_document` for a single page with a recorder, returning it."""
+    """Drive `_build_document` for a single page with a recorder, returning it.
+
+    The bands are real ones now: since they are laid out per page (§ 8.10), the
+    fake document carries a real `Band` and the geometry a real `Box`, and
+    "HDR"/"FTR" come out of the same `layout_band` a run uses.
+    """
+    from ctrlgrid.model import Band
+    from ctrlgrid.pages import Box
+
+    band = {"height": "8mm", "gap": "2mm", "font": {"size": "9pt"}}
     doc = SimpleNamespace(
         source="t.yaml",
         pages=SimpleNamespace(embed_def=False),
         sheet=SimpleNamespace(width=W, height=H),
         config=object(),
+        header=Band.model_validate({**band, "left": "HDR"}),
+        footer=Band.model_validate({**band, "left": "FTR"}),
     )
-    blade = SimpleNamespace(pages=lambda cfg, *, area, q: iter([page]))
+    blade = SimpleNamespace(
+        pages=lambda cfg, *, area, q: iter([page]),
+        page_count=lambda cfg, *, area: 1,
+        placeholders=lambda cfg: {},
+    )
     geometry = SimpleNamespace(
-        origin=SimpleNamespace(x=0, y=0), area=Area(width=W, height=H)
+        origin=SimpleNamespace(x=0, y=0),
+        area=Area(width=W, height=H),
+        header=Box(left=0, bottom=H - 8000, right=W, top=H),
+        footer=Box(left=0, bottom=0, right=W, top=8000),
     )
     rec = _Recorder()
-    header_marks = [Text(pos=Point(0, H - 1000), content="HDR", size=2000,
-                         family="sans", align="left", color="#000000")]
-    footer_marks = [Text(pos=Point(0, 1000), content="FTR", size=2000,
-                         family="sans", align="left", color="#000000")]
-    _build_document(doc, blade, rec, geometry, header_marks, footer_marks)
+    _build_document(doc, blade, rec, geometry)
     return rec
 
 
