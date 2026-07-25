@@ -242,12 +242,21 @@ class TestValidation:
         message = str(excinfo.value)
         assert "0.3mm" in message and "0.2mm" in message
 
-    def test_a_slanted_direction_says_it_is_not_implemented_yet(self) -> None:
+    def test_a_slanted_direction_is_built_now(self) -> None:
+        # It was refused by name until the slant of § 7.1 was built; the
+        # refusal is gone, and `tests/test_slanted.py` is where it is tested.
+        config = LinesConfig.model_validate(
+            {"families": [{"direction": "30deg", "base_spacing": "5mm"}]}
+        )
+        assert config.families[0].angle_deg == 30.0
+
+    def test_a_direction_that_is_neither_a_name_nor_an_angle_is_refused(self) -> None:
         with pytest.raises(ValidationError) as excinfo:
             LinesConfig.model_validate(
-                {"families": [{"direction": "30deg", "base_spacing": "5mm"}]}
+                {"families": [{"direction": "horizonal", "base_spacing": "5mm"}]}
             )
-        assert "horizontal" in str(excinfo.value)
+        message = str(excinfo.value)
+        assert "horizontal" in message and "55deg" in message
 
     def test_law_log10_is_a_family_property_now(self) -> None:
         # § 7.9 arrived with M4: it is a property of a family, not a generator.

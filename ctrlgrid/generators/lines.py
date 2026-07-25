@@ -20,6 +20,7 @@ from typing import Annotated, Any, Literal
 from pydantic import BaseModel, BeforeValidator, ConfigDict, Field, model_validator
 
 from ctrlgrid.axes import AxisPeriod
+from ctrlgrid.clip import clip_to_area
 from ctrlgrid.cycles import period_in_marks, period_um
 from ctrlgrid.errors import DefinitionError
 from ctrlgrid.generators.common import (
@@ -35,20 +36,33 @@ from ctrlgrid.generators.common import (
 from ctrlgrid.marks import Area, Layer, Mark, Point, Segment
 from ctrlgrid.model import LengthField, RelativeLengthField, Section
 from ctrlgrid.pages import PageContext
-from ctrlgrid.units import Length
+from ctrlgrid.units import Length, parse_angle
 from ctrlgrid.writers import WriterQuery
 
 
 def _as_direction(value: Any) -> Any:
-    if isinstance(value, str) and value.strip().endswith("deg"):
-        raise ValueError(
-            f"slanted families ({value!r}, § 7.1) need clipping against the pattern area "
-            "and are not implemented yet — this milestone takes horizontal and vertical"
-        )
-    return value
+    """`horizontal`, `vertical`, or an angle (§ 7.1).
+
+    An angle is kept as the text the user wrote — `55deg`, not 0.9599 rad —
+    because § 12 reports back in the user's own units, and because it is what
+    `describe` prints. `parse_angle` still runs, so a malformed angle is an
+    error here rather than a surprise later.
+    """
+    if not isinstance(value, str):
+        return value
+    text = value.strip()
+    if text in ("horizontal", "vertical"):
+        return text
+    if text.endswith("deg"):
+        parse_angle(text, field="direction")
+        return text
+    raise ValueError(
+        f"direction must be `horizontal`, `vertical` or an angle such as `55deg`, "
+        f"not {value!r} (§ 7.1)"
+    )
 
 
-DirectionField = Annotated[Literal["horizontal", "vertical"], BeforeValidator(_as_direction)]
+DirectionField = Annotated[str, BeforeValidator(_as_direction)]
 
 
 class Extent(Section):
@@ -109,12 +123,28 @@ class Family(Section, Dashable):
     governing: bool = False
 
     @property
+    def is_slanted(self) -> bool:
+        return self.direction.endswith("deg")
+
+    @property
+    def angle_deg(self) -> float:
+        """The line's angle, taken **modulo 180°** — a line has no direction, so
+        `55deg` and `235deg` are the same family (§ 3.5, § 7.1)."""
+        return parse_angle(self.direction, field="direction").deg % 180.0
+
+    @property
     def axis(self) -> str:
         """The axis the family advances along — not the one its lines run along.
 
         A horizontal family stacks upwards, so its spacing, offset and extent
-        all live on y.
+        all live on y. A slanted family advances along neither axis; it has a
+        perpendicular of its own, and nothing may ask it for a cartesian one
+        (§ 7.1, § 8.3).
         """
+        if self.is_slanted:
+            raise AssertionError(
+                f"a slanted family ({self.direction}) has no cartesian axis (§ 7.1)"
+            )
         return "y" if self.direction == "horizontal" else "x"
 
     @property
@@ -146,6 +176,26 @@ class Family(Section, Dashable):
                 "`spacing` and `law: log10` are two answers to the same question — the "
                 "positions of a log family come from the logarithm, which is the point: "
                 "nobody types 0.4771 (§ 7.9)"
+            )
+        return self
+
+    @model_validator(mode="after")
+    def _a_slant_has_neither_decades_nor_a_vote(self) -> Family:
+        """§ 7.1: snapping is not supported for a slanted family — an error, not
+        a guess. Both of these are that rule seen from the definition's side."""
+        if not self.is_slanted:
+            return self
+        if self.is_log:
+            raise ValueError(
+                f"`law: log10` needs an axis to lay its decades along and "
+                f"`direction: {self.direction}` has none — a logarithmic family is "
+                "horizontal or vertical (§ 7.1, § 7.9)"
+            )
+        if self.governing:
+            raise ValueError(
+                f"`governing` decides an axis when snapping or placing the leftover, and "
+                f"`direction: {self.direction}` has no axis — § 7.1 rules snapping out for "
+                "slanted families, so there is nothing here to govern (§ 8.3)"
             )
         return self
 
@@ -201,6 +251,11 @@ class LinesGenerator:
         axes: dict[str, list[AxisPeriod]] = {}
         for family in cfg.families:
             if family.count is not None or family.extent is not None:
+                continue
+            # A slanted family has a period, but not along x or y — and § 7.1
+            # rules snapping out for it by name. Reporting nothing is how that
+            # rule holds without the handle learning about angles (§ 8.3).
+            if family.is_slanted:
                 continue
             if family.is_log:
                 # A log family has a fixed length and does not repeat, so it
@@ -325,7 +380,10 @@ class LinesGenerator:
         q: WriterQuery,
     ) -> Iterator[Mark]:
         for family in cfg.families:
-            yield from self._family(family, area, page.pixel_of(family.axis))
+            # A slanted family has no cartesian axis to be pixel-snapped on,
+            # and § 7.1 rules snapping out for it — so it is not asked (§ 8.3.1).
+            pixel_dpi = None if family.is_slanted else page.pixel_of(family.axis)
+            yield from self._family(family, area, pixel_dpi)
 
     def _log_family(
         self, family: Family, *, span: int, horizontal: bool
@@ -353,9 +411,83 @@ class LinesGenerator:
                 layer=Layer.PATTERN,
             )
 
+    def _slanted_family(self, family: Family, area: Area) -> Iterator[Segment]:
+        """A family at an angle (§ 7.1): spaced perpendicular, clipped to the area.
+
+        Line 0 goes through the pattern area's origin — the same rule a
+        horizontal family follows, generalised — and an unlimited family grows
+        to **both** sides of it. For a horizontal or vertical family the whole
+        area lies on the positive side, so that is not a second rule; for a 45°
+        family it is the only way to cover the sheet, since the line through
+        one corner leaves half the area behind it.
+        """
+        radians = math.radians(family.angle_deg)
+        along = (math.cos(radians), math.sin(radians))
+        # The perpendicular is the line direction turned 90°, with its sign
+        # chosen so it points into the area: that is what makes `90deg` count
+        # into the sheet exactly as `vertical` does, rather than backwards. A
+        # square's diagonal leaves the centre exactly on line 0; there the
+        # canonical turn stands, so the choice is never arbitrary.
+        normal = (-along[1], along[0])
+        centre = _project(area.width / 2, area.height / 2, normal)
+        if centre < 0:
+            normal = (-normal[0], -normal[1])
+
+        corners = [
+            _project(x, y, normal)
+            for x, y in ((0, 0), (area.width, 0), (0, area.height), (area.width, area.height))
+        ]
+        lower, upper = min(corners), max(corners)
+        if family.extent is not None:
+            if family.extent.start is not None:
+                lower = max(lower, family.extent.start.um)
+            if family.extent.end is not None:
+                upper = min(upper, family.extent.end.um)
+        if family.count is not None:
+            lower = max(lower, 0)  # `count` counts from line 0, in cycle order
+
+        # Long enough to cross the area from any point on it, so the clip and
+        # not the length decides where a line ends.
+        reach = area.width + area.height
+        drawn = 0
+
+        for index, distance in family.spacing.positions_between(
+            base_um=family.base_spacing.um,
+            lower_um=math.floor(lower),
+            upper_um=math.ceil(upper),
+            offset_um=family.offset.um,
+            field="families",
+        ):
+            foot = Point(round(distance * normal[0]), round(distance * normal[1]))
+            clipped = clip_to_area(
+                Point(round(foot.x - reach * along[0]), round(foot.y - reach * along[1])),
+                Point(round(foot.x + reach * along[0]), round(foot.y + reach * along[1])),
+                area,
+            )
+            if clipped is None:
+                continue  # this line does not cross the area at all
+            yield Segment(
+                start=clipped[0],
+                end=clipped[1],
+                weight=family.base_weight.mm * float(family.weight.at(index)),
+                color=family.color[index % len(family.color)],
+                dash=family.dash_pattern,
+                cap=family.cap,
+                layer=Layer.PATTERN,
+            )
+            drawn += 1
+            if family.count is not None and drawn >= family.count:
+                return
+
     def _family(
         self, family: Family, area: Area, pixel_dpi: int | None = None
     ) -> Iterator[Segment]:
+        if family.is_slanted:
+            # Snapping is refused for a slanted family upstream (§ 7.1), so no
+            # pixel density can reach here.
+            yield from self._slanted_family(family, area)
+            return
+
         horizontal = family.direction == "horizontal"
         extent = area.height if horizontal else area.width
         span = area.width if horizontal else area.height
@@ -426,3 +558,8 @@ def _log_positions(family: Family) -> list[int]:
 
 def _mm(um: int) -> str:
     return f"{um / 1000:.1f}mm"
+
+
+def _project(x: float, y: float, normal: tuple[float, float]) -> float:
+    """A point's coordinate along the perpendicular — how far it is from line 0."""
+    return x * normal[0] + y * normal[1]
