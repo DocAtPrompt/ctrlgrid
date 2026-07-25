@@ -651,3 +651,42 @@ class TestMonthRowsAndNavPlacement:
             nav_marks = [m for m in page.marks if isinstance(m, Text) and m.size == pt(9)]
             if nav_marks:                    # the title page carries no nav
                 assert max(self._right(t) for t in nav_marks) == AREA.width
+
+
+class TestWeekPageDateColumns:
+    """The week page sets its dates in the same two columns as the month page,
+    from the same arithmetic — and shows a marked day like every other view."""
+
+    def _week(self, dest: str, **kw):
+        pages, _dests, _edges = _graph(cfg(week_view={}, **kw))
+        return next(p for p in pages if p.dest == dest)
+
+    def _rows(self, page) -> tuple[list[Text], list[Text]]:
+        rows = [m for m in page.marks if isinstance(m, Text) and m.size == pt(10)]
+        return ([t for t in rows if not t.content.isdigit()],
+                [t for t in rows if t.content.isdigit()])
+
+    def _right(self, mark: Text) -> int:
+        return mark.pos.x + Q.text_width(mark.content, family="sans", size=mark.size)
+
+    def test_the_seven_dates_line_up(self) -> None:
+        names, numbers = self._rows(self._week("week-18"))
+        assert len(names) == 7 and len(numbers) == 7
+        assert len({t.pos.x for t in names}) == 1          # weekdays flush left
+        assert len({self._right(t) for t in numbers}) == 1  # numbers flush right
+
+    def test_a_day_outside_the_year_keeps_the_columns_but_loses_the_link(self) -> None:
+        # Week 1 of 2026 opens in December 2025 — those days have no page.
+        page = self._week("week-01")
+        names, numbers = self._rows(page)
+        assert len({t.pos.x for t in names}) == 1
+        assert len({self._right(t) for t in numbers}) == 1
+        assert len([lk for lk in page.links if lk.target.startswith("day-")]) == 4
+
+    def test_a_marked_day_colours_its_week_row(self) -> None:
+        page = self._week(
+            "week-18",
+            holidays=[{"date": "2026-05-03", "label": "Birthday", "color": "#ffd9ec"}],
+        )
+        fills = {m.fill_color for m in page.marks if isinstance(m, Polygon) and m.fill_color}
+        assert "#ffd9ec" in fills

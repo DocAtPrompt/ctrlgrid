@@ -1178,9 +1178,10 @@ die Tage eng zusammen, der Abstand neben der Wochennummer bleibt deutlich größ
 als der zwischen zwei Tagen, und der Rest fällt zwischen die Monate. Passt ein
 Mini-Monat nicht in seine Zelle — ein zu schmales Blatt —, wird der Lauf abgelehnt,
 § 8.2), **Halbjahr 1 & 2** als Tabellen,
-Monate (der Wochentag hält die linke Kante, die Tageszahlen stehen
+Monate und **Wochen** (der Wochentag hält die linke Kante, die Tageszahlen stehen
 **rechtsbündig** in einer eigenen Spalte darunter, beides zusammen bleibt *ein*
-Sprungziel), Tage, optional **Wochen** (an `week_start` ausgerichtet, nicht ISO) und
+Sprungziel; beide Ansichten rechnen dieselben Spalten über `date_columns`, und
+ein Tag außerhalb des Jahres steht in denselben Spalten, nur ohne Link), Tage, optional **Wochen** (an `week_start` ausgerichtet, nicht ISO) und
 Notizen. `{year}` als Kopf-Platzhalter. Feiertage kommen **inline oder aus
 einer Datei** (`holidays_file`, YAML-Liste oder konkret-datiertes `.ics`),
 gegen `base_dir` aufgelöst wie `logo`, aufs Jahr gefiltert und mit der

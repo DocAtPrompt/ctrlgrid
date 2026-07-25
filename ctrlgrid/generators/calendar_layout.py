@@ -150,6 +150,44 @@ def _badge(page: Page, x, top, text, size, color) -> None:
     page.box(x - pad, top - pad, width + 2 * pad, size + 2 * pad, 0.0, color, color)
 
 
+def date_columns(page: Page, weekdays, size, x=None) -> tuple[int, int]:
+    """The two columns a date label is set in (§ 7): the weekday keeps the left
+    edge `x`, and the day numbers are right-aligned in a column of their own, so
+    9 stands under 30 on its units digit.
+
+    Measured, never assumed: a definition may name its days `Montag` or `月`.
+    Returns the weekday's x and the numbers' shared right edge.
+    """
+    x = pt(1) if x is None else x
+    name_w = max(page.q.text_width(name, family="sans", size=round(size)) for name in weekdays)
+    widest = page.q.text_width("30", family="sans", size=round(size))
+    return x, round(x + name_w + pt(7) + widest)
+
+
+def date_label(page: Page, top, name, number, size, columns, *, target=None,
+               color=LINK) -> None:
+    """One date set in those columns. Each piece is underlined on its own — no
+    rule across the gap — but the link is a single rectangle over both, so the
+    whole date stays one tap target on a pen device. Without a `target` it is
+    plain text: a day outside the year has no page to jump to.
+    """
+    name_x, num_right = columns
+    num_w = page.q.text_width(number, family="sans", size=round(size))
+    page.text(name_x, top, name, size, color)
+    page.text(num_right - num_w, top, number, size, color)
+    if target is None:
+        return
+    under = top + size + pt(0.8)
+    page.hline(name_x, name_x + page.q.text_width(name, family="sans", size=round(size)),
+               under, 0.35, color)
+    page.hline(num_right - num_w, num_right, under, 0.35, color)
+    page.links.append(Link(
+        Point(0, page._y(top + size + pt(2))),
+        Point(round(num_right + pt(1)), page._y(top - pt(1))),
+        target,
+    ))
+
+
 # ------------------------------------------------------------------ nav strip
 
 
@@ -530,15 +568,8 @@ def month_page(page: Page, cfg, n: Nav, months, weekdays, month, holidays, prev,
     row_h = avail / ndays
     marked = marked_days(cfg)
     size = pt(10)
-    # The weekday keeps the left edge; the numbers get a column of their own and
-    # are right-aligned in it, so 9 stands under 30 on its units digit. Both are
-    # measured — a definition may name its days "Montag" or "月".
-    name_w = max(
-        page.q.text_width(name, family="sans", size=round(size)) for name in weekdays
-    )
-    num_right = pt(1) + name_w + pt(7) + page.q.text_width(
-        "30", family="sans", size=round(size)
-    )
+    columns = date_columns(page, weekdays, size)
+    num_right = columns[1]
     for d in range(1, ndays + 1):
         date = datetime.date(cfg.year, month, d)
         rtop = top + (d - 1) * row_h
@@ -548,24 +579,8 @@ def month_page(page: Page, cfg, n: Nav, months, weekdays, month, holidays, prev,
         if fill:
             page.box(0, rtop, page.W, row_h, 0.0, fill, fill)
         page.hline(0, page.W, rtop, 0.2, GUIDE)
-        # One link over both pieces — the whole date is the tap target, even
-        # though it is set as two columns. Each piece is underlined on its own,
-        # so no rule runs across the gap between them.
-        label_top = round(rtop + row_h / 2 - pt(5))
-        name = weekdays[date.weekday()]
-        number = str(d)
-        num_w = page.q.text_width(number, family="sans", size=round(size))
-        page.text(pt(1), label_top, name, size, LINK)
-        page.text(num_right - num_w, label_top, number, size, LINK)
-        under = label_top + size + pt(0.8)
-        page.hline(pt(1), pt(1) + page.q.text_width(name, family="sans", size=round(size)),
-                   under, 0.35, LINK)
-        page.hline(num_right - num_w, num_right, under, 0.35, LINK)
-        page.links.append(Link(
-            Point(0, page._y(label_top + size + pt(2))),
-            Point(round(num_right + pt(1)), page._y(label_top - pt(1))),
-            f"day-{date.isoformat()}",
-        ))
+        date_label(page, round(rtop + row_h / 2 - pt(5)), weekdays[date.weekday()],
+                   str(d), size, columns, target=f"day-{date.isoformat()}")
         holiday = holidays.get(date)
         if holiday is not None:
             page.text(round(num_right + pt(14)), round(rtop + row_h / 2 - pt(4)),
@@ -632,19 +647,26 @@ def week_page(page: Page, cfg, n: Nav, months, weekdays, *, week_no, start_date,
     body = page.H - top - pt(2)
     row_h = body / 7
     right = page.W - (mm(48) if has_tasks else 0)
+    size = pt(10)
+    # The same two columns as the month page, from the same arithmetic.
+    columns = date_columns(page, weekdays, size)
+    marked = marked_days(cfg)
     for i in range(7):
         date = start_date + _dt.timedelta(days=i)
         rtop = top + i * row_h
-        weekend = date.weekday() >= 5
-        if weekend and cfg.week_view.weekend_shade:
-            page.box(0, rtop, right, row_h, 0.0,
-                     cfg.week_view.weekend_shade, cfg.week_view.weekend_shade)
+        fill = marked.get(date) or (
+            cfg.week_view.weekend_shade if date.weekday() >= 5 else None
+        )
+        if fill:
+            page.box(0, rtop, right, row_h, 0.0, fill, fill)
         page.hline(0, right, rtop, 0.2, GUIDE)
-        head = f"{weekdays[date.weekday()]} {date.day}"
-        if date.year == cfg.year:
-            page.link_text(pt(1), round(rtop + pt(2)), head, f"day-{date.isoformat()}", pt(10))
-        else:
-            page.text(pt(1), round(rtop + pt(2)), head, pt(9), GUIDE)  # outside the year, no link
+        # A day outside the year has no page of its own, so it is set plainly —
+        # in the same columns, so the seven still line up.
+        inside = date.year == cfg.year
+        date_label(page, round(rtop + pt(2)), weekdays[date.weekday()], str(date.day),
+                   size, columns,
+                   target=f"day-{date.isoformat()}" if inside else None,
+                   color=LINK if inside else GUIDE)
         page.surface(mm(2), rtop + pt(14), right - mm(4), row_h - pt(16), cfg.week_view.surface)
     page.hline(0, right, top + 7 * row_h, 0.2, GUIDE)
     if has_tasks:
