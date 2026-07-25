@@ -1,8 +1,8 @@
 # Examples
 
 A taste of what Ctrl+Grid makes — one A4 example per generator, plus a
-multi-page document, the calibration cover sheet, a whole linked calendar and a
-sheet with a printed ruler along its edges.
+multi-page document, the calibration cover sheet, a whole linked calendar, a
+calligraphy guide and a sheet with a printed ruler along its edges.
 Each is an ordinary definition file: open the `.yaml`, change it, regenerate.
 The `.pdf` is the real output (measured, to scale); the image is just a preview.
 Only the calendar ships without its PDF — 405 pages is too much to carry in a
@@ -35,6 +35,7 @@ proportionally.
 | <img src="previews/10-mandala.png" width="220"> | **`mandala`** — a twelve-fold template: guide rings and spokes, a flower-of-life rosette, a double ring of lotus petals, two bead rings and a twelve-sided frame.<br>[`10-mandala.yaml`](10-mandala.yaml) · [PDF](10-mandala.pdf) |
 | <img src="previews/10b-mandala-scallops.png" width="220"> | **`mandala`** (variant) — the same blade, a different character: a scalloped outer border, a pinwheel of tilted squares, an inward-turned scalloped ring and a flower-of-life centre.<br>[`10b-mandala-scallops.yaml`](10b-mandala-scallops.yaml) · [PDF](10b-mandala-scallops.pdf) |
 | <img src="previews/11-cover-calibration.png" width="220"> | **`--cover`** — the calibration cover sheet (§ 8.8): a 50 mm square and 100 mm rule to catch a scaling print driver, a ladder of stroke weights so you see how each one prints, and a settings summary. The preview is the cover; the grid it precedes is page two.<br>[`11-cover-calibration.yaml`](11-cover-calibration.yaml) · [PDF](11-cover-calibration.pdf) |
+| <img src="previews/14-calligraphy-italic.png" width="220"> | **`lines`** (slanted) — an italic calligraphy guide: a ruled cycle of ascender, body, descender and air, crossed by a family at 55°. A slanted family is spaced *perpendicular* and clipped to the pattern area (§ 7.1).<br>[`14-calligraphy-italic.yaml`](14-calligraphy-italic.yaml) · [PDF](14-calligraphy-italic.pdf) |
 | <img src="previews/12-calendar-day.png" width="150"> <img src="previews/12-calendar-month.png" width="150"> | **`calendar` — a whole document** — a linked, write-on year planner: a cover, the year on one sheet, two half-year tables, twelve months, every day and three note pads, all cross-linked — tap a date and land on that day. The previews are a day page (schedule with half hours, tick boxes, squared notes) and January. 405 pages and ~1.6 MB, so this one ships without its PDF: `ctrlgrid -d examples/12-calendar-year.yaml -o calendar.pdf` builds it in about a second.<br>[`12-calendar-year.yaml`](12-calendar-year.yaml) · preset [`calendar-a4`](../ctrlgrid/data/presets/calendar-a4.yaml) |
 | <img src="previews/13-ruler-edge.png" width="220"> | **`ruler`** — the promise, on the sheet: a centimetre scale along the bottom and left edges, zeroed on the pattern area so the numbers agree with the grid. Print at 100 % and lay a real ruler against it.<br>[`13-ruler-edge.yaml`](13-ruler-edge.yaml) · [PDF](13-ruler-edge.pdf) |
 

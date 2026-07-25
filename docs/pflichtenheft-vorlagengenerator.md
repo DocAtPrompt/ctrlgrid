@@ -570,6 +570,28 @@ Ohne `count` wäre für jede dieser Alltagsformen ein eigener Generator nötig.
   gemessen.
 - Jede Linie wird am Musterbereich-Rechteck **geclippt**.
 - **Einrasten ist für schräge Familien nicht unterstützt** — Fehler, kein Raten.
+  Eine schräge Familie meldet dem Griff **gar keine periodische Achse** (§ 8.3);
+  damit gilt die Regel, ohne dass der Griff je erfährt, was ein Winkel ist.
+  `governing: true` und `law: log10` sind an einer schrägen Familie ebenfalls
+  Fehler — beides braucht eine Achse, die es dort nicht gibt.
+
+**Wo Linie 0 liegt (festgelegt beim Bau, 2026-07):** auf dem **Ursprung des
+Musterbereichs**, genau wie bei einer waagrechten Familie — dieselbe Regel,
+verallgemeinert, nicht eine zweite. Eine unbegrenzte schräge Familie füllt die
+Fläche von dort aus nach **beiden** Seiten der Senkrechten; bei waagrecht und
+senkrecht liegt ohnehin alles auf der positiven Seite, dort ändert das nichts,
+bei 45° ist es die einzige Art, das Blatt zu decken. Rückwärts heißt dabei: der
+Zyklus **rückwärts gelesen**, nicht die Vorwärtspositionen negiert — `[2, 1]`
+schreitet abwärts erst 1, dann 2, sonst verschöbe sich das Muster um einen
+Schritt. `count: n` zählt weiterhin n Linien ab Linie 0 in Zyklusrichtung, und
+weil es Linien unterhalb von Linie 0 gibt, sind **negative senkrechte
+Koordinaten** zulässig: `extent: { start: -40mm }` ist sinnvoll.
+
+Die Senkrechte ist die um 90° gedrehte Linienrichtung, im Vorzeichen so
+gewählt, dass sie **zur Fläche zeigt** — nur so zählt `90deg` in das Blatt
+hinein wie `vertical` und nicht aus ihm heraus. Liegt die Mitte der Fläche
+genau auf Linie 0 (die Diagonale eines Quadrats), bleibt die kanonische
+Drehung stehen; geraten wird nie.
 
 ### 7.2 `dots`
 

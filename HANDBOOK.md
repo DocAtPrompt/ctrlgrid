@@ -561,7 +561,7 @@ angle them for isometric; use `law: log10` for graph paper.
 ```yaml
 generator: lines
 families:
-  - direction: horizontal      # or vertical (required)
+  - direction: horizontal      # horizontal | vertical | an angle like 55deg
     base_spacing: 5mm          # required
     base_weight: 0.15pt
     weight: [1, 1, 1, 1, 2.7]  # every fifth line heavier (the cycle model, §9)
@@ -593,8 +593,36 @@ families:
   - { direction: horizontal, base_spacing: 20mm, law: log10, decades: 3 }
 ```
 
-Example: [`01-lines-squared.yaml`](examples/01-lines-squared.yaml). Preset:
-`millimeter-a4`.
+**Slanted families.** A direction may be an angle — `direction: 55deg` — and
+then three things hold, all of them consequences of one idea:
+
+- `base_spacing`, `offset` and `extent` are measured **perpendicular** to the
+  lines, not along an axis. 8 mm at 55° means the lines are 8 mm apart as a
+  ruler laid across them measures, which is what a writing guide needs.
+- Every line is **clipped to the pattern area**, so the family fills the sheet
+  and never runs into the margin.
+- Line 0 goes through the pattern area's bottom-left corner — the same place
+  the first line of a horizontal family sits — and an unlimited family grows to
+  **both** sides of it. Perpendicular coordinates below line 0 are negative, so
+  `extent: { start: -40mm, end: 0mm }` keeps only the lines on that side.
+
+Angles are taken modulo 180° (a line has no direction, so `55deg` and `235deg`
+are the same family), and `0deg` and `90deg` draw exactly what `horizontal` and
+`vertical` draw. **Snapping is not supported on a slanted family** — it has no
+cartesian period to snap to, and `governing: true` or `law: log10` on one is
+refused rather than quietly ignored.
+
+```yaml
+# an italic calligraphy guide: a ruled hand, crossed by the pen slant
+families:
+  - { direction: horizontal, base_spacing: 5mm, spacing: [2, 1, 1, 3],
+      weight: [1, 2, 1, 1] }
+  - { direction: 55deg, base_spacing: 18mm, base_weight: 0.12pt }
+```
+
+Examples: [`01-lines-squared.yaml`](examples/01-lines-squared.yaml) and
+[`14-calligraphy-italic.yaml`](examples/14-calligraphy-italic.yaml). Presets:
+`millimeter-a4`, `calligraphy-a4`.
 
 ### `dots` — dot grids
 

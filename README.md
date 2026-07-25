@@ -121,7 +121,7 @@ planned.
 
 | Generator | Produces |
 |---|---|
-| `lines` | squared, ruled, isometric, calligraphy, Cornell, log/semi-log |
+| `lines` | squared, ruled, isometric, calligraphy (slanted families), Cornell, log/semi-log |
 | `dots` | dot grids with emphasised rows and columns |
 | `staves` | music staves and guitar tab, with treble/bass/alto/tenor clefs |
 | `grid` | labelled cell blocks — battleship, score sheets |

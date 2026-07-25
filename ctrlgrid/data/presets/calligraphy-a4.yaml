@@ -1,0 +1,49 @@
+# calligraphy — an italic guide sheet (§ 7.1). A4, landscape.
+#
+# Three families, and every one of them is the same cycle model wearing a
+# different hat — which is the whole argument of § 4: writing guides need no
+# generator of their own.
+#
+#   1. the ruling: a cycle of ascender / body / descender / air, so the heavy
+#      line falls on the writing line and the rest stay light;
+#   2. the slant: a family at 55° from the horizontal, the classic italic pen
+#      slant, spaced 20 mm apart and clipped to the sheet (§ 7.1);
+#   3. the pen angle: 45° the other way, dotted and sparse — lay the nib along
+#      it to check the angle you are holding.
+#
+# Change `base_spacing` to change the size of the hand: 4 mm body height is a
+# small hand, 8 mm a large one. The slant lines carry no measure of their own —
+# they only have to cross the writing lines.
+version: 1
+
+page:
+  format: a4
+  orientation: landscape
+  margin: 15mm
+
+generator: lines
+families:
+  # The ruling. One cycle: 2 up to the ascender, 1 body, 1 descender, 3 of air
+  # before the next line — § 7.1's own example, and it is a real hand.
+  - direction: horizontal
+    base_spacing: 4mm
+    spacing: [2, 1, 1, 3]
+    base_weight: 0.15pt
+    weight: [1, 2, 1, 1]        # the writing line is the heavy one
+    color: ["#9aa3ad", "#333333", "#9aa3ad", "#c7ccd2"]
+
+  # The slant. 55° is the italic slant; line 0 runs through the bottom-left
+  # corner of the pattern area and the family fills the sheet both ways.
+  - direction: 55deg
+    base_spacing: 20mm
+    base_weight: 0.12pt
+    color: ["#c0c6cc"]
+
+  # The pen angle, to check the nib against. Dotted, so it never competes with
+  # the writing lines, and sparse enough to stay out of the way.
+  - direction: 135deg
+    base_spacing: 60mm
+    base_weight: 0.25pt
+    style: dashed
+    base_dash: 2mm
+    color: ["#aab2ba"]

@@ -1,0 +1,40 @@
+# lines — an italic calligraphy guide, and the reason slanted families exist
+# (§ 7.1).
+#
+# Two families of the same cycle model. The ruling is a cycle of ascender,
+# body, descender and air, with the writing line heavier than the rest; the
+# slant is a family at 55° from the horizontal — the classic italic pen slant —
+# spaced 18 mm apart, clipped to the pattern area, and running through the
+# area's bottom-left corner, which is where line 0 of every family sits.
+#
+# The hand's size is one number: `base_spacing`. 5 mm here gives a 5 mm body
+# height, which is a comfortable practice size; halve it for a small hand.
+version: 1
+
+page:
+  format: a4
+  margin: 18mm
+
+header:
+  height: 8mm
+  gap: 4mm
+  font: { size: 9pt }
+  left: "Italic — 5 mm body, 55° slant"
+  right: "{page} / {page_count}"
+
+generator: lines
+families:
+  # Ascender (2), body (1), descender (1), then air (3) before the next line.
+  - direction: horizontal
+    base_spacing: 5mm
+    spacing: [2, 1, 1, 3]
+    base_weight: 0.15pt
+    weight: [1, 2, 1, 1]
+    color: ["#9aa3ad", "#2f3a48", "#9aa3ad", "#c7ccd2"]
+
+  # The slant. It carries no measure of its own — it only has to cross the
+  # writing lines at the angle the pen is held at.
+  - direction: 55deg
+    base_spacing: 18mm
+    base_weight: 0.12pt
+    color: ["#b9c0c7"]

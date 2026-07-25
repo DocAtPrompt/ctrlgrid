@@ -842,3 +842,40 @@ of a number is **asked of the writer** (`text_metrics`), never taken as a
 proportion of the font size. The width that decides whether two numbers collide
 is measured the same way. The whole arithmetic lives once, in `ctrlgrid/ruler.py`,
 because the drawing and the pre-flight both need it and two copies drift.
+
+
+## 48. Slanted families anchor on the origin, and grow both ways (§ 7.1)
+
+§ 7.1 specified slanted families — perpendicular spacing, perpendicular offset
+and extent, clipping, no snapping — and said nothing about where line 0 sits.
+It sits on the pattern area's origin, which is where mark 0 of a horizontal
+family already sits. One rule, generalised, rather than two.
+
+The consequence is that an unlimited slanted family has to grow to **both**
+sides of line 0, since the line through one corner leaves half the sheet
+behind it. For horizontal and vertical families the whole area lies on the
+positive side, so their output is byte-identical to what it was — and the test
+that says so compares `0deg` against `horizontal` and `90deg` against
+`vertical` mark for mark. If the general case cannot reproduce the special one,
+there are two rules again.
+
+Rejected: anchoring at the corner with the smallest perpendicular coordinate
+(the anchor jumps from one corner to another on a one-degree change, so a
+family moves across the sheet when the user nudges the angle), and anchoring at
+the area's centre (a second rule for where mark 0 sits, contradicting the one
+horizontal and vertical follow).
+
+Three smaller calls fall out of it. **Downwards is the cycle read backwards**,
+not the forward positions negated, so `spacing: [2, 1]` stays symmetric about
+line 0; the existing position formula already does this for negative indices,
+because Python's floor division walks into the previous cycle. **Negative
+perpendicular coordinates are legal**, so `extent: { start: -40mm }` means what
+it looks like. And the **perpendicular's sign points towards the area**, which
+is what makes `90deg` count into the sheet exactly as `vertical` does; when the
+centre lies exactly on line 0 — a square's diagonal — the canonical 90° turn
+stands, so the choice is never arbitrary.
+
+Snapping needed no new machinery: a slanted family reports no periodic axis at
+all, so § 8.3's existing handling applies unchanged and the handle never learns
+what an angle is. `governing: true` and `law: log10` are refused on a slanted
+family for the same reason — both name an axis that is not there.
