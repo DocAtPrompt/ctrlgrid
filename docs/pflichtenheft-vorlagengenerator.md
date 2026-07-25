@@ -1664,6 +1664,70 @@ Schriftgrößen (die skalieren nicht mit dem Blatt). Dort ist `%w`/`%h`/`%s` ein
 lauter Fehler mit Begründung, nie eine stille Null — dasselbe Muster wie `px`
 auf Papier (§ 8.3.1).
 
+### 8.12 Randlineal
+
+Ein gedruckter Maßstab entlang gewählter Blattkanten, optional — Rahmen-Möbel
+neben `border`, `hole_marks` und `stamp` (§ 5.2, § 8.7), keine Klinge.
+
+```yaml
+ruler:
+  edges: [bottom, left]   # bottom | left | top | right, mindestens eine
+  unit: mm                # mm | cm | in — was die Zahlen bedeuten
+  step: 1mm               # kleinster Strich
+  mid_every: 5mm          # mittlerer Strich; `none` lässt ihn weg
+  label_every: 10mm       # langer Strich, und die Zahl daneben
+  weight: 0.2pt
+  color: "#000000"
+  font: { size: 6pt }
+```
+
+**Arbeitsmaßstab, keine zweite Kalibrierfigur.** Null sitzt am **Ursprung des
+Musterbereichs** der jeweiligen Kante, nicht in der Papierecke: die Zahlen sollen
+mit dem Raster übereinstimmen, damit man am Blatt misst und zuschneidet. Der
+Kalibrierfall ist bereits beantwortet — das Deckblatt trägt Quadrat und
+100-mm-Regel (§ 8.8) — und bekommt deshalb kein zusätzliches Lineal.
+
+**Im Rand, ohne Platzreservierung.** Die Striche wachsen von der Musterkante
+**nach außen** in den Rand, auf `Layer.FRAME`. Der Musterbereich wird nicht
+verkleinert: § 8.1 berechnet ihn aus Rändern und Bändern allein, und ein
+eingeschaltetes Lineal verschiebt so wenig eine Rasterlinie wie ein `border`.
+Gemessen wird gegen den Bereich, den das Muster **tatsächlich bekommen hat** —
+lässt `remainder` (§ 8.5) Rest an einer Kante, zählt der als Platz.
+
+**Physische Kanten, nicht `inner`/`outer`.** Ein Maßstab ist ein Ding an der
+Papierkante und folgt nicht der Bindung; unter `duplex` tauscht er die Seite
+nicht, während die Ränder es tun (§ 8.1). Gezeichnet wird trotzdem aus der
+Geometrie *dieser* Seite, damit das Lineal dem Bereich folgt, wenn dieser wandert.
+
+**Die Leiter.** `unit` bestimmt nur, was die Zahlen bedeuten; die drei Intervalle
+bestimmen, wo die Striche stehen. Vorgaben: `mm` und `cm` teilen 1/5/10 mm (die
+Zahlen zählen Millimeter bzw. Zentimeter), `in` nutzt 1/8″, 1/2″, 1″. Jede Sprosse
+muss ein **ganzes Vielfaches** der darunterliegenden sein; sonst wird abgelehnt,
+denn ein Zahlstrich, der auf keinem Teilstrich sitzt, ist das stille
+„fast richtig" aus § 5.1. Strichlängen sind feste Maße (1,2 / 2,0 / 3,0 mm) und
+der Abstand zur Zahl ist 1 mm — ein Maßstab, den niemand verbiegen kann, ist der
+Sinn eines Maßstabs (wie die Deckblattfiguren, § 8.8).
+
+**Zahlen.** Eine Zahl nennt ihre Position **exakt**, mit den wenigsten Ziffern,
+die das leisten: `label_every: 25mm` unter `unit: cm` druckt 2,5 — nie gerundet,
+denn ein Maßstab, der ein falsches Maß druckt, ist schlechter als keiner. Auf den
+**senkrechten** Kanten stehen die Zahlen um 90° gedreht (von unten nach oben
+lesend), damit der benötigte Streifen auf allen vier Kanten gleich breit ist:
+Strich + Abstand + Zahlenhöhe, statt links und rechts die volle Textbreite.
+
+**Ablehnungen, alle vor Seite eins** (§ 12 Punkt 13), jede mit Millimetern:
+
+1. Der Streifen passt nicht zwischen Musterkante und Blattkante.
+2. Ein Kopf- oder Fußband endet dort — dann nennt die Meldung das Band.
+3. Die Zahlen kollidieren: die breiteste wird beim Writer **gemessen**
+   (§ 10.2) und mit `label_every` verglichen.
+4. Eine Sprosse sitzt neben der Leiter (siehe oben), oder eine Kante ist
+   unbekannt bzw. doppelt genannt.
+
+Nichts wird geschrumpft, beschnitten oder verschoben, damit ein Lineal passt
+(§ 8.2). Die Zahlen sind `Text`-Marken; auf PNG lehnt der Capability-Vorlauf den
+Lauf mit Namen ab (§ 10.2, § 10.4).
+
 ---
 
 ## 9. Datendateien

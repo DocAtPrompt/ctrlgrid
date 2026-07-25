@@ -14,7 +14,7 @@ calendar** — for paper formats **and** for e-ink tablets.
 > below work, and the dimensional test described below measures `lines` out of
 > a finished PDF on every commit. The handle around them is finished — multi-page output, headers
 > and footers, name lists, snapping, remainder handling, double-sided margins,
-> border, background, hole marks, stamp, the calibration cover sheet, embedded
+> border, background, hole marks, stamp, an edge ruler, the calibration cover sheet, embedded
 > font files, dashed and dotted styles, free page sizes, logos in bands, and
 > relative measures (`%w`/`%h`/`%s`) so one definition fills paper and a 3:4
 > e-ink slate alike.
@@ -248,7 +248,10 @@ you meet it without warning.
 page and silently scale to about 96 %. Choose "Actual size" / "100 %". Run with
 `--cover` to get a first sheet with a 50 mm calibration square and a 100 mm rule:
 measure them with a ruler and you will know immediately whether your printer
-scaled. That sheet also records the settings that produced the document — format,
+scaled. For the check on *every* sheet rather than the first one, add a
+`ruler:` — a printed scale along the edges of the page, zeroed on the pattern
+area, so a real ruler laid against it settles the question at a glance
+(`examples/13-ruler-edge.yaml`). That sheet also records the settings that produced the document — format,
 margins, base values, cycles, effective period, tool version and a checksum of
 the definition — so a print that came out right stays reproducible. It is not
 counted in the page numbering, and it is never scaled to fit: on a format too

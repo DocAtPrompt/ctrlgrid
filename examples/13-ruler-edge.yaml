@@ -1,0 +1,27 @@
+# ruler — the one promise, on the sheet itself (§ 8.12).
+#
+# Print this at 100 % and lay a real ruler along the bottom edge: either the
+# centimetres agree, or the print driver scaled. Every other example describes
+# dimensional accuracy; this one hands you the means to check it.
+#
+# Zero sits at the pattern area, not at the paper's corner — so the numbers
+# agree with the grid, and the scale measures what you draw rather than what
+# the paper is. `remainder: end` anchors the grid at the bottom-left, which is
+# what keeps 0 on the first grid line instead of half a leftover away from it.
+version: 1
+
+page:
+  format: a4
+  margin: 18mm          # room for tick, gap and number: a ruler needs ~5.5 mm
+
+pattern:
+  remainder: end
+
+generator: lines
+families:
+  - { direction: horizontal, base_spacing: 10mm, base_weight: 0.15pt }
+  - { direction: vertical,   base_spacing: 10mm, base_weight: 0.15pt }
+
+ruler:
+  edges: [bottom, left]
+  unit: cm              # the numbers count centimetres; the ticks stay 1/5/10 mm

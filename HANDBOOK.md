@@ -466,6 +466,55 @@ stamp:
 
 `--stamp DRAFT` on the command line is the quick route to a stamp.
 
+### The edge ruler
+
+A printed scale along the edges of the sheet — the one piece of furniture that
+demonstrates the promise on every page: lay a real ruler against it, and either
+the numbers agree or your printer scaled.
+
+```yaml
+ruler:
+  edges: [bottom, left]   # bottom | left | top | right, at least one
+  unit: cm                # mm | cm | in — what the numbers mean
+  step: 1mm               # the smallest tick
+  mid_every: 5mm          # the medium tick; `none` leaves it out
+  label_every: 10mm       # the long tick, and the number beside it
+  weight: 0.2pt
+  color: "#000000"
+  font: { size: 6pt }
+```
+
+**Zero sits at the pattern area, not at the paper's corner** — the numbers agree
+with the grid, so the first line is 0 and reading a position off the sheet needs
+no subtraction. The ticks grow outward into the margin and reserve no space:
+switching a ruler on leaves the grid exactly where it was.
+
+Only `edges` is required. The rest follows `unit`:
+
+| `unit` | `step` | `mid_every` | `label_every` | the numbers read |
+|---|---|---|---|---|
+| `mm` | 1mm | 5mm | 10mm | `10 20 30 …` |
+| `cm` | 1mm | 5mm | 10mm | `1 2 3 …` |
+| `in` | 0.125in | 0.5in | 1in | `1 2 3 …` |
+
+The intervals are ordinary lengths, so `step: 2mm` or `label_every: 0.25in` are
+equally sayable — but each must be a whole multiple of the one below it, or the
+run is refused: a numbered tick that sits on no tick of the ladder looks like a
+scale and measures wrong. A number states its position exactly and is never
+rounded (`label_every: 25mm` under `unit: cm` prints `2.5`). On the vertical
+edges the numbers turn 90°, reading bottom to top.
+
+Edges are physical and do not swap under `duplex` the way margins do — a scale
+belongs to the paper, not to the binding.
+
+What gets refused, always before the first page and always in millimetres: a
+margin too narrow for tick, gap and number (naming the header or footer band when
+that is what ends the space), and numbers so close together that they would run
+into one another. Nothing is shrunk to make a ruler fit. On PNG output the run is
+refused too — the numbers are text, and the PNG writer has no font file.
+
+Example: [`13-ruler-edge.yaml`](examples/13-ruler-edge.yaml).
+
 ---
 
 ## 11. The cover sheet and embedding the definition

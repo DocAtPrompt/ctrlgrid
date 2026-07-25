@@ -39,7 +39,7 @@ needs a human *and* the user has chosen to defer PyPI for now (see *Not done*).
 uv sync --extra dev && uv run pytest && uv run ruff check .
 ```
 
-1000 tests, all green, ruff clean. Sixty-odd commits on `main`, linear history,
+1046 tests, all green, ruff clean. Sixty-odd commits on `main`, linear history,
 pushed to **[github.com/DocAtPrompt/ctrlgrid](https://github.com/DocAtPrompt/ctrlgrid)**
 (public); CI runs green there on Linux (3.11–3.13), macOS and Windows. Eleven
 presets — one per generator (`lines`, `dots`, `polar`, `form`, `maze`,
@@ -90,6 +90,7 @@ says so.
 | post-M9 `--embed-def` | the PDF carries its own source: the def's exact bytes as an `EmbeddedFile` in the catalog's `/Names /EmbeddedFiles` tree, built by hand (reportlab has no filespec support), deterministic, PDF-only — PNG refuses it by name via the `attachment` capability (§ 8.8, § 10.2) |
 | post-M9 examples | rendered gallery in `examples/`, one per generator + multi-page + cover, `test_every_example_validates` guards it |
 | post-M9 `calendar` | a linked, write-on planner PDF (§ 7) — the first **document generator**: it owns heterogeneous, cross-linked pages (Index, Year two-table, Month day-list, configurable Day blocks, paginated Notes-index, Notes) instead of one pattern area. Two new mechanisms modelled on `outline`: a **`link` capability** (writer method + capability, PDF-only, PNG refused; links drawn as underlined Text) and a **document-mode page loop** in `pages.py`. Dates deterministic from the year, names from the def (English default), one-page-per-view fit-or-refuse. Pages: an opt-in **title** page (full-sheet colour via a new `DocumentPage.background` (+ an optional full-sheet `background_image`, `cover`/`contain`, transparency shows the colour), optional `logo`, and independent opt-in `show_header`/`show_footer` (replacing `plain`)), a **contents** hub, a **full-year overview** (twelve mini-months, three across, numbers as links, no cell boxes), **half-year 1 & 2** tables (short months' columns end — no empty cells), months, days, opt-in **weeks** (`week_start`-aligned), and notes. `{year}` header placeholder. Holidays come inline **or from a file** (`holidays_file`: a YAML list or a concrete-dated `.ics`, resolved against `base_dir` like `logo`, filtered to the year, merged with inline — inline wins on a date clash; `.ics` recurring/timed events skipped and counted; source named in the run report). **§ 7.12 is complete.** |
+| post-M9 `ruler` | an edge scale as frame furniture (§ 8.12): `ruler: {edges: [bottom, left], unit: cm}`. Zero at the *pattern area's* origin, so the numbers agree with the grid; ticks grow outward into the margin and reserve nothing, so switching it on moves no grid line (§ 8.1's rule for `border`, restated). Physical edges, not `inner`/`outer`. `unit` says what the numbers mean, three lengths say where the ticks are, each a whole multiple of the one below. The ladder arithmetic lives once in `ruler.py` (drawing *and* pre-flight use it); the number's height and width are asked of the writer, never guessed. Four refusals before page one; PNG refused by the existing capability path. Example `13-ruler-edge`, decision 47 |
 | post-M9 band colour | a header/footer `Band` takes `background` (a full-width strip, band height only) and `text_color`, both default off — drawn in `layout_band` so both the blade and document paths get them; resolves the title-page contrast (§ 8.9) |
 | pulled forward into M1 | format table, presets, `check`, overwrite protection, placeholders — the M1 acceptance criteria needed them |
 
@@ -205,8 +206,9 @@ and knows nothing about margins.
 | `model.py` | pydantic sections; `Section` base with `extra="forbid"` + `deferred` |
 | `loader.py` | YAML → `Document`; formats, presets, devices, name lists |
 | `pages.py` | `Geometry`, page loop, placeholders, `preflight`, `build`, `snap: pixel` |
-| `frame.py` | header/footer layout, border, background, hole marks, stamp |
+| `frame.py` | header/footer layout, border, background, hole marks, the edge ruler's marks and its fit check, stamp |
 | `labels.py` | counting patterns `n`/`a`/`A`, explicit lists (§ 7.10) |
+| `ruler.py` | the edge scale's ladder: tick positions, exact labels, the strip it needs (§ 8.12) |
 | `images.py` | PNG sources: signature check, pixel size, aspect (§ 5.2, § 13) |
 | `media.py` | the media check: resolution and colour findings (§ 12.1) |
 | `impose.py` | N-up layout, the 100 % fit check, crop marks (§ 14) |
@@ -309,7 +311,9 @@ this project runs on — claims are backed by a command's output, never asserted
 
 A handover written at the end of the 2026-07-25 session names the order:
 [`docs/superpowers/plans/2026-07-25-next-steps-handover.md`](superpowers/plans/2026-07-25-next-steps-handover.md).
-**Phase 0 — the online presence — is done:** the README has its own calendar
+**Phase 0 (online presence) and phase 1a (the edge ruler) are done.**
+
+Phase 0: the README has its own calendar
 section, `examples/12-calendar-year.yaml` is the worked example (405 pages, two
 previews, no committed PDF), and the handbook's calendar section now covers
 `holidays_file`, marked-day colours, `legend`, the title page's image and bands,
@@ -317,7 +321,10 @@ previews, no committed PDF), and the handbook's calendar section now covers
 where they belong, in the header/footer section. The gallery itself needed no
 rebuild: every committed example PDF was regenerated and compared byte for byte,
 and all thirteen matched (the maze booklet with its documented `--seed 4711`).
-Next is an edge ruler, angled line families (which
+Phase 1a is built: `ruler:` (§ 8.12, decision 47), designed with the user first
+— [`docs/superpowers/specs/2026-07-25-edge-ruler-design.md`](superpowers/specs/2026-07-25-edge-ruler-design.md)
+and its plan — and the gallery's `13-ruler-edge` is the sheet you can hold a real
+ruler against. Next is angled line families (which
 calligraphy guides *and* origami pre-creasing both need), international presets,
 and a `notebook` document generator; then fold notation and a parametric `net`.
 A specific paper aeroplane was considered and **refused**: it is a drawing, not

@@ -102,7 +102,16 @@ produces. Rebuild them from their own definitions.
 
 ## Phase 1 — the first bulk, in this order
 
-### 1a. An edge ruler (small, high show-value)
+### 1a. An edge ruler (small, high show-value) — **built, 2026-07-25**
+
+> Done. `ruler:` is § 8.12 and decision 47; the design was settled with the user
+> first (`docs/superpowers/specs/2026-07-25-edge-ruler-design.md`), then built
+> test-first against a plan (`2026-07-25-edge-ruler.md`). The three questions
+> below were the ones put to the user: it sits **in** the margin and reserves
+> nothing, the edges are physical and listed, and yes — a margin too narrow for
+> tick, gap and measured number is refused by name, before page one. The gallery
+> sheet is `examples/13-ruler-edge.yaml`.
+
 
 A printed centimetre/inch scale along one page edge, opt-in. Handle furniture,
 not a blade — it belongs beside `hole_marks` and `border` in `frame.py`, drawn

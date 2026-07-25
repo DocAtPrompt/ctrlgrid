@@ -803,3 +803,42 @@ index entries. A definition that built before can therefore now be refused — t
 deliberate trade for a contents page that is read rather than scanned. The height
 arithmetic lives once, in `calendar_layout.contents_height`, used by both the
 drawing and the refusal so the two cannot drift.
+
+## 47. The edge ruler: a working scale in the margin, not a second cover figure (§ 8.12)
+
+The specification was silent on a printed edge scale; the design settled with
+the user (`docs/superpowers/specs/2026-07-25-edge-ruler-design.md`) makes four
+calls that could each have gone the other way.
+
+**Zero at the pattern origin, not at the paper's corner.** A scale zeroed on the
+sheet would measure the paper, which the cover sheet already does with its 50 mm
+square and 100 mm rule (§ 8.8). Zeroed on the pattern area it measures what is
+drawn on the sheet: the first grid line is 0, and reading a position off the grid
+needs no subtraction.
+
+**In the margin, reserving nothing.** The alternative — a band-like strip that
+shrinks the pattern area — always fits and never refuses, but it changes the
+geometry of every definition the moment the ruler is switched on. § 8.1 already
+decided this question for `border`, and one rule for both is worth more than the
+convenience: switching furniture on moves no grid line. The price is the refusal
+when the margin is too narrow, and that price is paid loudly, in millimetres.
+
+**Physical edges, not `inner`/`outer`.** Margins are named for the binding
+because they follow it under duplex (§ 8.1). A scale is a thing at the edge of
+the paper and does not; `edges: [bottom, left]` therefore means those two edges
+on both sides of a sheet. The *drawing* still comes from the placed geometry of
+the page in hand, so the scale follows the pattern area when duplex moves it.
+
+**Rotated numbers on the vertical edges.** Upright numbers would need the full
+width of "170" in the left margin — three to four times the height of a digit —
+so the same definition would fit at the bottom and be refused on the left. Turned
+90°, all four edges need the same strip, and a scale read bottom-up is what a
+drawing ruler looks like anyway.
+
+Two smaller ones, recorded because they are the kind that get "simplified" later:
+the tick ladder and the label gap are **fixed measures**, like the cover sheet's
+figures — a yardstick nobody can bend is the point of a yardstick; and the height
+of a number is **asked of the writer** (`text_metrics`), never taken as a
+proportion of the font size. The width that decides whether two numbers collide
+is measured the same way. The whole arithmetic lives once, in `ctrlgrid/ruler.py`,
+because the drawing and the pre-flight both need it and two copies drift.
