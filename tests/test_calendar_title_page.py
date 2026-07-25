@@ -42,6 +42,19 @@ def test_cover_tall_image_binds_width():
     assert h == 420_000 and y == round((H - 420_000) / 2)
 
 
+def test_contain_tall_image_binds_height():
+    # aspect 0.5 (taller than sheet 0.707): contain binds height, colour left/right.
+    assert background_image_rect(W, H, 0.5, "contain") == (30_750, 0, 148_500, 297_000)
+
+
+def test_equal_aspect_fills_exactly_for_both_fits():
+    # aspect == sheet aspect: cover and contain agree, exact full-sheet, no overhang
+    # (verified: no 1-µm rounding drift with the float ratio).
+    s = W / H
+    assert background_image_rect(W, H, s, "contain") == (0, 0, W, H)
+    assert background_image_rect(W, H, s, "cover") == (0, 0, W, H)
+
+
 def _png(path: Path, w: int, h: int, *, transparent: bool = False) -> Path:
     mode, color = ("RGBA", (200, 60, 60, 128)) if transparent else ("RGB", (200, 60, 60))
     PILImage.new(mode, (w, h), color).save(path)
