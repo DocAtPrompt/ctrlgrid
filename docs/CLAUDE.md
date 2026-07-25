@@ -23,8 +23,15 @@ things landed on the handle side, each small and each in the spec: the
 `--embed-def` — **the PDF carries its own source** as a file attachment (§ 8.8,
 was § 15 open question 5) — open question 3 closed (reportlab is BSD-3-Clause,
 verified), and **`mandala` grew five motif families** — `petals`, `beads`,
-`scallops`, `pinwheel` and a single-or-list `rosette` (§ 7.11). Only M5's two
-device edges are left (see *Not done*).
+`scallops`, `pinwheel` and a single-or-list `rosette` (§ 7.11). **The newest and
+largest addition is the `calendar` generator (§ 7.12)** — a linked, write-on
+planner PDF and the first *document generator* (owns pages, not one pattern
+area). It brought two clean new mechanisms (a `link` writer capability like
+`outline`, and a document-mode page loop in `pages.py`) and is **done through all
+its views** (title, contents, full-year overview of twelve mini-months, half-year
+1 & 2, months, opt-in weeks, days, notes) — only importing holidays from a *file*
+is left (an inline list works). Only M5's two device edges are otherwise left
+(see *Not done*).
 0.1.0 is the version in the code; nothing has been released, because releasing
 needs a human *and* the user has chosen to defer PyPI for now (see *Not done*).
 
