@@ -12,7 +12,7 @@ from pydantic import ValidationError
 
 from ctrlgrid.errors import DefinitionError
 from ctrlgrid.frame import layout_band
-from ctrlgrid.marks import Layer, Text
+from ctrlgrid.marks import Layer, Polygon, Text
 from ctrlgrid.model import Band
 from ctrlgrid.pages import Box, PageContext
 from ctrlgrid.writers.pdf import PdfWriter
@@ -21,10 +21,11 @@ Q = PdfWriter("unused.pdf")
 BAND = Box(left=5000, bottom=280000, right=205000, top=292000)
 PAGE = PageContext(index=0, number=7, count=30, name="Anna Berger", is_even=False,
                    seed_material=b"")
+SHEET_W = 210_000
 
 
 def place(band: Band, box: Box = BAND) -> dict[str, Text]:
-    marks = layout_band(band, box, q=Q, page=PAGE, section="header")
+    marks = layout_band(band, box, q=Q, page=PAGE, section="header", sheet_width=SHEET_W)
     return {mark.align: mark for mark in marks}
 
 
@@ -46,7 +47,9 @@ class TestPlacement:
         assert place(Band(height="12mm", center="x"))["center"].layer is Layer.FRAME
 
     def test_empty_fields_produce_no_marks(self) -> None:
-        assert layout_band(Band(height="12mm"), BAND, q=Q, page=PAGE, section="header") == []
+        assert layout_band(
+            Band(height="12mm"), BAND, q=Q, page=PAGE, section="header", sheet_width=SHEET_W
+        ) == []
 
     def test_placeholders_are_resolved(self) -> None:
         assert place(Band(height="12mm", center="{page} / {page_count}"))["center"].content == (
@@ -66,6 +69,7 @@ class TestOverflow:
                 q=Q,
                 page=PAGE,
                 section="header",
+                sheet_width=SHEET_W,
             )
         message = str(excinfo.value)
         assert "header.left" in message
@@ -81,6 +85,7 @@ class TestOverflow:
             q=Q,
             page=PAGE,
             section="header",
+            sheet_width=SHEET_W,
         )
         content = marks[0].content
         assert content.endswith("…")
@@ -104,6 +109,7 @@ class TestOverflow:
                 q=Q,
                 page=PAGE,
                 section="footer",
+                sheet_width=SHEET_W,
             )
         assert "footer.left" in str(excinfo.value)
 
@@ -120,6 +126,7 @@ class TestBandHeight:
                 q=Q,
                 page=PAGE,
                 section="header",
+                sheet_width=SHEET_W,
             )
         message = str(excinfo.value)
         assert "header.height" in message and "9pt" in message
@@ -136,6 +143,7 @@ class TestGlyphCoverage:
                 q=Q,
                 page=PAGE,
                 section="header",
+                sheet_width=SHEET_W,
             )
         message = str(excinfo.value)
         assert "ł" in message
@@ -154,3 +162,36 @@ class TestBandColourModel:
     def test_an_invalid_colour_is_refused(self) -> None:
         with pytest.raises(ValidationError):  # via ColorField
             Band(height="12mm", center="x", background="not-a-colour")
+
+
+class TestBandColourDrawing:
+    def test_text_colour_is_applied_to_every_field(self) -> None:
+        band = Band(height="12mm", left="A", center="B", right="C", text_color="#ffffff")
+        marks = layout_band(band, BAND, q=Q, page=PAGE, section="header", sheet_width=SHEET_W)
+        texts = [m for m in marks if isinstance(m, Text)]
+        assert texts and all(m.color == "#ffffff" for m in texts)
+
+    def test_text_colour_defaults_to_black(self) -> None:
+        band = Band(height="12mm", center="B")
+        marks = layout_band(band, BAND, q=Q, page=PAGE, section="header", sheet_width=SHEET_W)
+        assert [m for m in marks if isinstance(m, Text)][0].color == "#000000"
+
+    def test_background_is_a_full_width_strip_drawn_first(self) -> None:
+        band = Band(height="12mm", center="B", background="#2f3a48")
+        marks = layout_band(band, BAND, q=Q, page=PAGE, section="header", sheet_width=SHEET_W)
+        assert isinstance(marks[0], Polygon)                      # first, so text paints over it
+        fill = marks[0]
+        xs = {p.x for p in fill.points}
+        ys = {p.y for p in fill.points}
+        assert xs == {0, SHEET_W}                                 # full sheet width
+        assert ys == {BAND.bottom, BAND.top}                      # band height only
+        assert fill.fill_color == "#2f3a48" and fill.layer is Layer.FRAME
+
+    def test_background_without_text_draws_only_the_strip(self) -> None:
+        band = Band(height="12mm", background="#2f3a48")
+        marks = layout_band(band, BAND, q=Q, page=PAGE, section="header", sheet_width=SHEET_W)
+        assert len(marks) == 1 and isinstance(marks[0], Polygon)
+
+    def test_no_colour_no_text_is_still_empty(self) -> None:
+        band = Band(height="12mm")
+        assert layout_band(band, BAND, q=Q, page=PAGE, section="header", sheet_width=SHEET_W) == []

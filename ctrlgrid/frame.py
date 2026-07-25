@@ -184,6 +184,7 @@ def layout_band(
     q: WriterQuery,
     page: PageContext,
     section: str,
+    sheet_width: Um,
     extra: Mapping[str, str] | None = None,
 ) -> list[Mark]:
     """Lay a header or footer out inside its box, measuring every field.
@@ -207,8 +208,22 @@ def layout_band(
         for align, content in fields.items()
         if content
     }
+    # A full-width strip behind the band (band height only, § 8.9). First in the
+    # list, so the text paints over it. Layer is not sorted — order is paint order.
+    fill = (
+        Polygon(
+            points=(
+                Point(0, box.bottom), Point(sheet_width, box.bottom),
+                Point(sheet_width, box.top), Point(0, box.top),
+            ),
+            closed=True, weight=0.0,
+            color=band.background, fill_color=band.background, layer=Layer.FRAME,
+        )
+        if band.background is not None
+        else None
+    )
     if not resolved:
-        return []
+        return [fill] if fill is not None else []
 
     size = band.font.size.um
     # A font token, not a family name: stage 1's three logical families and a
@@ -234,7 +249,7 @@ def layout_band(
     widths |= {align: picture[0] for align, picture in pictures.items()}
     available = _available(box, centre_width=widths.get("center", 0))
 
-    marks: list[Mark] = []
+    marks: list[Mark] = [fill] if fill is not None else []
     # The centre field is laid out first: § 8.9 rule 1 gives it the content
     # width, and if it alone is too wide it is the one that gets cut.
     for align in ("center", "left", "right"):
@@ -268,6 +283,7 @@ def layout_band(
                 size=size,
                 family=family,
                 align=align,
+                color=band.text_color or "#000000",
                 layer=Layer.FRAME,
             )
         )

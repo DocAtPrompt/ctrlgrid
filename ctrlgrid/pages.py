@@ -665,11 +665,13 @@ def preflight(
         marks: list[Text] = []
         if document.header and placed.header:
             marks += layout_band(
-                document.header, placed.header, q=probe, page=context, section="header"
+                document.header, placed.header, q=probe, page=context,
+                section="header", sheet_width=document.sheet.width,
             )
         if document.footer and placed.footer:
             marks += layout_band(
-                document.footer, placed.footer, q=probe, page=context, section="footer"
+                document.footer, placed.footer, q=probe, page=context,
+                section="footer", sheet_width=document.sheet.width,
             )
         frames.append(marks)
 
@@ -898,11 +900,13 @@ def _document_preflight(
     footer_marks: list[Text] = []
     if document.header and geometry.header:
         header_marks += layout_band(
-            document.header, geometry.header, q=probe, page=context, section="header", extra=extra
+            document.header, geometry.header, q=probe, page=context,
+            section="header", sheet_width=document.sheet.width, extra=extra,
         )
     if document.footer and geometry.footer:
         footer_marks += layout_band(
-            document.footer, geometry.footer, q=probe, page=context, section="footer", extra=extra
+            document.footer, geometry.footer, q=probe, page=context,
+            section="footer", sheet_width=document.sheet.width, extra=extra,
         )
     # Two entries: [header, footer], so the title page can show either alone.
     return geometry, [], [header_marks, footer_marks], []
