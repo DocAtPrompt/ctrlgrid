@@ -280,5 +280,6 @@ orthogonal part today; the diagonals are 1b. Mostly a preset once 1b exists.
   executed by the shell — that happened, and ate part of a message.
 - Update the spec (`docs/pflichtenheft-vorlagengenerator.md`), `docs/CLAUDE.md`
   and the preset in the *same* commit as the code.
-- Push only on the user's word, and **never** `--tags`: an annotated `v0.1.0`
-  sits locally and would fire the release workflow.
+- Push only on the user's word. The stale `v0.1.0` tag that used to make
+  `--tags` dangerous was deleted on 2026-07-26; there are now no tags at all, so
+  the next one will be the first real release tag.

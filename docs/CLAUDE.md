@@ -32,8 +32,19 @@ its views** (title, contents, full-year overview of twelve mini-months, half-yea
 1 & 2, months, opt-in weeks, days, notes) — and holidays now import from a file
 too (`holidays_file`, YAML or `.ics`, § 7.12) — the calendar is complete. Only
 M5's two device edges are otherwise left (see *Not done*).
-0.1.0 is the version in the code; nothing has been released, because releasing
-needs a human *and* the user has chosen to defer PyPI for now (see *Not done*).
+**0.9.0** is the version in the code (2026-07-26), and the number is a claim:
+everything the specification describes is built, so the only thing between here
+and 1.0.0 is *use* — nobody outside has written a definition, and nobody has yet
+cut a net out and folded it. 1.0.0 is a promise about the **DSL**, and it should
+wait until the promise has been checked against paper by someone other than the
+test suite. Nothing has been released either way: releasing needs a human, and
+the user has chosen to defer PyPI for now (see *Not done*).
+
+The version lives in **one** place, `ctrlgrid/__init__.py`; `pyproject.toml`
+reads it dynamically and the release workflow compares the git tag against it.
+It is also in every PDF's `/Creator` and `/Producer`, so **bumping it makes every
+committed gallery PDF stale** — rebuild them in the same commit, and the cover
+sheet's preview with them, since that sheet prints the version.
 
 ```bash
 uv sync --extra dev && uv run pytest && uv run ruff check .
@@ -151,11 +162,16 @@ ctrlgrid` (the bare PyPI form) does not work yet and that is intended, not a gap
 When PyPI is wanted, two things: a human sets up trusted publishing
 (https://pypi.org/manage/account/publishing/ for `DocAtPrompt/ctrlgrid`, workflow
 `release.yml`, environment `pypi` — a pypi.org login), then a tag `v*` is pushed
-to trigger [`.github/workflows/release.yml`](../.github/workflows/release.yml). An
-annotated **`v0.1.0` exists locally** but now sits at the M9 commit, ~15 commits
-behind HEAD — re-tag at the release commit before pushing. Do **not** run
-`git push --tags`/`--follow-tags` casually: it would push that tag and fire the
-release. Plain `git push origin main` is safe.
+to trigger [`.github/workflows/release.yml`](../.github/workflows/release.yml).
+
+**There are no tags any more, locally or on the remote** (2026-07-26). The
+annotated `v0.1.0` used to sit on the M9 commit, 115 commits behind HEAD, where
+a stray `git push --tags` would have fired a release for a state nobody wanted
+released; it was deleted rather than moved, because a tag names a released
+state and that one never was. So the next tag is the first real one: create it
+on the commit that is to be released, with the same number as
+`ctrlgrid.__version__`, and push *that* tag deliberately. Plain
+`git push origin main` remains the everyday command.
 
 ### Deferred features named their milestone — and the list is now empty
 
