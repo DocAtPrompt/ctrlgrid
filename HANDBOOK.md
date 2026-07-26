@@ -1303,6 +1303,32 @@ A **document generator** (`calendar`, `notebook`) refuses `--nup` outright: it
 writes its own pages rather than running the page loop imposition works on, and
 imposing would destroy the links such a document is made of.
 
+### Booklets
+
+```bash
+ctrlgrid millimeter-a4 --format a5 --pages 8 --booklet --nup-sheet 297x210mm -o booklet.pdf
+```
+
+Four sheet sides carrying pages 8-1, 2-7, 6-3, 4-5. Print double-sided flipping
+on the **short** edge, fold the stack in half, staple through the fold. The run
+report names the flip and the one thing to check on the first sheet: page 2 must
+come out behind page 1.
+
+Three things to know before the first run:
+
+- **The sheet must be landscape.** Two portrait pages sit side by side, and
+  `--nup-sheet a4` is portrait — so write the size out, as above. If you forget,
+  the refusal tells you which size to use.
+- **A page count that is not a multiple of four is padded** with blank leaves,
+  and the run says how many. A folded sheet carries four pages; nothing is
+  scaled to make the count come out even.
+- **One signature.** Every sheet nests inside the next, one staple through the
+  fold. Past roughly forty pages the fold creep becomes visible and the stack
+  staples badly — split the work into several booklets instead.
+
+`--booklet` and `--nup` are refused together, and a document generator refuses
+`--booklet` for the same reason it refuses `--nup`.
+
 ---
 
 ## 15. Output formats
@@ -1480,12 +1506,13 @@ key.
 | `--skip-unsupported` | leave out what the writer cannot draw, and say so |
 | `--nup <CxR>` | N-up imposition, never scaled |
 | `--nup-sheet <format>` | the sheet format for imposition |
-| `--crop-marks` | trim marks with `--nup` |
+| `--booklet` | impose as a folded, saddle-stitched booklet, never scaled |
+| `--crop-marks` | trim marks with `--nup` or `--booklet` |
 | `--force` | overwrite an existing output file |
 | `--quiet` | report only the output path |
 
 Switch flags (`--cover`, `--strict`, `--embed-def`, `--skip-unsupported`,
-`--crop-marks`) only turn
+`--crop-marks`, `--booklet`) only turn
 something on; the definition decides when the flag is absent. All flags beat the
 definition.
 

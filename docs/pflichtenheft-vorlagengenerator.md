@@ -2316,6 +2316,7 @@ einen Lauf.
 | `--embed-def` | Die Def als Dateianhang ins PDF einbetten | § 8.8 |
 | `--nup <sxz>` | Ausschießen, **ohne Skalierung** | § 14, M6 |
 | `--nup-sheet <format>` | Bogenformat fürs Ausschießen | § 14, M6 |
+| `--booklet` | Als gefalztes Heft ausschießen, **ohne Skalierung** | § 14 |
 | `--force` | Vorhandene Ausgabedatei überschreiben | § 11.3 |
 | `--skip-unsupported` | Nicht unterstützte Marken weglassen statt abbrechen | § 10.2 |
 | `--strict` | Warnungen als Fehler behandeln | § 12.1 |
@@ -2659,6 +2660,41 @@ stattdessen:
 Das ist unüblich gegenüber `pdfjam` und `pdfcpu` — und die einzige mit der
 Kernzusage verträgliche Auslegung.
 
+**`--booklet` — Rückstichheftung (2026-07-26).** Ein gefalztes Heft: Bogen *i*
+trägt vorne die Seiten `P − 2i` und `2i + 1`, hinten `2i + 2` und `P − 2i − 1`,
+mit *P* der auf ein Vielfaches von vier aufgerundeten Seitenzahl. Acht Seiten
+ergeben also 8-1, 2-7, 6-3, 4-5. Geometrisch ist das ein 2×1, also gilt alles
+oben Gesagte unverändert — insbesondere, dass **nicht skaliert** wird. Was
+hinzukommt, ist allein die **Reihenfolge**.
+
+Eine Seitenzahl, die kein Vielfaches von vier ist, wird **aufgefüllt und
+gemeldet**, nicht abgelehnt: Das leere Blatt entsteht physisch, sobald man
+faltet, und es wird kein Maß verändert — § 8.2 ist also nicht berührt, und § 5.1
+verlangt nur, dass es nicht still geschieht. Eine aufgefüllte Zelle zeichnet gar
+nichts, auch keinen Kopf und keinen Fuß, und `{page_count}` zählt sie nicht: Sie
+ist eine Tatsache über das Papier, nicht über das Dokument.
+
+**Eine Lage**, ineinandergelegt und durch den Falz geheftet. Lagen wählbarer
+Größe sind bewusst nicht gebaut — sie brächten eine zweite Zählung und die Frage
+nach der angebrochenen letzten Lage, und niemand hat danach gefragt. Ab etwa
+vierzig Seiten wird der Falzversatz sichtbar; eine Falzversatz-Kompensation wäre
+eine geratene Zahl und entfällt aus demselben Grund wie die Falzzugabe je Rille
+(§ 7.14).
+
+**Eine Wendekante, laut benannt.** Das PDF ist für das Wenden über die **kurze
+Kante** gebaut — der Falz läuft senkrecht, das Blatt dreht sich also um seine
+kurzen Kanten. Der Laufbericht nennt die Einstellung *und* den einen Handgriff,
+der sie prüft (Seite 2 muss hinter Seite 1 liegen), wie § 8.2 es für die
+Skalierung verlangt. Kein Schalter: siehe § 15 Punkt 6.
+
+**Abgelehnt wird, vor Seite eins:** `--booklet` neben `--nup` (zwei Wege für
+dasselbe), `--booklet` an einem Dokument-Generator (wie `--nup`, Entscheidung
+52), `--nup-sheet`/`--crop-marks` ohne beides, und ein Bogen, auf den zwei Seiten
+bei 100 % nicht passen — mit dem **Querformat in der Meldung**, denn die
+Formattabelle steht im Hochformat (§ 9.1) und `--nup-sheet a4` kann deshalb nie
+der richtige Bogen sein. `--cover` bleibt erlaubt und vom Ausschießen ausgenommen
+(§ 8.8); die Folge ist ein PDF mit zwei Seitengrößen, wie bei `--nup` auch.
+
 *Nebenwirkung:* Ausschießen zerstört Verknüpfungen und Lesezeichen in PDFs.
 Wird beides gebraucht, muss das Inhaltsverzeichnis **nach** dem Ausschießen
 entstehen. Das Deckblatt (§ 8.8) ist vom Ausschießen ausgenommen.
@@ -2738,9 +2774,13 @@ Bewusst noch offen:
    unabhängigen Parsern (pypdf, pikepdf/qpdf). Offen bleibt nur der ursprüngliche
    *Verdacht* — wie Betrachter und Synchronisationsdienste mit Anhängen umgehen;
    das entscheidet die Praxis, nicht der Code.
-6. **Wendekante beim Duplexdruck.** `back_mirrored` (§ 7.5) setzt Wenden über
-   die lange Kante voraus. Ob ein Schalter für die kurze Kante nötig ist, zeigt
-   erst die Praxis — er wäre eine einzige Fallunterscheidung beim Spiegeln.
+6. **Wendekante beim Duplexdruck.** Zwei Stellen setzen eine voraus:
+   `back_mirrored` (§ 7.5) die **lange** Kante, `--booklet` (§ 14) die **kurze**
+   — beide nennen sie, statt zu raten, und `--booklet` nennt zusätzlich den
+   Handgriff, mit dem der Nutzer sie am ersten Bogen prüft. Ob ein Schalter
+   nötig ist, zeigt erst die Praxis; er wäre eine einzige Fallunterscheidung und
+   säße beim Heft in `impose._folded`, wo Vorder- und Rückseite eines Bogens
+   entstehen.
 
 ### 15.1 Vorgesehen, aber nicht in v1
 

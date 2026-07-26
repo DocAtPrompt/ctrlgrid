@@ -57,7 +57,7 @@ sheet's preview with them, since that sheet prints the version.
 uv sync --extra dev && uv run pytest && uv run ruff check .
 ```
 
-1247 tests, all green, ruff clean, linear history on
+1272 tests, all green, ruff clean, linear history on
 **[github.com/DocAtPrompt/ctrlgrid](https://github.com/DocAtPrompt/ctrlgrid)**
 (public); CI runs green there on Linux (3.11–3.13), macOS and Windows. Nineteen
 presets — twelve that show a generator (`dots-5mm`, `grid-a4`, `mandala-a4`,
@@ -127,6 +127,7 @@ edge, so a tick now carries its position *and* its value separately. `unit` says
 | post-M9 `notebook` | the **second document generator**, and the first that composes blades (§ 7.13, decision 50): sections, each filled by an ordinary generator, with a linked contents page, opt-in dividers and a cover. The seam: a `DocumentPage` may carry a `Fill` (generator name + validated config) instead of marks, and **the handle calls the blade** — `pages.document_page_marks` is the one function that says what is on a page, used by the writer, the capability pre-flight and the media check. A section is a definition in miniature, validated by that blade's own `config_model` with the loader's context (so `px`/`%w` resolve there too). Document bands are now laid out **per page**, so `{page}` counts and a per-page `{section}` names the section; `calendar-a4` stayed byte-identical. `page_layout.Page` extracted from `calendar_layout` and shared. Preset `notebook-a4`, example `15-notebook` |
 | post-M9 band colour | a header/footer `Band` takes `background` (a full-width strip, band height only) and `text_color`, both default off — drawn in `layout_band` so both the blade and document paths get them; resolves the title-page contrast (§ 8.9) |
 | pulled forward into M1 | format table, presets, `check`, overwrite protection, placeholders — the M1 acceptance criteria needed them |
+| post-0.11 `--booklet` | saddle-stitch imposition (§ 14, decision 54) — the one feature the specification never described. A booklet **is** a 2×1, so no geometry was added: **`impose.slots()`** says which page goes in which cell of which sheet side, for *both* kinds of imposition, and `_write_imposed` lost its own chunking loop (the fifth time this codebase applied "one function says what is on a sheet" rather than learning it). Padding is the `None` a missing page has — a padded cell draws nothing at all, and `{page_count}` does not count it. One signature, one turning edge named in the run report with the glance that checks it, no switch. Refuses `--nup` beside it, and refuses documents by inheriting decision 52. The fit refusal names the **landscape** free size that would work, because § 9.1 stores formats portrait and `--nup-sheet a4` therefore never can be right |
 | 0.11.x — after the audit | **`tests/test_geometry_readback.py`**: every blade's geometry measured out of a finished PDF against numbers taken from the definition, never from the code — a hexagon's every edge exactly `size`, ring radii against the cumulative series, a mandala mapped onto itself by a twelfth of a turn, a perspective fan concurrent within a millimetre, `form`'s 8 mm ruling identical on A4 and A5, log positions against `math.log10`. **`check_page_furniture`**: the frame is checked on both page paths, not only drawn on both. **`check_text_glyphs`**: a generator's text is checked for missing glyphs (§ 12 point 13), which no code had ever done. **`words:` and `font:`** on the document generators, so every word on the sheet comes from the definition and there is a way out of Latin-1 for it (decision 53). **`labels: none`** accepted on `grid` and `polar`, the spelling § 7.10 documents |
 | 0.10.0 release-readiness | the audit above, in five commits: three degenerate values that hung or crashed instead of refusing; **`page_furniture`**, so the document path carries the page model (duplex, border, hole marks, ruler, stamp, background) instead of dropping it silently, plus three keys refused by name and a fourth (a multi-sheet blade in a notebook section) refused for now (decision 52); five messages made actionable and `--version` added; a ruler tick that ran off the edge, a ruler font that was never opened, an unreachable bookmark guard; and twenty-six stale comments |
 
@@ -272,7 +273,7 @@ work around it.
 
 **Where the specification was genuinely silent**, the resolution is recorded in
 [`implementation-decisions.md`](implementation-decisions.md) —
-fifty-three of them so far, each with the section it belongs to and the
+fifty-four of them so far, each with the section it belongs to and the
 reasoning. Read it before changing a default; several look arbitrary and are not.
 
 ## Language split
@@ -422,9 +423,15 @@ this project runs on — claims are backed by a command's output, never asserted
 
 ## What to do next
 
-**Nothing in the specification is unbuilt.** As of 2026-07-26 the tool is also
+**Nothing in the specification is unbuilt** — and since 2026-07-26 one thing is
+built that the specification never described: **`--booklet`**, saddle-stitch
+imposition (§ 14, decision 54). It was the only genuine gap in a document
+otherwise complete, and it is worth knowing why it was small: a booklet *is* a
+2×1 imposition, so it added an order and no geometry at all.
+
+As of 2026-07-26 the tool is also
 *published* — the sessions since 0.9.0 audited it as a stranger meets it, read
-every blade's geometry back out of a finished PDF, and put it on PyPI. The user
+every generator's geometry back out of a finished PDF, and put it on PyPI. The user
 has said there is more to do and will say what; nothing below is a queue they
 have asked for, it is the state to start from.
 

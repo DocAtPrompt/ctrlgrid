@@ -1078,3 +1078,56 @@ would be a typographic system nobody asked for.
 The order these were done in is the lesson, not the code. Refusing the silent
 failure first and supplying the remedy second left a window in which a Polish
 calendar was *less* usable than before. Both belong in one step.
+
+
+## 54. A booklet is an order, not a geometry (§ 14)
+
+The specification described `--nup` and nothing that folds. Booklet imposition
+was the one feature genuinely absent from it, and building it turned out to need
+no new geometry at all: a booklet **is** a 2×1 imposition, so `check_fits`,
+`cell` and `crop_mark_segments` hold unchanged. What it adds is which page goes
+in which cell.
+
+So `impose.slots()` answers that for *both* kinds of imposition, and
+`_write_imposed` lost its own chunking loop. One description of "what is on this
+sheet", for the same reason `layout_band`, the writer wrapper,
+`document_page_marks` and `page_furniture` each exist: two descriptions drift the
+first time either changes. `Imposition` gained one field, `booklet`, which only
+`slots` reads — it sits beside `crop_marks` because the dataclass is a *request*
+with its sheet, not the geometry.
+
+Four calls were made where the specification was silent:
+
+- **A page count off a multiple of four is padded and reported, not refused.**
+  Refusing is the more characteristic answer for this tool, and it is the wrong
+  one here: the blank leaf exists the moment paper is folded, so nothing is
+  invented, and no measure is changed, so § 8.2 is untouched. § 5.1 asks only
+  that it not happen silently. The padding never reaches the page loop, so
+  `{page_count}` still reports what the user asked for, and a padded cell draws
+  nothing at all — not even the band that would have printed a page number on a
+  leaf nobody filled.
+- **`--booklet` is its own flag**, not `--nup 2x1 --booklet-order`: two pages per
+  sheet follow from folding once and are not the user's to vary. The sheet keeps
+  one spelling, `--nup-sheet`.
+- **One turning edge, named in the run report, no switch.** The same discipline
+  § 8.2 applies to print scaling and § 7.5 to `back_mirrored`. A switch would
+  need a right default anyway, and its second setting would be untested. § 15
+  point 6 now names `impose._folded` as the place it would attach.
+- **Documents are refused**, inheriting decision 52 — a hand-folded notebook is
+  the obvious casualty, and it was weighed rather than overlooked. Allowing it
+  would make one rule a rule with an exception and would put the sheet order on
+  the document path.
+
+One usability call the design had not foreseen and the plan added: a booklet
+always needs a **landscape** sheet, and the format table stores sizes portrait
+(§ 9.1), so `--nup-sheet a4` can never be right. Rather than turn the sheet
+silently — that would be the tool deciding against § 9.1's one convention — the
+fit refusal names the free size that works (`296x210mm` for A5 pages), so the fix
+is a copy-paste instead of arithmetic the user repeats.
+
+A note for whoever next falsifies a probe here, because it cost a confused
+minute: swapping `front` and `back` in `_folded` is a **length-preserving** edit.
+Both writes landed inside one second, so Python judged its cached bytecode still
+valid and kept running the mutated version after the revert — git reported the
+tree clean while the tests stayed red. Clear `__pycache__` before believing the
+result of a length-preserving mutation.
