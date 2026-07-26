@@ -39,9 +39,9 @@ def contents_height(sections: int, *, q: WriterQuery) -> int:
     return TOP_MARGIN + TITLE_SIZE + TITLE_GAP + sections * LINE_STEP
 
 
-def title_page(spec, area: Area, *, q: WriterQuery) -> DocumentPage:
+def title_page(spec, area: Area, *, q: WriterQuery, family: str = "sans") -> DocumentPage:
     """The cover: a full-sheet colour with a centred title and subtitle."""
-    page = Page(area, q)
+    page = Page(area, q, family)
     middle = area.width // 2
     page.text(middle, area.height * 0.38, spec.title, pt(30), spec.text_color, "center")
     if spec.subtitle:
@@ -61,7 +61,9 @@ def title_page(spec, area: Area, *, q: WriterQuery) -> DocumentPage:
     )
 
 
-def contents_page(cfg, starts: list[int], area: Area, *, q: WriterQuery) -> DocumentPage:
+def contents_page(
+    cfg, starts: list[int], area: Area, *, q: WriterQuery, family: str = "sans"
+) -> DocumentPage:
     """The hub: one line per section, its name a link and its first page number.
 
     The page number is printed as well as linked, because a notebook is a
@@ -70,7 +72,7 @@ def contents_page(cfg, starts: list[int], area: Area, *, q: WriterQuery) -> Docu
     """
     from ctrlgrid.generators.notebook import _section_dest
 
-    page = Page(area, q)
+    page = Page(area, q, family)
     top = TOP_MARGIN
     page.text(0, top, cfg.contents_title, TITLE_SIZE, INK)
     top += TITLE_SIZE + TITLE_GAP
@@ -96,11 +98,11 @@ def contents_page(cfg, starts: list[int], area: Area, *, q: WriterQuery) -> Docu
 
 def divider_page(
     name: str, section, area: Area, *, dest: str, q: WriterQuery, placeholders,
-    contents_title: str = "Contents",
+    contents_title: str = "Contents", family: str = "sans",
 ) -> DocumentPage:
     """A sheet before a section: its name, a rule to write a subtitle under, and
     the way back to the contents."""
-    page = Page(area, q)
+    page = Page(area, q, family)
     top = area.height * 0.32
     page.text(0, top, name, pt(26), INK)
     page.hline(0, area.width, top + pt(26) + pt(14), 0.6, INK)
@@ -108,7 +110,7 @@ def divider_page(
     # The way back, at the top right — where the calendar's nav strip sits, so
     # the two documents are read the same way.
     back = contents_title
-    width = q.text_width(back, family="sans", size=pt(10))
+    width = q.text_width(back, family=page.family, size=pt(10))
     page.link_text(area.width - width, TOP_MARGIN, back, CONTENTS_DEST, pt(10))
     return DocumentPage(
         dest=dest,

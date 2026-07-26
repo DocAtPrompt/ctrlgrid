@@ -891,3 +891,77 @@ class TestEveryWordOnThePageComesFromTheDefinition:
         build(loads(text, source="test"), PdfWriter(path))
         pages = " ".join(text_on(path, page) for page in range(4))
         assert "Contents" in pages and "Full-year overview" in pages
+
+
+class TestADocumentTakesItsOwnFont:
+    """§ 10.3's stage 2 is the documented way out of the Latin-1 limit, and the
+    calendar had no `font:` key at all — so `error: unknown key \\`font\\``, and a
+    Polish or Turkish calendar had nowhere to go once the glyph check started
+    refusing it. Refusing with no remedy is only half a fix.
+    """
+
+    def definition(self, font_line: str = "") -> str:
+        return (
+            "version: 1\n"
+            "page: {format: a4, margin: 12mm}\n"
+            "generator: calendar\n"
+            "year: 2027\n"
+            f"{font_line}"
+            "months: [Ocak, Şubat, Mart, Nisan, Mayıs, Haziran, Temmuz,\n"
+            "         Ağustos, Eylül, Ekim, Kasım, Aralık]\n"
+        )
+
+    def test_turkish_month_names_are_refused_without_a_font(self) -> None:
+        from ctrlgrid.errors import DefinitionError
+        from ctrlgrid.loader import loads
+        from ctrlgrid.pages import preflight
+        from ctrlgrid.writers.pdf import PdfWriter
+
+        with pytest.raises(DefinitionError) as excinfo:
+            preflight(loads(self.definition(), source="t"), PdfWriter("unused.pdf"))
+        assert "ğ" in str(excinfo.value) or "ş" in str(excinfo.value)
+
+    def test_and_accepted_with_one(self, tmp_path: Path) -> None:
+        from pathlib import Path as P
+
+        import reportlab
+
+        from ctrlgrid.loader import loads
+        from ctrlgrid.pages import build
+        from ctrlgrid.writers.pdf import PdfWriter
+
+        vera = P(reportlab.__file__).parent / "fonts" / "Vera.ttf"
+        text = self.definition(f"font: {{file: '{vera}', size: 9pt}}\n")
+        path = tmp_path / "tr.pdf"
+        build(loads(text, source="test"), PdfWriter(path))
+        from pdfread import text_on
+
+        pages = " ".join(text_on(path, page) for page in range(3))
+        assert "Ağustos" in pages or "Şubat" in pages
+
+    def test_the_font_is_embedded_so_the_pdf_stands_on_its_own(
+        self, tmp_path: Path
+    ) -> None:
+        # § 10.3: named files are embedded and subset, which is what makes the
+        # *PDF* the same everywhere even though making it needed a local file.
+        from pathlib import Path as P
+
+        import reportlab
+        from pypdf import PdfReader
+
+        from ctrlgrid.loader import loads
+        from ctrlgrid.pages import build
+        from ctrlgrid.writers.pdf import PdfWriter
+
+        vera = P(reportlab.__file__).parent / "fonts" / "Vera.ttf"
+        path = tmp_path / "emb.pdf"
+        build(
+            loads(self.definition(f"font: {{file: '{vera}', size: 9pt}}\n"), source="test"),
+            PdfWriter(path),
+        )
+        fonts = PdfReader(path).pages[0]["/Resources"]["/Font"]
+        embedded = [
+            name for name, ref in fonts.items()
+            if "/FontFile2" in (ref.get_object().get("/FontDescriptor") or {})
+        ]
+        assert embedded, list(fonts)

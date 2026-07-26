@@ -29,7 +29,7 @@ from ctrlgrid.document import DocumentPage
 from ctrlgrid.errors import DefinitionError
 from ctrlgrid.generators.holiday_import import read_holiday_file
 from ctrlgrid.marks import Area
-from ctrlgrid.model import ColorField, Section
+from ctrlgrid.model import ColorField, FontSpec, Section
 from ctrlgrid.writers import WriterQuery
 
 Surface = Literal["blank", "lines", "dots", "grid"]
@@ -273,6 +273,12 @@ class CalendarConfig(BaseModel):
 
     year: int = Field(ge=1, le=9999)
     week_start: Literal["monday", "sunday"] = "monday"
+    #: § 10.3. `sans`/`serif`/`mono` are the standard PDF fonts, which reach
+    #: Latin-1 and are not embedded; a `file:` names one to embed and subset,
+    #: which is the way out for Polish, Czech, Hungarian, Turkish or Romanian
+    #: month names — and it had to exist here, or the glyph check would refuse
+    #: them with nowhere to go.
+    font: FontSpec = FontSpec()
     words: Words = Words()
     months: tuple[str, ...] | None = None
     weekdays: tuple[str, ...] | None = None
@@ -516,7 +522,7 @@ class CalendarGenerator:
         # A mini-month of the full-year overview is sized from its content, so a
         # narrow sheet is told rather than handed twelve months running into one
         # another (§ 8.2).
-        needed_w = layout.mini_month_width(q)
+        needed_w = layout.mini_month_width(q, cfg.font.token)
         cell_w = layout.mini_month_cell_width(area.width)
         if needed_w > cell_w:
             raise DefinitionError(
@@ -593,7 +599,7 @@ class CalendarGenerator:
         )
 
         def make() -> layout.Page:
-            return layout.Page(area, q)
+            return layout.Page(area, q, cfg.font.token)
 
         def nav(month: int = 1, week_no: int = 1) -> layout.Nav:
             return layout.Nav(

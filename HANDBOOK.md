@@ -1144,8 +1144,36 @@ own:
 font: {file: "~/Library/Fonts/NotoSans-Regular.ttf", size: 9pt}
 ```
 
+A **document** takes one font for the whole document — there is nothing on a
+calendar page that wants two — and a blade takes one per labelled thing
+(`grid`, `polar.labels`, `form.title`, `tiling`, and the `ruler`). Header and
+footer have their own.
+
 A character the font cannot draw is refused before the first page, naming the
 character and the word it came from — it is never printed as a box.
+
+**Which font, and where it goes.** Two stages, and the difference matters
+(§10.3):
+
+| | `family: sans \| serif \| mono` | `file: /path/to/font.ttf` |
+|---|---|---|
+| what it is | Helvetica, Times, Courier — three of the 14 fonts every PDF reader has | any TrueType/OpenType file on your machine |
+| embedded? | **no**, and it does not need to be | **yes**, and subset to the glyphs actually used |
+| coverage | Latin-1 | whatever the file has |
+| the PDF | carries no font at all | carries the font, and is the same everywhere |
+
+It is a **path and never a font name**. Name lookup works differently on every
+platform and answers differently depending on what happens to be installed —
+which is precisely the unreliability this tool exists to avoid. A path is
+unambiguous, checkable, and can be named in an error message.
+
+Before embedding, the `fsType` field of the font's `OS/2` table is read: a font
+whose licence forbids embedding stops the run and is named. There is no quiet
+substitution — a PDF that violates a font licence is not an acceptable output.
+The cover sheet records the file name and the font's version, so a sheet that
+came out well can be reproduced years later.
+
+So: making the PDF needs the file on your machine; the PDF it makes does not.
 
 ### `notebook` — several papers in one linked document
 

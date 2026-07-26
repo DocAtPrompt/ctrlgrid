@@ -50,10 +50,15 @@ class Page:
     box is exactly its glyphs.
     """
 
-    def __init__(self, area: Area, q: object) -> None:
+    def __init__(self, area: Area, q: object, family: str = "sans") -> None:
         self.W = area.width
         self.H = area.height
         self.q = q
+        #: The token every text on this page is set in (§ 10.3, decision 15).
+        #: A document names one font for the whole document — there is nothing
+        #: on these pages that would want two — and it is what makes § 10.3's
+        #: stage 2 reachable from a calendar at all.
+        self.family = family
         self.marks: list[Mark] = []
         self.links: list[Link] = []
 
@@ -64,7 +69,7 @@ class Page:
         # `top` is the top of the cap; the baseline sits one size below.
         self.marks.append(
             Text(pos=Point(round(x), self._y(top + size)), content=s, size=round(size),
-                 family="sans", align=align, color=color)
+                 family=self.family, align=align, color=color)
         )
 
     def hline(self, x1, x2, top, weight=0.2, color=GUIDE):
@@ -91,7 +96,7 @@ class Page:
     def link_text(self, x, top, s, target, size, color=LINK, align="left"):
         """Underlined text that jumps to `target`. Left-aligned only (calendars
         do not need a right-aligned link, and it keeps the box arithmetic simple)."""
-        width = self.q.text_width(s, family="sans", size=round(size))
+        width = self.q.text_width(s, family=self.family, size=round(size))
         self.text(x, top, s, size, color, align)
         under = top + size + pt(0.8)
         self.hline(x, x + width, under, 0.35, color)

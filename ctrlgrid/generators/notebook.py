@@ -26,7 +26,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 from ctrlgrid.document import DocumentPage, Fill
 from ctrlgrid.errors import DefinitionError
 from ctrlgrid.marks import Area
-from ctrlgrid.model import ColorField, Section
+from ctrlgrid.model import ColorField, FontSpec, Section
 from ctrlgrid.writers import WriterQuery
 
 #: The keys a section owns. Everything else belongs to the blade it names.
@@ -104,6 +104,9 @@ class NotebookConfig(BaseModel):
     sections: tuple[NotebookSection, ...] = Field(min_length=1)
     title_page: TitlePage | None = None
     contents_title: str = "Contents"
+    #: § 10.3, as for the calendar: a named file is embedded and subset, which
+    #: is what a section label outside Latin-1 needs.
+    font: FontSpec = FontSpec()
 
 
 class NotebookGenerator:
@@ -200,8 +203,8 @@ class NotebookGenerator:
 
         starts = self._section_starts(cfg)
         if cfg.title_page is not None:
-            yield layout.title_page(cfg.title_page, area, q=q)
-        yield layout.contents_page(cfg, starts, area, q=q)
+            yield layout.title_page(cfg.title_page, area, q=q, family=cfg.font.token)
+        yield layout.contents_page(cfg, starts, area, q=q, family=cfg.font.token)
 
         for index, section in enumerate(cfg.sections):
             name = section.name(index)
@@ -210,6 +213,7 @@ class NotebookGenerator:
                 yield layout.divider_page(
                     name, section, area, dest=_section_dest(index), q=q,
                     placeholders=placeholders, contents_title=cfg.contents_title,
+                    family=cfg.font.token,
                 )
             for number in range(1, section.pages + 1):
                 dest = (

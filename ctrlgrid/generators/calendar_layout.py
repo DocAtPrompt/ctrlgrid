@@ -47,7 +47,7 @@ def _badge(page: Page, x, top, text, size, color) -> None:
     where there is no cell to fill (§ 7). Drawn before the text, so the text
     reads over it; the patch is the glyphs' own width, measured."""
     pad = pt(1.5)
-    width = page.q.text_width(text, family="sans", size=round(size))
+    width = page.q.text_width(text, family=page.family, size=round(size))
     page.box(x - pad, top - pad, width + 2 * pad, size + 2 * pad, 0.0, color, color)
 
 
@@ -60,8 +60,8 @@ def date_columns(page: Page, weekdays, size, x=None) -> tuple[int, int]:
     Returns the weekday's x and the numbers' shared right edge.
     """
     x = pt(1) if x is None else x
-    name_w = max(page.q.text_width(name, family="sans", size=round(size)) for name in weekdays)
-    widest = page.q.text_width("30", family="sans", size=round(size))
+    name_w = max(page.q.text_width(name, family=page.family, size=round(size)) for name in weekdays)
+    widest = page.q.text_width("30", family=page.family, size=round(size))
     # The gap is set tight on purpose. Right-aligning costs a single digit one
     # digit-width of extra air — it starts where the tens column would — so a
     # comfortable gap for `12` leaves `1` looking adrift from its weekday.
@@ -76,13 +76,13 @@ def date_label(page: Page, top, name, number, size, columns, *, target=None,
     plain text: a day outside the year has no page to jump to.
     """
     name_x, num_right = columns
-    num_w = page.q.text_width(number, family="sans", size=round(size))
+    num_w = page.q.text_width(number, family=page.family, size=round(size))
     page.text(name_x, top, name, size, color)
     page.text(num_right - num_w, top, number, size, color)
     if target is None:
         return
     under = top + size + pt(0.8)
-    page.hline(name_x, name_x + page.q.text_width(name, family="sans", size=round(size)),
+    page.hline(name_x, name_x + page.q.text_width(name, family=page.family, size=round(size)),
                under, 0.35, color)
     page.hline(num_right - num_w, num_right, under, 0.35, color)
     page.links.append(Link(
@@ -131,7 +131,7 @@ def nav(page: Page, n: Nav) -> None:
     if n.has_notes:
         entries.append((words.notes, "notes-1"))
     gap = pt(14)
-    widths = [page.q.text_width(label, family="sans", size=size) for label, _ in entries]
+    widths = [page.q.text_width(label, family=page.family, size=size) for label, _ in entries]
     # Ranged against the right edge: on the left it shared the corner with the
     # page title, and the two fought over it. Measured, so a translated label
     # still ends flush.
@@ -241,12 +241,12 @@ def contents_page(page: Page, cfg, n: Nav, months, notes_index) -> DocumentPage:
     # sheet — measured, never guessed, so a translated month name still centres.
     # A key line is its patch, the gap, and its label.
     widths = [
-        page.q.text_width(label, family="sans", size=round(size))
+        page.q.text_width(label, family=page.family, size=round(size))
         for group in groups
         for label, _ in group
     ]
     widths += [
-        _KEY_PATCH + _KEY_GAP + page.q.text_width(e.label, family="sans", size=round(size))
+        _KEY_PATCH + _KEY_GAP + page.q.text_width(e.label, family=page.family, size=round(size))
         for e in legend
     ]
     left = round((page.W - max(widths)) / 2)
@@ -315,7 +315,7 @@ _WEEK_GAP = pt(24)
 _YEAR_GUTTER = mm(4)
 
 
-def mini_month_width(q) -> int:
+def mini_month_width(q, family: str = "sans") -> int:
     """How wide one mini-month needs to be: the week number, the gap beside it,
     and seven day columns (§ 7).
 
@@ -323,8 +323,8 @@ def mini_month_width(q) -> int:
     against the cell it has to sit in — a narrow sheet must be told, not handed
     twelve months running into each other (§ 8.2).
     """
-    day_w = q.text_width("30", family="sans", size=round(pt(6.5)))
-    week_w = q.text_width("53", family="sans", size=round(pt(6)))
+    day_w = q.text_width("30", family=family, size=round(pt(6.5)))
+    week_w = q.text_width("53", family=family, size=round(pt(6)))
     return round(week_w + _WEEK_GAP + day_w + 6 * (day_w + _DAY_GAP))
 
 
@@ -355,8 +355,8 @@ def _mini_month(page: Page, cfg, months, weekdays, month, x, top, w, h,
     day_size = pt(6.5)
     week_size = pt(6)
     # Measured, not divided: the widest day and the widest week the year can show.
-    day_w = page.q.text_width("30", family="sans", size=round(day_size))
-    week_w = page.q.text_width("53", family="sans", size=round(week_size))
+    day_w = page.q.text_width("30", family=page.family, size=round(day_size))
+    week_w = page.q.text_width("53", family=page.family, size=round(week_size))
     col_w = day_w + _DAY_GAP
 
     # Where a two-digit day in the first column begins. The month name starts
@@ -393,7 +393,7 @@ def _mini_month(page: Page, cfg, months, weekdays, month, x, top, w, h,
         # row's, far enough not to join the column the month name heads.
         wx = round(
             body_left - _WEEK_GAP
-            - page.q.text_width(label, family="sans", size=round(week_size))
+            - page.q.text_width(label, family=page.family, size=round(week_size))
         )
         # Nudged down by the size difference so the week number sits on the same
         # baseline as its own days: `top` is the cap, and the two sizes differ.
@@ -408,7 +408,8 @@ def _mini_month(page: Page, cfg, months, weekdays, month, x, top, w, h,
         label = str(d)
         # Right-aligned by measuring: `link_text` anchors left, so the underline
         # and the tap box follow the glyphs rather than a guessed box.
-        cx = right_edge(idx % 7) - page.q.text_width(label, family="sans", size=round(day_size))
+        label_w = page.q.text_width(label, family=page.family, size=round(day_size))
+        cx = right_edge(idx % 7) - label_w
         cy = grid_top + (idx // 7) * row_h
         # No cell boxes here by design (§ 7), so a marked day colours the number.
         colour = (marked or {}).get(datetime.date(cfg.year, month, d))
@@ -543,7 +544,7 @@ def notes_index_page(page: Page, cfg, n: Nav, *, pad, pad_no, name, others,
                 page.text(x, top, other, size, INK)
             else:
                 page.link_text(x, top, other, dest, size)
-            x += page.q.text_width(other, family="sans", size=round(size)) + pt(14)
+            x += page.q.text_width(other, family=page.family, size=round(size)) + pt(14)
         top += pt(18)
     # A fixed row, the same one `notes_capacity` counts with — one arithmetic,
     # not two. Dividing the page instead made a ten-page pad's rows enormous.
@@ -633,7 +634,7 @@ def _rules_left(page: Page, blocks) -> int:
         if b.type == "schedule":
             size = pt(7)
             marker = max(marker, pt(1) + max(
-                page.q.text_width(str(b.start_hour + i), family="sans", size=round(size))
+                page.q.text_width(str(b.start_hour + i), family=page.family, size=round(size))
                 for i in range(max(1, b.end_hour - b.start_hour))
             ))
         elif b.type == "todo":
@@ -664,7 +665,7 @@ def _draw_block(page: Page, b, top, h, rules_left: int = 0) -> None:
         labels = [str(b.start_hour + i) for i in range(hours)]
         # Right-aligned by measuring. Padding with a space does not align them:
         # a space is half a digit wide, so ` 7` used to end 0.7 mm short of `10`.
-        widths = {s: page.q.text_width(s, family="sans", size=round(size)) for s in labels}
+        widths = {s: page.q.text_width(s, family=page.family, size=round(size)) for s in labels}
         num_right = pt(1) + max(widths.values())
         rule_left = rules_left or num_right + _BLOCK_GUTTER
         # With half hours on, the hour rule steps up to GUIDE so the half stays
