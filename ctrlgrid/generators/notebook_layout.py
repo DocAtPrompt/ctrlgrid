@@ -95,7 +95,8 @@ def contents_page(cfg, starts: list[int], area: Area, *, q: WriterQuery) -> Docu
 
 
 def divider_page(
-    name: str, section, area: Area, *, dest: str, q: WriterQuery, placeholders
+    name: str, section, area: Area, *, dest: str, q: WriterQuery, placeholders,
+    contents_title: str = "Contents",
 ) -> DocumentPage:
     """A sheet before a section: its name, a rule to write a subtitle under, and
     the way back to the contents."""
@@ -106,7 +107,7 @@ def divider_page(
     page.hline(0, area.width, top + pt(26) + pt(52), 0.25, GUIDE)
     # The way back, at the top right — where the calendar's nav strip sits, so
     # the two documents are read the same way.
-    back = "Contents"
+    back = contents_title
     width = q.text_width(back, family="sans", size=pt(10))
     page.link_text(area.width - width, TOP_MARGIN, back, CONTENTS_DEST, pt(10))
     return DocumentPage(

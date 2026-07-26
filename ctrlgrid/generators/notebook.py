@@ -209,7 +209,7 @@ class NotebookGenerator:
             if section.divider:
                 yield layout.divider_page(
                     name, section, area, dest=_section_dest(index), q=q,
-                    placeholders=placeholders,
+                    placeholders=placeholders, contents_title=cfg.contents_title,
                 )
             for number in range(1, section.pages + 1):
                 dest = (

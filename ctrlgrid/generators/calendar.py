@@ -57,14 +57,14 @@ def _inline_date(item) -> datetime.date | None:
     return None
 
 
-def notes_name(pads, index: int) -> str:
+def notes_name(pads, index: int, word: str = "Notes") -> str:
     """What a pad is called (§ 7). Its own label, else `Notes` when it is the
     only one and a numbered `Notes n` when it is not — two pads must never
     answer to the same name in the contents."""
     label = pads[index].label
     if label:
         return label
-    return "Notes" if len(pads) == 1 else f"Notes {index + 1}"
+    return word if len(pads) == 1 else f"{word} {index + 1}"
 
 
 def notes_index_dest(pad: int, page_no: int = 1) -> str:
@@ -241,6 +241,31 @@ class NotesSpec(Section):
     label: str | None = None
 
 
+class Words(Section):
+    """The calendar's own words on the sheet (§ 7.12, § 7.8).
+
+    § 7.12 already took month and weekday names from the definition, on § 7.8's
+    rule: the labels belong to the language of the sheet, so the tool receives
+    them and never invents them. The rest of its vocabulary — the navigation
+    strip, the headings — stayed English, so a German calendar came out with
+    `Jänner` under `Index Year Month Notes`.
+
+    These are the same rule applied to the same words. The defaults are the
+    English the tool has always printed, so an existing definition is unmoved;
+    this is not a locale table and there is none to ship (§ 3.4).
+    """
+
+    index: str = "Index"
+    year: str = "Year"
+    month: str = "Month"
+    week: str = "Week"
+    notes: str = "Notes"
+    contents: str = "Contents"
+    full_year_overview: str = "Full-year overview"
+    half_year: str = "Half-year"
+    full_year: str = "full year"
+
+
 class CalendarConfig(BaseModel):
     """The definition section for the calendar (§ 3.6, seam 2)."""
 
@@ -248,6 +273,7 @@ class CalendarConfig(BaseModel):
 
     year: int = Field(ge=1, le=9999)
     week_start: Literal["monday", "sunday"] = "monday"
+    words: Words = Words()
     months: tuple[str, ...] | None = None
     weekdays: tuple[str, ...] | None = None
     holidays: tuple[Holiday, ...] = ()
@@ -446,7 +472,8 @@ class CalendarGenerator:
             lines.append(f"{len(cfg.holidays)} holidays")
         for index, pad in enumerate(cfg.notes):
             lines.append(
-                f"{pad.count} {notes_name(cfg.notes, index)!r} pages, {pad.surface}"
+                f"{pad.count} {notes_name(cfg.notes, index, cfg.words.notes)!r} pages, "
+                f"{pad.surface}"
             )
         return lines
 
@@ -544,7 +571,7 @@ class CalendarGenerator:
         index pages already lead to each other.
         """
         return [
-            (notes_name(cfg.notes, index), notes_index_dest(index))
+            (notes_name(cfg.notes, index, cfg.words.notes), notes_index_dest(index))
             for index in range(len(cfg.notes))
         ]
 
@@ -571,7 +598,7 @@ class CalendarGenerator:
         def nav(month: int = 1, week_no: int = 1) -> layout.Nav:
             return layout.Nav(
                 month=f"month-{month:02d}", week=f"week-{week_no:02d}",
-                has_week=has_week, has_notes=has_notes,
+                has_week=has_week, has_notes=has_notes, words=cfg.words,
             )
 
         def wk(date: datetime.date) -> int:
@@ -618,7 +645,8 @@ class CalendarGenerator:
         # Every pad's index links to every other one, so the pads are reachable
         # from each other and not only through the contents (§ 7).
         others = [
-            (notes_name(cfg.notes, i), notes_index_dest(i)) for i in range(len(cfg.notes))
+            (notes_name(cfg.notes, i, cfg.words.notes), notes_index_dest(i))
+            for i in range(len(cfg.notes))
         ]
         for pad_no, pad in enumerate(cfg.notes):
             count = pad.count
@@ -628,7 +656,7 @@ class CalendarGenerator:
             for page_no, numbers in enumerate(chunks, start=1):
                 yield layout.notes_index_page(
                     page(), cfg, nav, pad=pad, pad_no=pad_no,
-                    name=notes_name(cfg.notes, pad_no), others=others,
+                    name=notes_name(cfg.notes, pad_no, cfg.words.notes), others=others,
                     page_no=page_no, page_count=len(chunks), numbers=numbers,
                     prev=notes_index_dest(pad_no, page_no - 1) if page_no > 1 else None,
                     nxt=notes_index_dest(pad_no, page_no + 1) if page_no < len(chunks) else None,
@@ -636,7 +664,7 @@ class CalendarGenerator:
             for i in range(1, count + 1):
                 yield layout.note_page(
                     page(), cfg, nav, pad=pad, pad_no=pad_no,
-                    name=notes_name(cfg.notes, pad_no), num=i,
+                    name=notes_name(cfg.notes, pad_no, cfg.words.notes), num=i,
                     prev=note_dest(pad_no, i - 1, count) if i > 1 else None,
                     nxt=note_dest(pad_no, i + 1, count) if i < count else None,
                 )

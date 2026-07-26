@@ -816,3 +816,78 @@ class TestSeveralNotePads:
     def test_no_link_dangles_across_the_pads(self) -> None:
         _pages, dests_, edges = _graph(cfg(notes=self.PADS))
         assert sorted(t for _s, t in edges if t not in dests_) == []
+
+
+class TestEveryWordOnThePageComesFromTheDefinition:
+    """§ 7.12 takes month and weekday names from the definition and ships no
+    translation table (§ 3.4, § 7.8). It did that for the *names* and not for the
+    rest, so a German calendar came out mixed: `Jänner` under a nav strip reading
+    `Index Year Month Notes`, beside `Contents`, `Full-year overview` and
+    `Half-year 1 · Jän–Jun`.
+
+    Those are the tool's words on the user's sheet, which is the thing § 7.8
+    rules out. They are configurable now, with today's English as the default so
+    no existing definition moves.
+    """
+
+    GERMAN = (
+        "version: 1\n"
+        "page: {format: a4, margin: 12mm}\n"
+        "generator: calendar\n"
+        "year: 2027\n"
+        "months: [Jänner, Februar, März, April, Mai, Juni, Juli, August,\n"
+        "         September, Oktober, November, Dezember]\n"
+        "weekdays: [Mo, Di, Mi, Do, Fr, Sa, So]\n"
+        "notes: [{count: 2, label: Notizen}]\n"
+        "words:\n"
+        "  index: Inhalt\n"
+        "  year: Jahr\n"
+        "  month: Monat\n"
+        "  notes: Notizen\n"
+        "  contents: Inhaltsverzeichnis\n"
+        "  full_year_overview: Jahresübersicht\n"
+        "  half_year: Halbjahr\n"
+        "  full_year: ganzes Jahr\n"
+    )
+
+    def test_no_english_word_survives_on_the_first_pages(self, tmp_path: Path) -> None:
+        from pdfread import text_on
+
+        from ctrlgrid.loader import loads
+        from ctrlgrid.pages import build
+        from ctrlgrid.writers.pdf import PdfWriter
+
+        path = tmp_path / "de.pdf"
+        build(loads(self.GERMAN, source="test"), PdfWriter(path))
+        pages = " ".join(text_on(path, page) for page in range(4))
+        for english in ("Index", "Year", "Month", "Notes", "Contents",
+                        "Full-year", "Half-year", "full year"):
+            assert english not in pages, english
+
+    def test_and_the_german_words_are_there_instead(self, tmp_path: Path) -> None:
+        from pdfread import text_on
+
+        from ctrlgrid.loader import loads
+        from ctrlgrid.pages import build
+        from ctrlgrid.writers.pdf import PdfWriter
+
+        path = tmp_path / "de2.pdf"
+        build(loads(self.GERMAN, source="test"), PdfWriter(path))
+        pages = " ".join(text_on(path, page) for page in range(4))
+        for german in ("Inhalt", "Jahr", "Monat", "Inhaltsverzeichnis",
+                       "Jahresübersicht", "Halbjahr", "ganzes Jahr"):
+            assert german in pages, german
+
+    def test_the_english_default_is_unchanged(self, tmp_path: Path) -> None:
+        # No `words:` block at all: every existing definition must be untouched.
+        from pdfread import text_on
+
+        from ctrlgrid.loader import loads
+        from ctrlgrid.pages import build
+        from ctrlgrid.writers.pdf import PdfWriter
+
+        text = self.GERMAN.split("words:")[0]
+        path = tmp_path / "en.pdf"
+        build(loads(text, source="test"), PdfWriter(path))
+        pages = " ".join(text_on(path, page) for page in range(4))
+        assert "Contents" in pages and "Full-year overview" in pages

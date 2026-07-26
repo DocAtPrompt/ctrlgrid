@@ -104,6 +104,15 @@ class Nav:
     week: str
     has_week: bool = False
     has_notes: bool = False
+    words: object | None = None
+    """The calendar's own vocabulary (§ 7.12). `None` keeps the English the
+    tool has always printed, which is what a caller without a config wants."""
+
+    @property
+    def w(self):
+        from ctrlgrid.generators.calendar import Words
+
+        return self.words or Words()
 
 
 def nav(page: Page, n: Nav) -> None:
@@ -115,11 +124,12 @@ def nav(page: Page, n: Nav) -> None:
     title owns the left, and the two no longer compete for the same corner.
     """
     size = pt(9)
-    entries = [("Index", "index"), ("Year", "year"), ("Month", n.month)]
+    words = n.w
+    entries = [(words.index, "index"), (words.year, "year"), (words.month, n.month)]
     if n.has_week:
-        entries.append(("Week", n.week))
+        entries.append((words.week, n.week))
     if n.has_notes:
-        entries.append(("Notes", "notes-1"))
+        entries.append((words.notes, "notes-1"))
     gap = pt(14)
     widths = [page.q.text_width(label, family="sans", size=size) for label, _ in entries]
     # Ranged against the right edge: on the left it shared the corner with the
@@ -216,9 +226,9 @@ def contents_page(page: Page, cfg, n: Nav, months, notes_index) -> DocumentPage:
     nav(page, n)
     groups = [
         [
-            ("Full-year overview", "year"),
-            (f"Half-year 1 · {months[0][:3]}–{months[5][:3]}", "half-1"),
-            (f"Half-year 2 · {months[6][:3]}–{months[11][:3]}", "half-2"),
+            (cfg.words.full_year_overview, "year"),
+            (f"{cfg.words.half_year} 1 · {months[0][:3]}–{months[5][:3]}", "half-1"),
+            (f"{cfg.words.half_year} 2 · {months[6][:3]}–{months[11][:3]}", "half-2"),
         ],
         [(months[i], f"month-{i + 1:02d}") for i in range(12)],
         list(notes_index),
@@ -248,7 +258,7 @@ def contents_page(page: Page, cfg, n: Nav, months, notes_index) -> DocumentPage:
     block = contents_height(entries, len(groups) + (1 if legend else 0))
     top = CONTENTS_NAV + max(0, round((page.H - CONTENTS_NAV - block) / 2))
 
-    page.text(round(page.W / 2), top, "Contents", pt(20), INK, "center")
+    page.text(round(page.W / 2), top, cfg.words.contents, pt(20), INK, "center")
     top += _CONTENTS_TITLE_GAP
     for index, group in enumerate(groups):
         if index:
@@ -266,7 +276,7 @@ def contents_page(page: Page, cfg, n: Nav, months, notes_index) -> DocumentPage:
                      0.2, GUIDE, entry.color)
             page.text(left + _KEY_PATCH + _KEY_GAP, top, entry.label, size, INK)
             top += _CONTENTS_LINE
-    return page.done("index", "index", "Contents")
+    return page.done("index", "index", cfg.words.contents)
 
 
 def year_overview_page(page: Page, cfg, n: Nav, months, weekdays) -> DocumentPage:
@@ -278,7 +288,7 @@ def year_overview_page(page: Page, cfg, n: Nav, months, weekdays) -> DocumentPag
     zooms (§ 8.2)."""
     nav(page, n)
     top = pt(16)
-    page.text(0, top, f"{cfg.year} · full year", pt(15), INK)
+    page.text(0, top, f"{cfg.year} · {cfg.words.full_year}", pt(15), INK)
     top += pt(22)
     cols, rows = 3, 4
     gutter = _YEAR_GUTTER
@@ -290,7 +300,7 @@ def year_overview_page(page: Page, cfg, n: Nav, months, weekdays) -> DocumentPag
         _mini_month(page, cfg, months, weekdays, m + 1,
                     c * (cell_w + gutter), top + r * (cell_h + gutter), cell_w, cell_h,
                     n.has_week, marked)
-    return page.done("year", "year", f"{cfg.year} full year")
+    return page.done("year", "year", f"{cfg.year} {cfg.words.full_year}")
 
 
 #: The air between two day columns. The mini-month is built from its content
@@ -417,9 +427,10 @@ def half_year_page(page: Page, cfg, n: Nav, months, half: int) -> DocumentPage:
     span = f"{months[first_month - 1][:3]}–{months[first_month + 4][:3]}"
     prev = "half-1" if half == 2 else None
     nxt = "half-2" if half == 1 else None
-    top = crumb(page, title=f"Half-year {half} · {span}", prev=prev, nxt=nxt, up="year")
+    title = f"{cfg.words.half_year} {half} · {span}"
+    top = crumb(page, title=title, prev=prev, nxt=nxt, up="year")
     _half_table(page, cfg, months, top, page.H - top - pt(2), first_month=first_month)
-    return page.done(f"half-{half}", "half", f"Half-year {half}")
+    return page.done(f"half-{half}", "half", f"{cfg.words.half_year} {half}")
 
 
 def _half_table(page: Page, cfg, months, top, h, *, first_month: int) -> None:

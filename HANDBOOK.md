@@ -1108,6 +1108,45 @@ Preset: `calendar-a4` (`ctrlgrid show calendar-a4`), which turns on every view;
 worked example: [`12-calendar-year.yaml`](examples/12-calendar-year.yaml) — 405
 pages, and the one example that ships without its PDF.
 
+#### The language of the sheet
+
+The tool ships no translations and never will (§3.4) — but it writes no word of
+its own on your sheet either. Everything printed comes from the definition:
+
+```yaml
+months: [Jänner, Februar, März, April, Mai, Juni,
+         Juli, August, September, Oktober, November, Dezember]
+weekdays: [Mo, Di, Mi, Do, Fr, Sa, So]
+notes: [{count: 40, label: Notizen}]
+words:
+  index: Inhalt
+  year: Jahr
+  month: Monat
+  week: Woche
+  notes: Notizen
+  contents: Inhaltsverzeichnis
+  full_year_overview: Jahresübersicht
+  half_year: Halbjahr
+  full_year: ganzes Jahr
+```
+
+`words:` names the calendar's own vocabulary — the navigation strip at the top of
+every page and the headings. Leave it out and you get the English above, so no
+existing definition changes. A notebook's one word is `contents_title`.
+
+**One limit to know about**, and it is the same one the README lists first: the
+standard PDF fonts reach Latin-1. German, French, Spanish, Italian, Portuguese,
+Dutch and the Nordic languages are covered. Polish, Czech, Hungarian, Turkish,
+Romanian and Croatian are not — `ń`, `ř`, `ő`, `ğ`, `ă`, `č` need a font of your
+own:
+
+```yaml
+font: {file: "~/Library/Fonts/NotoSans-Regular.ttf", size: 9pt}
+```
+
+A character the font cannot draw is refused before the first page, naming the
+character and the word it came from — it is never printed as a box.
+
 ### `notebook` — several papers in one linked document
 
 The other document generator, and the one that composes the rest: sections, each
