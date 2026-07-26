@@ -195,7 +195,13 @@ edge, so a tick now carries its position *and* its value separately. `unit` says
   the highest-volume search term in the package — were findable nowhere. Check
   `pyproject.toml`'s `description` against what the tool actually does before a
   release, not after. GitHub's description, topics and homepage are the other
-  half of the same question and can be changed at any time.
+  half of the same question and can be changed at any time — which is exactly
+  why they are worth revisiting *after* a release, not only before it. Done for
+  0.12.0 (booklets). One constraint that is not obvious and costs a decision:
+  **GitHub caps a repository at twenty topics**, and ctrlgrid sits at twenty, so
+  adding one means dropping one. `pdf` and `printable` went, for `booklet` and
+  `imposition`: both were too generic to bring anyone here and both are already
+  covered by `pdf-generation` and `graph-paper`.
 - ~~**Nobody has cut a net out and folded it.**~~ **Folded on 2026-07-26, and it
   closes.** `box-tuck-a4` was printed at 100 %, cut and assembled by the owner:
   *"hervorragend"*. That is the stronger of the two proofs available — the tray
