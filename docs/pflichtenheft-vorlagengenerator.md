@@ -1313,6 +1313,39 @@ alles, was das `check` der jeweiligen Klinge gegen den Musterbereich verweigert,
 und ein Inhaltsverzeichnis, das nicht auf seine Seite passt (mit der nötigen
 Höhe).
 
+#### Mehrere Blätter je Stück (ergänzt 2026-07-26)
+
+**Ein Abschnitt mit einem Blattplan** (§ 7.5, `maze` mit `solution:
+separate_page` oder `back_mirrored`) wird ausgeführt, nicht mehr abgelehnt
+(Entscheidung 55, sie ersetzt die vierte Ablehnung aus Entscheidung 52).
+`pages:` zählt weiterhin **Stücke**, wie § 7.5 es auf dem Klingenweg liest —
+`pages: 10` sind also zehn Rätsel auf zwanzig Seiten. Eine Regel für beide Wege,
+statt eines Wortes mit zwei Bedeutungen.
+
+**Ein Abschnitt ist eine Definition im Kleinen, und das gilt jetzt auch für den
+Seitenkontext:** die Klinge eines Abschnitts bekommt Index 0…n−1 *ihres*
+Abschnitts, nicht den der Dokumentseite. Damit stimmen die beiden Ablesungen aus
+§ 7.5 wieder — die Parität für Rätsel gegen Lösung und `index // 2` für das
+Stück hinter dem Seed —, und ein Titelblatt davor verschiebt kein Labyrinth mehr.
+
+**Bei `back_mirrored` schiebt das Notizbuch ein leeres Blatt ein**, wenn der
+Abschnitt sonst auf einer Rückseite begänne: beim Duplexdruck ist eine Seite
+genau dann vorne, wenn ihre Nummer ungerade ist. Gemessen **nach** dem
+Trennblatt, denn das ist eine Seite wie jede andere. Danach bleibt die Paarung
+von selbst erhalten, weil jedes Paar zwei Seiten lang ist.
+
+Dieses Blatt ist eine **echte Seite**: es trägt die Bänder, beantwortet
+`{section}` und zählt in `{page}`; nur sein Musterbereich bleibt leer. Das ist
+ausdrücklich die *andere* Entscheidung als die aufgefüllte Zelle eines Hefts
+(§ 14) — die ist die Abwesenheit einer Seite und zeichnet gar nichts. Der
+Laufbericht nennt jede Einfügung (§ 12).
+
+Die Bedingung aus § 7.5 gilt unverändert: `back_mirrored` verlangt
+`duplex: false` oder gleiche `inner`/`outer`, sonst wird abgelehnt — auf dem
+Dokumentweg genauso wie auf dem Klingenweg. Der Griff fragt das Dokument dafür
+nach seinen gespiegelten Abschnitten; die Prüfung selbst gehört zum Seitenmodell
+und bleibt beim Griff.
+
 **Bewusst nicht in dieser Fassung**, damit es niemand für vergessen hält: kein
 `snap`, `remainder` oder `align` je Abschnitt (das ist Griffgeometrie für das
 ganze Dokument, ein Abschnitt nimmt den Musterbereich, wie er ist), kein eigenes

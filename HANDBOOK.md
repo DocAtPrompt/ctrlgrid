@@ -1212,6 +1212,28 @@ section — its divider if it asked for one, then its pages. The contents names
 each section, links to it, and prints the page it starts on, because a notebook
 is a paper object too and there a link is only underlined text.
 
+**A section may be a puzzle book.** `maze` with `solution: separate_page` puts
+each solution on the sheet after its puzzle, and inside a section that works
+exactly as it does on its own:
+
+```yaml
+  - label: "Mazes"
+    pages: 12          # twelve *puzzles* — twenty-four pages
+    generator: maze
+    cells: { x: 16, y: 22 }
+    solution: separate_page
+```
+
+`pages:` counts puzzles, not sheets, the same way `--pages 12` does for a maze
+on its own. With `solution: back_mirrored` the solution goes on the *back* of
+its puzzle's sheet, so it shows through against the light — and because that
+needs the puzzle on the front of a sheet, the notebook may insert one blank leaf
+before the section to line the parity up. The run says so when it does.
+
+That mode also needs the pattern area to sit in the same place on both sides:
+either `duplex: false`, or `inner` and `outer` margins equal. Otherwise the run
+is refused, naming the section.
+
 Bands are worth setting here: `{section}` names the section a page belongs to
 and `{page}` counts, both filled per page.
 

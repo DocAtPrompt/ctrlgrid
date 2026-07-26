@@ -1029,15 +1029,19 @@ mechanism § 5.1 provides for exactly this:
   document page is not one pattern area — § 7.13 already refuses it per section
   for the same reason.
 
-**A fourth refusal, and this one is deliberately temporary.** A notebook section
+**A fourth refusal, and this one was deliberately temporary — lifted by
+decision 55 on 2026-07-26.** A notebook section
 whose blade states a `SheetPlan` with more than one sheet per item — a `maze`
-with `solution: separate_page` — is refused. On the blade path the handle
+with `solution: separate_page` — was refused. On the blade path the handle
 carries such a plan out (decision 27); the document path never asked, so
 solutions printed *before* their puzzles, and adding a title page silently
-redrew every maze because unrelated furniture shifted `page.index`. § 7.13 says
-nothing about what a per-section sheet plan should mean, so it is refused until
-it does rather than answered wrongly. Honouring it per section is a real design
-question, not an oversight, and is left open.
+redrew every maze because unrelated furniture shifted `page.index`. § 7.13 said
+nothing about what a per-section sheet plan should mean, so it was refused until
+it did rather than answered wrongly. Honouring it per section was a real design
+question, not an oversight, and it stayed open until § 7.13 answered it:
+**decision 55** — `pages:` counts items on both paths, and a section's blade is
+handed a page context of the section's own, which is what makes the parity and
+the seed right.
 
 
 ## 53. The language of the sheet: the tool receives words, it does not know any (§ 7.12, § 7.8, § 10.3)
@@ -1131,3 +1135,60 @@ Both writes landed inside one second, so Python judged its cached bytecode still
 valid and kept running the mutated version after the revert — git reported the
 tree clean while the tests stayed red. Clear `__pycache__` before believing the
 result of a length-preserving mutation.
+
+
+## 55. A section is a run of its own, and that is the whole fix (§ 7.13, § 7.5)
+
+Decision 52 refused a `maze` with separate solution pages inside a notebook
+section, deliberately and temporarily: § 7.13 did not say what a per-section
+sheet plan should mean, and the wrong answer had printed solutions *before*
+their puzzles and let a title page silently redraw every maze.
+
+Measured before designing, and it made the answer smaller than the problem
+sounded: `maze` is the **only** blade with a `sheets()` at all, and no shipped
+preset or example uses one in a notebook, so nothing committed could move. What
+was actually broken is narrow — `maze.generate` reads `page.index` twice, for
+the puzzle/solution parity and for the item number behind the seed, and inside a
+notebook that index counted *document* pages.
+
+So the fix is one idea rather than a mechanism. A `Fill` carries the page's
+index within its section, and `document_page_marks` builds the page context from
+that. § 7.13 already called a section "eine Definition im Kleinen"; this makes it
+true of the one thing that mattered. Both readings come right at once, and a
+section is stable against everything before it.
+
+Four calls, each of which could have gone the other way:
+
+- **`pages:` counts items, not sheets**, exactly as § 7.5 reads `--pages` on the
+  blade path. The alternative — `pages:` meaning sheets in a section and items on
+  the blade path — is one word with two meanings, and it would have needed a rule
+  for an odd count as well.
+- **`back_mirrored` is honoured, not refused**, by inserting a blank leaf where
+  the parity needs one. Refusing was the smaller change and was rejected because
+  the pairing is *computable*: the tool would have pushed arithmetic onto the user
+  that it can do itself. What is not acceptable is doing it silently, so the run
+  report names every insertion (§ 12).
+- **That leaf is a page.** Deliberately the opposite call to the booklet's padded
+  cell (decision 54), which draws nothing at all because it is the *absence* of a
+  page. This one occupies a number a reader turns past, so it carries its bands,
+  answers `{section}` and counts in `{page}`; only its pattern area is empty. Two
+  cases that look alike, two answers, both written down so neither is copied onto
+  the other by mistake.
+- **Mirroring is applied in `_document_content`, not in `document_page_marks`.**
+  The first answer was the latter — the one function that says what is on a
+  document page (decision 50) — and it is wrong: that function yields *area-local*
+  marks, while § 7.5 mirrors about the **sheet's** centre, the physical turning
+  edge. It goes where a document page's marks are translated onto the sheet, which
+  is where the blade path mirrors too. The other three callers therefore see an
+  unmirrored page, and that is correct rather than tolerated: a reflection
+  preserves a mark's kind, weight, colour and text, which is all any of them looks
+  at.
+
+§ 7.5's own condition — `back_mirrored` needs `duplex: false` or equal
+`inner`/`outer` — existed on the blade path only. The notebook now answers a
+`mirrored_sections` query and the **document pre-flight** asks it: a question the
+handle asks a generator, the shape `periodic_axes` and `sheets` already have.
+Worth recording is where that refusal was written first: on the blade path, where
+it could never fire, because `preflight` returns into `_document_preflight` for a
+document long before reaching it. The test said DID NOT RAISE, which is what it
+was written for.
