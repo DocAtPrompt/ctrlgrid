@@ -197,3 +197,57 @@ class TestTheReport:
         assert "2 sheet(s)" in result.output
         assert "SHORT edge" in result.output
         assert "page 2" in result.output
+
+
+NUMBERED = (
+    "version: 1\n"
+    "page:\n  format: a5\n  margin: 10mm\n"
+    "footer:\n  height: 8mm\n  gap: 2mm\n  center: '{page}'\n"
+    "generator: lines\n"
+    "families:\n"
+    "  - {direction: horizontal, base_spacing: 10mm}\n"
+)
+
+
+class TestTheSheetsThemselves:
+    """The order, read off the artefact rather than out of the function."""
+
+    def sides(self, path: Path) -> list[list[str]]:
+        """Each sheet side as [left page number, right page number]."""
+        found = []
+        for index in range(pdfread.page_count(path)):
+            numbers = [
+                text for text in pdfread.texts_um(path, index)
+                if text.content.isdigit()
+            ]
+            found.append([t.content for t in sorted(numbers, key=lambda t: t.x)])
+        return found
+
+    def sheet(self, tmp_path: Path, pages: int, name: str = "b.pdf") -> Path:
+        path = tmp_path / name
+        build(
+            loads(NUMBERED, {"pages": pages, "booklet": True,
+                             "nup_sheet": "297x210mm"}, source="t"),
+            PdfWriter(path),
+        )
+        return path
+
+    def test_eight_pages_fold_into_eight_one_two_seven_six_three_four_five(
+        self, tmp_path: Path
+    ) -> None:
+        assert self.sides(self.sheet(tmp_path, 8)) == [
+            ["8", "1"], ["2", "7"], ["6", "3"], ["4", "5"],
+        ]
+
+    def test_a_padded_cell_draws_nothing_at_all(self, tmp_path: Path) -> None:
+        # Not an empty page — the absence of one. A footer reading "7" on a
+        # leaf nobody filled would claim content that does not exist.
+        assert self.sides(self.sheet(tmp_path, 6)) == [
+            ["1"], ["2"], ["6", "3"], ["4", "5"],
+        ]
+
+    def test_two_runs_are_byte_identical(self, tmp_path: Path) -> None:
+        # § 10.1, and it is checked whenever anything is added to the writer.
+        first = self.sheet(tmp_path, 6, "1.pdf")
+        second = self.sheet(tmp_path, 6, "2.pdf")
+        assert first.read_bytes() == second.read_bytes()
