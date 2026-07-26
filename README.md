@@ -46,7 +46,7 @@ paper formats **and** for e-ink tablets.
 > `--skip-unsupported`, `--nup`, `--nup-sheet`, `--crop-marks`, `-o`,
 > `--force`, `--quiet`.
 >
-> **Not on PyPI yet** — install straight from this repository (see below).
+> On PyPI as [`ctrlgrid`](https://pypi.org/project/ctrlgrid/): `uvx ctrlgrid millimeter-a4 --pages 3 -o grid.pdf`.
 
 ## Examples
 
@@ -89,22 +89,29 @@ ctrlgrid
 
 ## Installation
 
-Not on PyPI yet, so install straight from this repository. With
-[uv](https://docs.astral.sh/uv/):
+With [uv](https://docs.astral.sh/uv/), no installation needed at all:
 
 ```bash
-# run it once, without installing anything
-uvx --from git+https://github.com/DocAtPrompt/ctrlgrid.git ctrlgrid --help
+uvx ctrlgrid millimeter-a4 --pages 3 -o grid.pdf
+```
 
-# or install it as a tool on your PATH
-uv tool install git+https://github.com/DocAtPrompt/ctrlgrid.git
+That downloads it, runs it, and leaves nothing behind. To keep it on your PATH:
+
+```bash
+uv tool install ctrlgrid
 ctrlgrid --help
 ```
 
 Or with pip, into an environment of your choosing:
 
 ```bash
-pip install git+https://github.com/DocAtPrompt/ctrlgrid.git
+pip install ctrlgrid
+```
+
+For the unreleased state of `main`, install from the repository instead:
+
+```bash
+uvx --from git+https://github.com/DocAtPrompt/ctrlgrid.git ctrlgrid --help
 ```
 
 To work on it, clone and let uv build the environment:

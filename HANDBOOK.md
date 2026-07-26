@@ -47,26 +47,29 @@ is, see the specification, [`pflichtenheft-vorlagengenerator.md`](docs/pflichten
 
 ## 1. Installation
 
-Ctrl+Grid is a Python CLI. It is not on PyPI yet, so install it from the Git
-repository. The simplest way, with [uv](https://docs.astral.sh/uv/):
+Ctrl+Grid is a Python CLI, on PyPI as `ctrlgrid`. With
+[uv](https://docs.astral.sh/uv/) you need not install it at all:
+
+```bash
+uvx ctrlgrid millimeter-a4 --pages 3 -o grid.pdf
+```
+
+That downloads it, runs it and leaves nothing behind. To keep it on your PATH:
+
+```bash
+uv tool install ctrlgrid
+```
+
+Or with pip:
+
+```bash
+pip install ctrlgrid
+```
+
+To run the unreleased state of `main`, point at the repository instead:
 
 ```bash
 uvx --from git+https://github.com/DocAtPrompt/ctrlgrid.git ctrlgrid --help
-```
-
-That runs it without a permanent install. To install it into a tool
-environment:
-
-```bash
-uv tool install git+https://github.com/DocAtPrompt/ctrlgrid.git
-```
-
-Or with pip, from a clone:
-
-```bash
-git clone https://github.com/DocAtPrompt/ctrlgrid.git
-cd ctrlgrid
-pip install .
 ```
 
 For development (tests and linter):

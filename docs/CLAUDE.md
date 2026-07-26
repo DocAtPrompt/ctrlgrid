@@ -77,7 +77,7 @@ unless the change was meant to move it.
 
 | Milestone | State |
 |---|---|
-| **M1** — the vertical slice | complete; all seven acceptance criteria of § 14 met except the PyPI release, which needs a human (see *Not done* below) |
+| **M1** — the vertical slice | complete, and since 2026-07-26 **all seven** acceptance criteria of § 14 are met: the last one was the PyPI release, verified with `uvx` against the published package |
 | **M2** geometry | `count`, `extent`, `remainder`, `snap`, `duplex` |
 | **M2** name lists | `--names`, both modes, `{name}`, PDF outline |
 | **M2** frame furniture | `border`, `background`, `hole_marks`, `stamp` |
@@ -142,24 +142,29 @@ edge, so a tick now carries its position *and* its value separately. `unit` says
   `color: color` since 2026-07.) The only device gap left is an on-device rM2
   check and the empty `quirks`.
 
-**Three more things wait, and none of them is code:**
+**Two more things wait, and neither of them is code:**
 
-- **PyPI: wanted now, and everything on this side is ready.** The user decided on
-  2026-07-26 to publish, after the release-readiness pass above. Checked since:
-  the name **`ctrlgrid` is free** (`https://pypi.org/pypi/ctrlgrid/json` → 404,
-  which is how PyPI says "no such project"); the built wheel carries all 19
-  presets, the clef font, its OFL text, `formats.yaml` and `devices.yaml`; the
-  release workflow gates on the suite and compares the tag against
-  `ctrlgrid.__version__`. What still needs a human: **trusted publishing** at
-  https://pypi.org/manage/account/publishing/ for `DocAtPrompt/ctrlgrid`,
-  workflow `release.yml`, environment `pypi` — then the tag is pushed.
-  **There are no tags at all** (the stale `v0.1.0` was deleted on 2026-07-26), so
-  the next one is the first real release tag and must read `v0.11.0`.
-  Two things worth knowing before it goes: a version can never be re-uploaded to
-  PyPI, only yanked; and the README's links were made absolute for exactly this,
-  because a relative link resolves against pypi.org on the project page and dies.
-  Until it is published, install from git —
-  `uvx --from git+https://github.com/DocAtPrompt/ctrlgrid.git ctrlgrid …`.
+- ~~**PyPI.**~~ **Published on 2026-07-26 — `ctrlgrid 0.11.0`, MIT, Python ≥ 3.11,
+  wheel and sdist, under the repository's first tag `v0.11.0`.** M1's first
+  acceptance criterion is met at last, and measured rather than assumed: `uvx
+  ctrlgrid millimeter-a4 --pages 3 -o out.pdf` installs from the network and
+  produces a sheet whose MediaBox reads 210.000 × 297.000 mm with a 1.000 mm line
+  spacing, and two runs of it are byte-identical (§ 14, criteria 1–3). From the
+  published wheel: `--version` answers, all 19 presets are there, and
+  `staves-treble-a4` draws its clef, so the bundled music font resolves too.
+
+  Releasing again is one tag: `git tag -aM vX.Y.Z && git push origin vX.Y.Z`.
+  `release.yml` runs ruff and the suite, refuses a tag that disagrees with
+  `ctrlgrid.__version__`, builds, and publishes through **trusted publishing** —
+  no token in the repository. The publisher is configured for
+  `DocAtPrompt/ctrlgrid`, workflow `release.yml`, environment `pypi`; if a
+  release ever fails with `invalid-publisher`, that quartet is what PyPI matches
+  on, and the failing run prints the claims GitHub actually sent.
+
+  Two things to remember before the next one: **a version can never be
+  re-uploaded to PyPI, only yanked** — so the number is decided once — and the
+  README's links are absolute on purpose, because a relative one resolves against
+  pypi.org on the project page and dies there.
 - **Nobody has cut a net out and folded it.** `examples/16-net-tray.yaml` checks
   the geometry, `box-tuck-a4` also checks the thickness rule. The tests agree
   with the arithmetic; only paper can disagree with it (§ 7.14).
@@ -395,8 +400,7 @@ supply:
 |---|---|
 | a device | the empty `quirks` (decision 31), and the rM2 figures nobody has measured on the device — the Paper Pro is owner-checked, the rM2 is not |
 | a pair of scissors | print `examples/16-net-tray.yaml` and `box-tuck-a4` at 100 %, cut, fold. The tray checks the geometry; the tuck-top also checks the thickness rule. **No test can do this**, and until someone does, the tests only agree with themselves |
-| a pypi.org login | trusted publishing, then the first real tag — `v0.11.0`. Everything on this side is ready and the name is free; see *Not done* |
-| use | the three § 15 questions below, and 1.0.0 itself: 0.10.0 says the features are done and audited, and the DSL has not yet met anyone else |
+| use | the three § 15 questions below, and 1.0.0 itself. 0.11.0 is *published*, so the DSL can now meet someone other than the test suite — which is the one thing 1.0.0 has always been waiting for |
 
 If a new feature *is* wanted, the recipe has not changed since M1: a design
 settled with the user first when there is a real fork in it, then a plan, then
