@@ -45,6 +45,11 @@ class Imposition:
     sheet_height: Um
     sheet_name: str
     crop_marks: bool = False
+    #: § 14: saddle-stitch order rather than reading order. A booklet *is* a
+    #: 2x1 imposition, so no geometry changes — `cell`, `check_fits` and
+    #: `crop_mark_segments` never read this. Only `slots` does, which is why it
+    #: sits on the request beside `crop_marks` and not in the geometry.
+    booklet: bool = False
 
     @property
     def per_sheet(self) -> int:
@@ -116,6 +121,32 @@ class Imposition:
             segments += _tick(left, y, -1, vertical=False, room=left)
             segments += _tick(right, y, +1, vertical=False, room=self.sheet_width - right)
         return segments
+
+
+def slots(page_count: int, imposition: Imposition) -> list[list[int | None]]:
+    """For every sheet side, which rendered page goes in which cell (§ 14).
+
+    `None` means the cell stays empty — a part-full last sheet in plain n-up,
+    or a blank leaf in a booklet. Both kinds of imposition are described here
+    and nowhere else: a second description of "what is on this sheet" would
+    drift from this one the first time either changed, which this codebase has
+    now learnt four times over (`layout_band`, the writer wrapper,
+    `document_page_marks`, `page_furniture`).
+
+    Indices are into the rendered pages, 0-based. Position within a sheet is
+    the one `Imposition.cell` numbers: 0 is top-left, reading order.
+    """
+    if imposition.booklet:
+        return _folded(page_count)
+    per = imposition.per_sheet
+    return [
+        [index if index < page_count else None for index in range(start, start + per)]
+        for start in range(0, max(page_count, 1), per)
+    ]
+
+
+def _folded(page_count: int) -> list[list[int | None]]:
+    raise NotImplementedError  # the fold order arrives with the next commit
 
 
 def _tick(x: Um, y: Um, direction: int, *, vertical: bool, room: Um) -> list[Segment]:

@@ -23,7 +23,7 @@ from typing import TYPE_CHECKING
 
 from ctrlgrid.axes import AxisPeriod
 from ctrlgrid.errors import DefinitionError
-from ctrlgrid.impose import Imposition
+from ctrlgrid.impose import Imposition, slots
 from ctrlgrid.marks import (
     Arc,
     Area,
@@ -1557,12 +1557,13 @@ def _write_imposed(
     outline after imposing.
     """
     page_w, page_h = document.sheet.width, document.sheet.height
-    for start in range(0, len(rendered), nup.per_sheet):
-        group = rendered[start : start + nup.per_sheet]
+    for sheet in slots(len(rendered), nup):
         writer.begin_page(nup.sheet_width, nup.sheet_height)
-        for position, (_, marks) in enumerate(group):
+        for position, index in enumerate(sheet):
+            if index is None:
+                continue
             cell = nup.cell(position, page_w, page_h)
-            for mark in marks:
+            for mark in rendered[index][1]:
                 writer.draw(translate(mark, dx=cell.x, dy=cell.y))
         for mark in nup.crop_mark_segments(page_w, page_h):
             writer.draw(mark)
