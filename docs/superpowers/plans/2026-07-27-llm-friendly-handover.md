@@ -50,11 +50,31 @@ are pydantic too.
 (§ 5.1), the relative measures `%w`/`%h`/`%s` (§ 8.11), or what a cycle *means*
 (§ 5.3). Those stay prose, which is what (b) is for.
 
-**(b) One page written for machines.** The handbook is ~1600 lines; an assistant
-needs perhaps 150 of them: the shape of a definition, the generator table with
-required keys, the units, the cycle model in one paragraph, and the refusals it
-will actually hit. The `llms.txt` idea. No code, and it can be written from the
-handbook without new decisions.
+**(b) One page written for machines — and it should probably be a *skill*.**
+(Raised by the user, 2026-07-27, and it is the better shape.) The handbook is
+~1600 lines; an assistant needs perhaps 150 of them: the shape of a definition,
+the generator table, the units, the cycle model in one paragraph, the refusals it
+will actually hit, and the workflow — write, `check`, correct, build, then relay
+the print instruction. A skill is exactly that document in the format an
+assistant already loads on demand, with a description that decides when it is
+loaded at all ("printable paper, a planner, a booklet, graph paper for a pad…").
+It also carries what no schema can: which questions to ask (section 4), and the
+§ 8.2 sentence about printing at 100 %, which is the one thing a user must be
+told and no file can enforce.
+
+**The one rule that decides whether it stays true: it must point, not copy.**
+`ctrlgrid schema`, `ctrlgrid presets`, `ctrlgrid devices` and `ctrlgrid show` are
+the truth; a skill that lists keys is a second description of the same thing and
+will go stale. This is not a hypothetical — in *this* session the handbook was
+found to hold two lists of the switch-style flags, one of which had never learnt
+`--crop-marks`. Same failure, one level up. So the skill teaches the *shape* and
+the *questions*, and asks the tool for the *facts*.
+
+Where it lives is an open question (see section 5): in the repository so it
+versions with the tool and a user can install both at once, or as a separate
+plugin so it can be updated without a release. The repository has no `.claude/`
+skills directory today — only `settings.local.json` — so either way it is new
+ground here.
 
 **(c) `--json` as an envelope, never a replacement.** Errors already carry a
 field path and a source line; wrapping them alongside the prose closes the loop
@@ -124,7 +144,14 @@ feature turns into its own opposite.
    a 0.2 pt line is 0.64 px), and it is *one* question that changes everything
    downstream. It may deserve to be asked first and separately rather than as one
    marked field among twelve.
-4. **How far does `--json` go?** Errors only, or the run report too? The report
+4. **Where the skill lives, and what it is allowed to state.** In the repository
+   (versions with the tool, installs with it, but a wrong sentence needs a
+   release to fix) or as a separate plugin (fixable any time, but it can drift
+   from the version it describes). And: is it allowed to contain *any* key names
+   at all, or must every fact come from `ctrlgrid schema` at use time? The strict
+   answer is easier to keep true and slower to read; the loose one is the
+   handbook's mistake waiting to happen again.
+5. **How far does `--json` go?** Errors only, or the run report too? The report
    carries the media findings an assistant should relay, so probably both — but
    that is a second command surface to keep true.
 
@@ -148,6 +175,11 @@ the design to `docs/superpowers/specs/`, then a plan, then test-first with the
 *why* and its § number in the comment, one coherent commit each, and the
 specification, `implementation-decisions.md` and `docs/CLAUDE.md` updated in the
 same breath.
+
+A skill changes the order slightly, and for the better: **(a) and (b) are then a
+matched pair.** The schema command is the truth that would go stale in prose; the
+skill is the prose that cannot go in a schema. Building the schema first makes the
+skill shorter *and* more durable, because it can point instead of list.
 
 Note that (a) and (b) together are small — one command and one document — and
 they need almost none of section 5, because the markers are what the forks are
