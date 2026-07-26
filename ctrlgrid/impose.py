@@ -146,7 +146,25 @@ def slots(page_count: int, imposition: Imposition) -> list[list[int | None]]:
 
 
 def _folded(page_count: int) -> list[list[int | None]]:
-    raise NotImplementedError  # the fold order arrives with the next commit
+    """Saddle stitch: every sheet nested inside the next (§ 14).
+
+    With *P* the page count rounded up to a multiple of four — a folded sheet
+    carries four pages, so the count cannot be anything else — sheet *i*
+    carries pages `P - 2i` and `2i + 1` on its front and `2i + 2` and
+    `P - 2i - 1` on its back. Returned in printing order, front and back
+    interleaved, which is what duplex printing consumes.
+
+    Padding is not a second mechanism: a page number above the real count has
+    no index, so it comes back as `None` and nothing is drawn for it.
+    """
+    padded = -(-page_count // 4) * 4
+    sides: list[list[int | None]] = []
+    for sheet in range(padded // 4):
+        front = (padded - 1 - 2 * sheet, 2 * sheet)
+        back = (2 * sheet + 1, padded - 2 - 2 * sheet)
+        for side in (front, back):
+            sides.append([index if index < page_count else None for index in side])
+    return sides
 
 
 def _tick(x: Um, y: Um, direction: int, *, vertical: bool, room: Um) -> list[Segment]:
