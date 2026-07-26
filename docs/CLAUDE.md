@@ -52,12 +52,12 @@ uv sync --extra dev && uv run pytest && uv run ruff check .
 
 1156 tests, all green, ruff clean. Sixty-odd commits on `main`, linear history,
 pushed to **[github.com/DocAtPrompt/ctrlgrid](https://github.com/DocAtPrompt/ctrlgrid)**
-(public); CI runs green there on Linux (3.11–3.13), macOS and Windows. Eighteen
+(public); CI runs green there on Linux (3.11–3.13), macOS and Windows. Nineteen
 presets — one per blade (`lines`, `dots`, `polar`, `form`, `maze`,
 `perspective`, `mandala`, `staves`, `grid`, `tiling`, `net`), the two documents
 (`calendar-a4`, `notebook-a4`), and four papers that are all `lines` with
 different cycles (`calligraphy-a4`, `seyes-a4`, `mizige-a4`,
-`knitting-chart-a4`, `precrease-16-a4`) — and a
+`knitting-chart-a4`, `precrease-16-a4`, `plot-a4`) — and a
 rendered
 **example gallery** in [`examples/`](../examples/) — one A4 sheet per generator plus
 a multi-page maze booklet, a cover sheet and the calendar, each an ordinary

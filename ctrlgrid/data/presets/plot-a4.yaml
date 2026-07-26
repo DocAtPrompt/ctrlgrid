@@ -1,0 +1,75 @@
+# plot — a sheet for plotting a function by hand. A4 landscape.
+#
+# A millimetre grid with every fifth line emphasised, a coordinate cross through
+# the middle, and a scale along two edges whose **zero sits in the middle** —
+# so the numbers left of it and below it are negative, which is what a plotted
+# function needs (§ 8.12).
+#
+# The two things that make it line up are worth knowing before you bend it:
+#
+#   * the axes are drawn by a family of exactly one line (`count: 1`, § 7.1)
+#     whose `offset` is a *relative* measure — `50%w` is half the pattern area's
+#     width (§ 8.11), so the cross stays centred whatever format or margin you
+#     give it;
+#   * `ruler.origin: center` puts the scale's nought in the middle of each edge
+#     too, and its ladder hangs on that nought rather than on the sheet's edge,
+#     so the numbered ticks are symmetric about the axes.
+#
+# Change the format and both follow. `--format a3` gives the same sheet with
+# more room; `--device remarkable-paper-pro` puts it on the tablet.
+version: 1
+
+defs:
+  grid:   &grid   "#8fa8c4"
+  accent: &accent "#4466aa"
+  axis:   &axis   "#1e2a36"
+
+page:
+  format: a4
+  orientation: landscape
+  margin: 14mm
+
+pattern:
+  # The leftover goes at the end rather than being split, so the grid starts on
+  # the pattern area's corner and the axes' relative offsets land where the
+  # ruler's centre does.
+  remainder: end
+
+generator: lines
+
+families:
+  # The millimetre grid: every fifth line heavier and darker, as on ordinary
+  # graph paper (§ 5.3 — one cycle for the weight, one for the colour).
+  - direction: horizontal
+    base_spacing: 1mm
+    base_weight: 0.13pt
+    weight: [1, 1, 1, 1, 2.4]
+    color: [*grid, *grid, *grid, *grid, *accent]
+
+  - direction: vertical
+    base_spacing: 1mm
+    base_weight: 0.13pt
+    weight: [1, 1, 1, 1, 2.4]
+    color: [*grid, *grid, *grid, *grid, *accent]
+
+  # The two axes: one line each, through the middle of the pattern area.
+  - direction: horizontal
+    base_spacing: 1mm
+    offset: 50%h
+    count: 1
+    base_weight: 0.7pt
+    color: [*axis]
+
+  - direction: vertical
+    base_spacing: 1mm
+    offset: 50%w
+    count: 1
+    base_weight: 0.7pt
+    color: [*axis]
+
+# The scale: zero in the middle of each edge, negatives before it, centimetres.
+ruler:
+  edges: [bottom, left]
+  origin: center
+  unit: cm
+  font: { size: 6pt }

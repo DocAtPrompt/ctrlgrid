@@ -1273,7 +1273,7 @@ the documentation. There is one for every generator:
 dots-5mm            grid-a4             mandala-a4          maze-medium
 millimeter-a4       perspective-2pt-a4  phone-log-a5        polar-a4
 staves-treble-a4    tiling-hex-a4       calendar-a4         notebook-a4
-box-tuck-a4         precrease-16-a4
+box-tuck-a4         precrease-16-a4     plot-a4
 ```
 
 And five that are papers rather than generators — each one is `lines` with a
@@ -1285,6 +1285,7 @@ different cycle, which is the argument of §9 made in files:
 | `seyes-a4` | the French school ruling (*grands carreaux*): 2 mm rows with every fourth line strong, 8 mm verticals, and the red margin rule |
 | `mizige-a4` | 米字格, Chinese character practice: 20 mm boxes with both midlines and both diagonals |
 | `knitting-chart-a4` | chart paper proportional to a knitting gauge — a stitch is wider than a row, so the two axes differ |
+| `plot-a4` | a sheet for plotting by hand: millimetre grid, a coordinate cross through the middle, and a scale whose zero sits there too |
 | `millimeter-a4` | plain 5 mm graph paper, the one to start from |
 
 ```bash
