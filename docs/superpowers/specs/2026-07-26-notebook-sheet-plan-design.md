@@ -53,14 +53,23 @@ reflection is about the **sheet's** vertical centre and not the pattern area's
 where the sheet is. This is exactly parallel to `SheetPlan.mirrored` on the blade
 path, and it reuses `marks.mirror_x`, which already declines to reflect text.
 
-**The reflection is applied in `pages.document_page_marks`**, the one function
-that says what is on a document page — used by the writer, by the capability
-pre-flight and by the media check alike (decision 50). Applying it in the write
-path instead would leave the other two measuring an unmirrored page, which is the
-same half-a-tool failure decision 52 is about. Mirroring changes no colour and no
-stroke width, so nothing those two conclude would differ today; it would differ
-the first time a check looked at a position, and that is exactly the kind of
-latent split this codebase keeps paying for.
+**The reflection is applied in `pages._document_content`** — corrected while
+writing the plan, because the first answer here was wrong and the reason is worth
+keeping. The instinct was `document_page_marks`, the one function that says what
+is on a document page (decision 50). It cannot be: that function yields
+**area-local** marks, and § 7.5 mirrors about the **sheet's** vertical centre,
+because the reference is the physical turning edge. `_document_content` is where a
+document page's marks are translated onto the sheet, which is the same place the
+blade path mirrors (`_placed_marks`, after `translate`, about
+`document.sheet.width`).
+
+The other three callers of `document_page_marks` — the capability pre-flight, the
+glyph check and the media check — therefore see an unmirrored page, and that is
+**correct rather than tolerated**: a reflection preserves a mark's kind, its
+stroke weight, its colour and its text, which is exactly and only what those three
+look at. `mirror_x` also declines to reflect text at all (decision 27), so even
+the glyph check sees the same characters. Where the two paths would genuinely
+diverge is geometry, and none of the three measures geometry on a document page.
 
 ## `back_mirrored`: the pairing is forced, and said
 
