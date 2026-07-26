@@ -27,9 +27,14 @@ Nothing refuses with "a later milestone" any more — that mechanism is still
 there (`Section.deferred`, `loader.DEFERRED_KEYS`) and currently empty, which is
 worth knowing when the next unbuilt key arrives.
 
-**0.10.0** is the version in the code (2026-07-26). 0.9.0 said the features were
-complete; 0.10.0 says they have been **audited against a first user**, which is a
-different claim and was worth its own number. What that audit found is in the
+**0.11.0** is the version in the code (2026-07-26). 0.9.0 said the features were
+complete; 0.10.0 said they had been **audited against a first user**; 0.11.0 adds
+what that audit's last question turned up — every blade's geometry read back out
+of a finished PDF (`tests/test_geometry_readback.py`), a glyph check on generator
+text, and the two DSL keys a non-English calendar needs (`words:` and `font:` on
+a document). It is a minor and not a patch because a definition with Polish month
+names built at 0.10.0 and is refused now: silently losing a character was the
+bug, and refusing it is the fix. What that audit found is in the
 five commits before this one and summarised under *The release-readiness pass*
 below; the short version is that the core promises — dimensional accuracy and
 byte-identical output — held under measurement, and the edges did not.
@@ -49,7 +54,7 @@ sheet's preview with them, since that sheet prints the version.
 uv sync --extra dev && uv run pytest && uv run ruff check .
 ```
 
-1192 tests, all green, ruff clean, linear history on
+1231 tests, all green, ruff clean, linear history on
 **[github.com/DocAtPrompt/ctrlgrid](https://github.com/DocAtPrompt/ctrlgrid)**
 (public); CI runs green there on Linux (3.11–3.13), macOS and Windows. Nineteen
 presets — twelve that show a generator (`dots-5mm`, `grid-a4`, `mandala-a4`,
@@ -149,7 +154,7 @@ edge, so a tick now carries its position *and* its value separately. `unit` says
   https://pypi.org/manage/account/publishing/ for `DocAtPrompt/ctrlgrid`,
   workflow `release.yml`, environment `pypi` — then the tag is pushed.
   **There are no tags at all** (the stale `v0.1.0` was deleted on 2026-07-26), so
-  the next one is the first real release tag and must read `v0.10.0`.
+  the next one is the first real release tag and must read `v0.11.0`.
   Two things worth knowing before it goes: a version can never be re-uploaded to
   PyPI, only yanked; and the README's links were made absolute for exactly this,
   because a relative link resolves against pypi.org on the project page and dies.
@@ -207,7 +212,7 @@ things accepted and then ignored (a ruler font file, a tick off the edge, an
 unreachable capability guard); and twenty-six comments the code beside them had
 outgrown. All fixed, each test-first, one commit per coherent block.
 
-**Why 1192 tests had not caught the biggest one:** they exercise the blade path.
+**Why the tests had not caught the biggest one:** they exercise the blade path.
 The document path is young, has two generators and far thinner coverage, and four
 of the five serious findings were there. That is where to look first.
 
@@ -390,7 +395,7 @@ supply:
 |---|---|
 | a device | the empty `quirks` (decision 31), and the rM2 figures nobody has measured on the device — the Paper Pro is owner-checked, the rM2 is not |
 | a pair of scissors | print `examples/16-net-tray.yaml` and `box-tuck-a4` at 100 %, cut, fold. The tray checks the geometry; the tuck-top also checks the thickness rule. **No test can do this**, and until someone does, the tests only agree with themselves |
-| a pypi.org login | trusted publishing, then the first real tag — `v0.10.0`. Everything on this side is ready and the name is free; see *Not done* |
+| a pypi.org login | trusted publishing, then the first real tag — `v0.11.0`. Everything on this side is ready and the name is free; see *Not done* |
 | use | the three § 15 questions below, and 1.0.0 itself: 0.10.0 says the features are done and audited, and the DSL has not yet met anyone else |
 
 If a new feature *is* wanted, the recipe has not changed since M1: a design
