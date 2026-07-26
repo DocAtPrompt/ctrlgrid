@@ -1353,6 +1353,28 @@ kleinsten Maßes (die Wände träfen sich in der Mitte), ein Schlüssel, der fü
 gewählte Bauart nichts tut (`tuck` an einer Wanne, § 5.1), und eine unbekannte
 Bauart, die die vorhandenen nennt.
 
+#### Faltnotation — Benennung, keine neue Mechanik
+
+Die Yoshizawa–Randlett-Notation des Papierfaltens braucht **keine neuen
+Schlüssel**: sie ist die Strichmechanik aus § 5.3 und § 7.1, benannt.
+
+| Bedeutung | Schreibweise |
+|---|---|
+| **Talfalte** (zu mir hin) | `style: dashed` |
+| **Bergfalte** (von mir weg) | `style: dashed` mit `dash: [3, 1, 1, 1]` — Strichpunkt |
+| **Hilfsfalte** (Bezug, keine Faltung) | `style: dotted` oder eine hellere `color` |
+| **Schnittlinie** | `style: solid` — womit `net` seinen Umriss zeichnet |
+
+Bewusst **keine** Werte `valley`/`mountain` in der DSL: es gäbe zwei Wege,
+dasselbe zu sagen, und der zweite müsste gepflegt werden. Eine Konvention, die
+im Handbuch steht und die ein Preset vorführt (`precrease-16-a4`, ein 16 × 16
+Vorfalzraster mit beiden Diagonalen), leistet dasselbe, ohne die Sprache zu
+verdoppeln — dieselbe Zurückhaltung wie bei den Formularbeschriftungen (§ 7.8).
+
+Welche Linie Berg und welche Tal ist, gehört zum Modell und nicht zum Papier;
+ein Vorfalzbogen leistet die nützliche Hälfte, nämlich sie unterscheidbar zu
+machen.
+
 **Bewusst nicht enthalten:** weitere Bauarten (Umschlag, Wickelschachtel,
 Stülpdeckel — alle dieselbe Mechanik mit anderer Flächenliste, sie kommen, wenn
 sie jemand braucht), Beschriftungen auf den Flächen (§ 2: das Werkzeug

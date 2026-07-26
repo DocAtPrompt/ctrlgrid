@@ -208,7 +208,14 @@ is already made, do not re-open it:** a specific paper aeroplane is a *drawing*,
 not a structure, and § 2 (line 60 of the spec) rules out a general drawing
 language. What follows is the part that is parametric.
 
-### 2a. Fold notation (naming, not new machinery)
+### 2a. Fold notation (naming, not new machinery) — **done, 2026-07-26**
+
+> Done as this file recommended: a documented convention, no code. The table
+> lives in the handbook and in § 7.14; `valley`/`mountain` as DSL values were
+> put to the user and rejected — two ways to say one thing. `precrease-16-a4`
+> shows it.
+
+
 
 Origami's Yoshizawa–Randlett convention: valley fold dashed, mountain fold
 dash-dot, reference crease thin. The dash machinery already does this —
@@ -236,7 +243,15 @@ Start with one box style (a simple tuck-top or a tray) and refuse the rest by
 name until built, the way every deferred feature in this codebase does. Check
 that the net fits the sheet in `check()` and refuse loudly with the size needed.
 
-### 2c. Pre-creasing grids for tessellations
+### 2c. Pre-creasing grids for tessellations — **done, 2026-07-26**
+
+> Done: `precrease-16-a4`, a preset as this file predicted. One thing it got to
+> decide: the field has to be the **pattern area itself** (margins 17 / 60.5 mm
+> on A4 give a 176 mm square), because `extent` bounds which lines exist and
+> not how long they are — a centred field with the diagonals bounded by extent
+> would still have run them out over the whole sheet.
+
+
 
 A 16×16 or 32×32 grid plus diagonals, in fold notation. `grid` does the
 orthogonal part today; the diagonals are 1b. Mostly a preset once 1b exists.

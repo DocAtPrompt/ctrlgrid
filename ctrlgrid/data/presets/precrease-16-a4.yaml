@@ -1,0 +1,71 @@
+# precrease — a 16 × 16 pre-creasing grid with both diagonals, in fold
+# notation. A4, and the field is the pattern area itself.
+#
+# The sheet you crease *before* folding a tessellation: every line here is a
+# crease you make in advance, and the notation tells you which way to fold it.
+#
+# **The fold notation (Yoshizawa–Randlett) needs no new keys** — it is the dash
+# machinery this tool has had since M2, named:
+#
+#   valley fold      `style: dashed`                  — a plain dashed line
+#   mountain fold    `dash: [3, 1, 1, 1]`             — dash-dot
+#   reference crease `style: dotted`, or a lighter colour
+#   cut line         `style: solid` (see `net`, § 7.14)
+#
+# Which lines are valleys and which are mountains depends on the model, so this
+# sheet does the useful half: it tells them apart. The orthogonal grid is drawn
+# as valleys and the diagonals as mountains — swap the two blocks below for the
+# other convention.
+#
+# The margins make the pattern area **square** (176 × 176 mm = 16 cells of
+# 11 mm), so the diagonals are clipped to the field rather than running out over
+# the rest of the sheet. Cut along the field's edge after creasing.
+#
+# The diagonals' spacing is 11 mm / √2 — that is what puts one diagonal through
+# every corner of every cell (§ 7.1: a slanted family is spaced perpendicular to
+# itself), and line 0 of every family runs through the pattern area's origin, so
+# all four families meet exactly.
+version: 1
+
+page:
+  format: a4
+  margin:
+    inner: 17mm
+    outer: 17mm
+    top: 60.5mm
+    bottom: 60.5mm
+
+generator: lines
+families:
+  # The grid: 16 cells of 11 mm each way, drawn as valley folds.
+  - direction: horizontal
+    base_spacing: 11mm
+    base_weight: 0.25pt
+    style: dashed
+    base_dash: 0.8mm
+    color: ["#4a5b6d"]
+
+  - direction: vertical
+    base_spacing: 11mm
+    base_weight: 0.25pt
+    style: dashed
+    base_dash: 0.8mm
+    color: ["#4a5b6d"]
+
+  # The diagonals: mountain folds, dash-dot. 11 mm / √2 = 7.7781746 mm,
+  # written out far enough that the last diagonal still meets its corner.
+  - direction: 45deg
+    base_spacing: 7.7781746mm
+    base_weight: 0.2pt
+    style: dashed
+    base_dash: 0.7mm
+    dash: [3, 1, 1, 1]
+    color: ["#9aa3ad"]
+
+  - direction: 135deg
+    base_spacing: 7.7781746mm
+    base_weight: 0.2pt
+    style: dashed
+    base_dash: 0.7mm
+    dash: [3, 1, 1, 1]
+    color: ["#9aa3ad"]

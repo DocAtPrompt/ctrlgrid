@@ -41,12 +41,12 @@ uv sync --extra dev && uv run pytest && uv run ruff check .
 
 1141 tests, all green, ruff clean. Sixty-odd commits on `main`, linear history,
 pushed to **[github.com/DocAtPrompt/ctrlgrid](https://github.com/DocAtPrompt/ctrlgrid)**
-(public); CI runs green there on Linux (3.11–3.13), macOS and Windows. Seventeen
+(public); CI runs green there on Linux (3.11–3.13), macOS and Windows. Eighteen
 presets — one per blade (`lines`, `dots`, `polar`, `form`, `maze`,
 `perspective`, `mandala`, `staves`, `grid`, `tiling`, `net`), the two documents
 (`calendar-a4`, `notebook-a4`), and four papers that are all `lines` with
 different cycles (`calligraphy-a4`, `seyes-a4`, `mizige-a4`,
-`knitting-chart-a4`) — and a
+`knitting-chart-a4`, `precrease-16-a4`) — and a
 rendered
 **example gallery** in [`examples/`](../examples/) — one A4 sheet per generator plus
 a multi-page maze booklet, a cover sheet and the calendar, each an ordinary
@@ -341,12 +341,19 @@ question 4 was deliberately left out of it — the angle is what unlocks
 calligraphy guides *and* origami pre-creasing; the unit is a convenience on top,
 and § 15 says that class waits on real use. 1c shipped `seyes-a4`, `mizige-a4` and `knitting-chart-a4` (Genkō yōshi was
 dropped with its reason: its furigana strip needs interrupted rules, and § 2
-rules out a drawing language), and 1d shipped `notebook`. **Phase 2b is built too:** `net` (§ 7.14, decision 51), with `box-tuck-a4` and
-`16-net-tray`. What is left of the handover is the small rest of phase 2: fold
-notation as a *documented convention* (2a — the dash machinery already draws
-valley and mountain folds; § 7.14 names them, presets could show them) and
-pre-creasing grids for tessellations (2c — `grid` plus the diagonals of 1b,
-mostly a preset).
+rules out a drawing language), and 1d shipped `notebook`. **Phase 2 is built as well** — `net` (2b: § 7.14, decision 51, `box-tuck-a4`,
+`16-net-tray`), and 2a and 2c together in one move: the **fold notation is a
+documented convention**, not new keys (valley `style: dashed`, mountain
+`dash: [3, 1, 1, 1]`, reference `dotted`, cut `solid` — handbook and § 7.14
+carry the table, and `valley`/`mountain` as DSL values were **rejected**: two
+ways to say one thing, and the second needs maintaining), and `precrease-16-a4`
+is the sheet that shows it — a 16 × 16 grid of valleys with both diagonals as
+mountains, its margins chosen so the *pattern area itself* is the 176 mm square
+field, which is what clips the diagonals to it.
+
+**Nothing from the handover is left.** What remains is what always remained:
+the empty `quirks`, the rM2 figures nobody has checked on the device, the
+deferred PyPI release — and the box nobody has cut out and folded yet.
 A specific paper aeroplane was considered and **refused**: it is a drawing, not
 a structure, and § 2 rules out a drawing language.
 

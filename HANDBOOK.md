@@ -923,6 +923,38 @@ a tray where they would do nothing, and an unknown style.
 Example: [`16-net-tray.yaml`](examples/16-net-tray.yaml). Preset:
 `box-tuck-a4`.
 
+#### Fold notation
+
+Paper folding has a notation — Yoshizawa–Randlett — and Ctrl+Grid needs no new
+keys for it: it is the dash machinery of §9, named.
+
+| Means | Write |
+|---|---|
+| **valley fold** (fold towards you) | `style: dashed` |
+| **mountain fold** (fold away) | `style: dashed` with `dash: [3, 1, 1, 1]` — dash-dot |
+| **reference crease** (a guide, not a fold) | `style: dotted`, or a lighter `color` |
+| **cut line** | `style: solid` — what `net` draws its outline with |
+
+`base_dash` sets the scale: the numbers in `dash` are multiples of it, so
+`base_dash: 0.7mm` with `dash: [3, 1, 1, 1]` is 2.1 mm on, 0.7 off, 0.7 on, 0.7
+off. Keep the dashes short relative to the spacing — at three or four dashes per
+cell the sheet reads as a grid; at one it reads as a row of ticks.
+
+Which lines are valleys and which are mountains is a property of the model, not
+of the paper, so a **pre-creasing sheet** does the useful half: it tells them
+apart. `precrease-16-a4` is one — a 16 × 16 grid of valleys with both diagonals
+as mountains, on a square field:
+
+```bash
+ctrlgrid precrease-16-a4 -o precrease.pdf
+```
+
+Its margins make the *pattern area itself* square (176 × 176 mm), so the
+diagonals are clipped to the field instead of running out over the rest of the
+sheet — and because a slanted family is spaced perpendicular to itself (§7.1),
+a diagonal spacing of 11 mm / √2 puts one diagonal through every corner of every
+cell.
+
 ### `calendar` — a linked, write-on planner
 
 Unlike every generator above, `calendar` does not fill one page — it produces a
@@ -1199,7 +1231,7 @@ the documentation. There is one for every generator:
 dots-5mm            grid-a4             mandala-a4          maze-medium
 millimeter-a4       perspective-2pt-a4  phone-log-a5        polar-a4
 staves-treble-a4    tiling-hex-a4       calendar-a4         notebook-a4
-box-tuck-a4
+box-tuck-a4         precrease-16-a4
 ```
 
 And five that are papers rather than generators — each one is `lines` with a
