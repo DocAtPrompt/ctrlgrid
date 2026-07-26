@@ -119,6 +119,20 @@ class TestRefusals:
         with pytest.raises(DefinitionError):
             Cycle.of([Decimal(1)]).positions(base_um=0, extent_um=10000)
 
+    def test_the_both_ways_walk_refuses_the_same_two_things(self) -> None:
+        # `positions_between` is the slanted family's path (§ 7.1), and it walks
+        # outwards from line 0 until a position falls past the bound. A cycle
+        # that never advances means that never happens — the loop runs forever
+        # and `ctrlgrid check`, of all commands, hangs. The upward-only
+        # `positions` has guarded this since M1; both entry points need it, or
+        # the one without it is the one a user finds.
+        never_advances = Cycle.of([Decimal(0)])
+        with pytest.raises(DefinitionError):
+            list(never_advances.positions_between(base_um=1000, lower_um=-5000, upper_um=5000))
+        no_base = Cycle.of([Decimal(1)])
+        with pytest.raises(DefinitionError):
+            list(no_base.positions_between(base_um=0, lower_um=-5000, upper_um=5000))
+
 
 class TestEffectivePeriod:
     def test_the_period_in_marks_is_the_lcm_of_the_cycle_lengths(self) -> None:

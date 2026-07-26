@@ -191,6 +191,24 @@ class TilingConfig(BaseModel):
     font: FontSpec = FontSpec(size="7pt")
 
     @model_validator(mode="after")
+    def _a_tile_has_an_edge(self) -> TilingConfig:
+        """§ 12 point 6: a tile with no edge length is not a small tile.
+
+        This has to be asked here and not in `check`: `_cells` divides the area
+        by the step vector and runs *before* `check` does, so a zero reaches the
+        user as a `ZeroDivisionError` traceback. A negative gets further still
+        and is answered by `check` with "no tile fits — use a smaller size",
+        advice written for the opposite problem. One question closes both, and
+        on the model the loader can still name the line (§ 12).
+        """
+        if self.size.um <= 0:
+            raise ValueError(
+                f"a tile of {self.size.raw} has no edge to lay out — `size` is the edge "
+                "length and must be greater than zero (§ 7.7)"
+            )
+        return self
+
+    @model_validator(mode="after")
     def _keys_that_need_each_other(self) -> TilingConfig:
         if "orientation" in self.model_fields_set and self.shape != "hex":
             raise ValueError(

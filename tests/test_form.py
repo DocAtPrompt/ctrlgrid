@@ -407,3 +407,34 @@ class TestOnTheSheet:
         for path in (first, second):
             build(loads(self.DEFINITION, source="test"), PdfWriter(path))
         assert first.read_bytes() == second.read_bytes()
+
+
+class TestADegenerateRuling:
+    """`line_spacing: 0mm` draws every writing line on top of the last.
+
+    § 7.8's whole point is that the ruling is absolute and the line *count*
+    follows from it — which is a division, in two places (`_line_count` and
+    `_ruling`). Both assert the spacing is not `None`; neither asks whether it
+    is zero, so the user gets a `ZeroDivisionError` traceback. The guard belongs
+    on the field, where the loader can still name the line (§ 12).
+    """
+
+    DEFINITION = (
+        "version: 1\n"
+        "page:\n  format: a5\n  margin: 10mm\n"
+        "generator: form\n"
+        "rows:\n"
+        "  - height: rest\n"
+        "    columns:\n"
+        "      - { title: 'Notiz', line_spacing: 8mm }\n"
+    )
+
+    def test_a_line_spacing_of_zero_is_refused_and_does_not_divide_by_it(self) -> None:
+        with pytest.raises(DefinitionError) as excinfo:
+            loads(self.DEFINITION.replace("line_spacing: 8mm", "line_spacing: 0mm"), source="test")
+        assert "0mm" in str(excinfo.value)
+
+    def test_a_negative_line_spacing_is_refused(self) -> None:
+        with pytest.raises(DefinitionError) as excinfo:
+            loads(self.DEFINITION.replace("line_spacing: 8mm", "line_spacing: -2mm"), source="test")
+        assert "-2mm" in str(excinfo.value)

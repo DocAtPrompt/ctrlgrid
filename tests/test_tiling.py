@@ -221,3 +221,33 @@ class TestOnTheSheet:
         for path in (first, second):
             build(loads(self.DEFINITION, source="test"), PdfWriter(path))
         assert first.read_bytes() == second.read_bytes()
+
+
+class TestADegenerateTile:
+    """A tile with no edge is not a small tile — it is no tile (§ 12 point 6).
+
+    `size` reaches `_cells` before `check` ever runs, so a zero divides and the
+    user gets a `ZeroDivisionError` traceback instead of a message; a negative
+    reaches `check` and is answered with advice written for a tile too *large*.
+    One guard on the value closes both, and it belongs on the model so the
+    loader can name the line (§ 12).
+    """
+
+    DEFINITION = (
+        "version: 1\n"
+        "page:\n  format: a5\n  margin: 10mm\n"
+        "generator: tiling\n"
+        "shape: hex\n"
+        "size: 8mm\n"
+    )
+
+    def test_a_size_of_zero_is_refused_and_does_not_divide_by_it(self) -> None:
+        with pytest.raises(DefinitionError) as excinfo:
+            loads(self.DEFINITION.replace("size: 8mm", "size: 0mm"), source="test")
+        assert "0mm" in str(excinfo.value)
+
+    def test_a_negative_size_is_refused_as_such(self) -> None:
+        # Not with "no tile fits, use a smaller size" — that advice is wrong.
+        with pytest.raises(DefinitionError) as excinfo:
+            loads(self.DEFINITION.replace("size: 8mm", "size: -5mm"), source="test")
+        assert "-5mm" in str(excinfo.value)

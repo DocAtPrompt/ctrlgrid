@@ -104,6 +104,24 @@ class Field_(Section):
         return data
 
     @model_validator(mode="after")
+    def _the_ruling_has_to_advance(self) -> Field_:
+        """§ 7.8: the ruling is absolute, so the line count is a division.
+
+        `_line_count` and `_ruling` both divide by `line_spacing`, and both
+        assert only that it is not `None` — the author was thinking of the key
+        being absent, not of it being zero. A zero therefore reaches the user
+        as a `ZeroDivisionError`, and a negative would step the writing lines
+        upwards out of the field.
+        """
+        if self.line_spacing is not None and self.line_spacing.um <= 0:
+            raise ValueError(
+                f"`line_spacing` is {self.line_spacing.raw} — every writing line would "
+                "fall on the last. The ruling is absolute (§ 7.8), so it must be greater "
+                "than zero"
+            )
+        return self
+
+    @model_validator(mode="after")
     def _a_field_or_a_nest(self) -> Field_:
         if self.rows is not None and (self.title is not None or self.options):
             raise ValueError(

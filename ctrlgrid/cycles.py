@@ -69,6 +69,29 @@ class Cycle:
         """The multiple that applies to mark `index`."""
         return self.values[index % len(self.values)]
 
+    def _refuse_a_walk_that_cannot_advance(self, *, base_um: int, field: str | None) -> None:
+        """The two conditions under which any walk over this cycle never ends.
+
+        Both walks below step outwards until a position falls past a bound. If
+        a step is zero the position never moves, the bound is never reached and
+        the loop runs forever — so this has to be asked *before* either of them
+        starts, and by both of them. It lives here rather than at each walk
+        because there are two entry points and the one that forgets is the one
+        a user finds: `positions_between` (§ 7.1, slanted families) went without
+        it and hung `ctrlgrid check`, the one command that promises to do
+        nothing but look.
+        """
+        if base_um <= 0:
+            raise DefinitionError(
+                f"the base value must be greater than zero, got {base_um} µm", field=field
+            )
+        if self.total <= 0:
+            raise DefinitionError(
+                f"the spacing cycle {list(self.values)} sums to zero, so the pattern would "
+                "never advance — at least one entry must be greater than zero (§ 5.3)",
+                field=field,
+            )
+
     def positions(
         self,
         *,
@@ -91,16 +114,7 @@ class Cycle:
         micrometres, or a 45-pixel cell would come out 4.995mm instead of the
         true 4.991mm. Off (`None`) is the ordinary exact-micrometre path.
         """
-        if base_um <= 0:
-            raise DefinitionError(
-                f"the base value must be greater than zero, got {base_um} µm", field=field
-            )
-        if self.total <= 0:
-            raise DefinitionError(
-                f"the spacing cycle {list(self.values)} sums to zero, so the pattern would "
-                "never advance — at least one entry must be greater than zero (§ 5.3)",
-                field=field,
-            )
+        self._refuse_a_walk_that_cannot_advance(base_um=base_um, field=field)
         if pixel_dpi:
             return self._walk_pixels(
                 base_um=base_um, extent_um=extent_um, offset_um=offset_um, dpi=pixel_dpi
@@ -132,6 +146,7 @@ class Cycle:
         The index goes on counting downwards, so `weight.at(index)` and
         `color[index % len]` mean below line 0 what they mean above it.
         """
+        self._refuse_a_walk_that_cannot_advance(base_um=base_um, field=field)
         if lower_um > upper_um:
             raise DefinitionError(
                 f"the range {lower_um}…{upper_um} µm runs backwards", field=field
