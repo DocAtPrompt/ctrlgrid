@@ -167,6 +167,11 @@ class Document:
     """The active device profile, or None on paper (§ 9.2). Carries the density
     the media check measures against (§ 12.1) and `snap: pixel` rounds to."""
 
+    skip_unsupported: bool = False
+    """§ 10.2: `--skip-unsupported` leaves out what the writer cannot draw and
+    carries on, instead of refusing the run. Only ever the user's explicit
+    decision, and never silent: what was left out is reported once."""
+
     strict: bool = False
     """§ 12.1: `--strict` turns every media warning into an error, so a CI run
     or `ctrlgrid check` can guard a preset set."""
@@ -284,6 +289,7 @@ def loads(text: str, overrides: Mapping[str, Any] | None = None, *, source: str)
         source_text=text,
         digest=hashlib.sha256(text.encode("utf-8")).hexdigest()[:12],
         device=profile,
+        skip_unsupported=bool(overrides.get("skip_unsupported")),
         strict=bool(overrides.get("strict")),
         nup=_resolve_nup(overrides),
     )

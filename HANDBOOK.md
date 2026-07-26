@@ -162,7 +162,8 @@ If a target file already exists, the run refuses rather than overwrite it. Pass
 ### Flags
 
 All flags beat the definition file (the command line always wins). Switch-style
-flags (`--cover`, `--strict`, `--embed-def`) only ever turn something *on* — the
+flags (`--cover`, `--strict`, `--embed-def`, `--skip-unsupported`) only ever
+turn something *on* — the
 definition decides when the flag is absent.
 
 See [Appendix C](#appendix-c--command-line-flags) for the full list. The most
@@ -1181,6 +1182,27 @@ imposition.
 
 ---
 
+### When the writer cannot draw something
+
+A run is refused up front when the chosen writer lacks a feature the definition
+needs — text on PNG is the usual case, and a calendar's links the other. That is
+the right default: half a file is worse than none.
+
+`--skip-unsupported` is the explicit way out. The run then leaves out what
+cannot be drawn and carries on, and **says what it left out**:
+
+```bash
+ctrlgrid -d pad.yaml -o pad.png --skip-unsupported
+  note: --skip-unsupported: leaving out text — the writer cannot draw it,
+        so those marks are not on the sheet at all (§ 10.2)
+```
+
+The name is deliberate: an `--anyway` next to `--force` would be two flags that
+both read "do it regardless" and do different things — `--force` is about the
+*file*, this one about the *content*.
+
+---
+
 ## 16. Batch output: name lists
 
 Give a list of names, one per line, and get one sheet per name with `{name}`
@@ -1317,13 +1339,15 @@ key.
 | `--embed-def` | embed the definition's source in the PDF |
 | `--seed <n>` | seed for procedural generators (`maze`) |
 | `--strict` | turn media warnings into errors |
+| `--skip-unsupported` | leave out what the writer cannot draw, and say so |
 | `--nup <CxR>` | N-up imposition, never scaled |
 | `--nup-sheet <format>` | the sheet format for imposition |
 | `--crop-marks` | trim marks with `--nup` |
 | `--force` | overwrite an existing output file |
 | `--quiet` | report only the output path |
 
-Switch flags (`--cover`, `--strict`, `--embed-def`, `--crop-marks`) only turn
+Switch flags (`--cover`, `--strict`, `--embed-def`, `--skip-unsupported`,
+`--crop-marks`) only turn
 something on; the definition decides when the flag is absent. All flags beat the
 definition.
 

@@ -40,10 +40,9 @@ paper formats **and** for e-ink tablets.
 > ```
 >
 > Flags: `--pages`, `--names`, `--format`, `--device`, `--orientation`,
-> `--stamp`, `--cover`, `--embed-def`, `--seed`, `--strict`, `--nup`,
-> `--nup-sheet`, `--crop-marks`, `-o`, `--force`, `--quiet`.
->
-> Not yet: `--skip-unsupported`.
+> `--stamp`, `--cover`, `--embed-def`, `--seed`, `--strict`,
+> `--skip-unsupported`, `--nup`, `--nup-sheet`, `--crop-marks`, `-o`,
+> `--force`, `--quiet`.
 >
 > **Not on PyPI yet** — install straight from this repository (see below).
 

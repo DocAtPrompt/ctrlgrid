@@ -162,3 +162,71 @@ class TestPaperUsesAssumedDpi:
         path = render(tmp_path, definition)
         with Image.open(path) as image:
             assert image.size[0] == pytest.approx(2480, abs=2)
+
+
+class TestSkipUnsupported:
+    """§ 10.2: leaving a feature out and carrying on — but only as the user's
+    explicit decision, and never silently.
+
+    The name is the spec's own: `--anyway` beside § 11.3's `--force` would be
+    two flags that both read "do it regardless" and do different things.
+    """
+
+    HEADER = (
+        "version: 1\npage:\n  device: remarkable-paper-pro\n"
+        "header:\n  height: 10mm\n  center: 'Notes'\n"
+        "generator: dots\n"
+        "grid:\n  x: {base_spacing: 5mm}\n  y: {base_spacing: 5mm}\n"
+        "base_size: 0.5mm\n"
+    )
+
+    def test_without_the_flag_the_run_is_still_refused(self, tmp_path: Path) -> None:
+        with pytest.raises((DefinitionError, CtrlGridError)):
+            render(tmp_path, self.HEADER)
+
+    def test_with_the_flag_the_png_is_written_without_the_text(self, tmp_path: Path) -> None:
+        path = render(tmp_path, self.HEADER, skip_unsupported=True)
+        assert path.exists()
+
+    def test_it_says_what_it_left_out(self, tmp_path: Path) -> None:
+        from ctrlgrid.pages import preflight
+        from ctrlgrid.writers.png import PngWriter
+
+        document = loads(self.HEADER, {"skip_unsupported": True}, source="test")
+        geometry, _contexts, _bands, _cover = preflight(
+            document, PngWriter(tmp_path / "out.png")
+        )
+        notices = list(document.notices) + list(geometry.notices)
+        assert any("text" in note and "skip" in note.lower() for note in notices)
+
+    def test_the_pattern_itself_still_comes_out(self, tmp_path: Path) -> None:
+        from PIL import Image
+
+        path = render(tmp_path, self.HEADER, skip_unsupported=True)
+        with Image.open(path) as image:
+            assert image.size == (1620, 2160)
+            assert image.convert("L").getextrema()[0] < 200   # the dots are there
+
+    def test_on_pdf_the_flag_changes_nothing(self, tmp_path: Path) -> None:
+        # Everything is supported there, so there is nothing to leave out — and
+        # a flag that quietly changed a supported run would be the worst of both.
+        definition = (
+            "version: 1\npage: {format: a4}\n"
+            "header:\n  height: 10mm\n  center: 'Notes'\n"
+            "generator: dots\ngrid:\n  x: {base_spacing: 5mm}\n  y: {base_spacing: 5mm}\n"
+            "base_size: 0.5mm\n"
+        )
+        plain = render(tmp_path, definition, name="a.pdf")
+        skipped = render(tmp_path, definition, name="b.pdf", skip_unsupported=True)
+        assert plain.read_bytes() == skipped.read_bytes()
+
+    def test_a_document_on_png_leaves_out_its_links(self, tmp_path: Path) -> None:
+        # A calendar needs `link` and `text`; with the flag it becomes a set of
+        # plain pages rather than a refusal.
+        definition = (
+            "version: 1\npage:\n  device: remarkable-2\n  orientation: landscape\n"
+            "  margin: 0mm\n"
+            "generator: calendar\nyear: 2026\n"
+        )
+        path = render(tmp_path, definition, name="cal.png", skip_unsupported=True)
+        assert path.exists() or (tmp_path / "cal-1.png").exists()

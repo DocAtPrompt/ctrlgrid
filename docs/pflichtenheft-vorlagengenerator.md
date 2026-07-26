@@ -2119,6 +2119,15 @@ fehlenden Features. Sonst entstehen halbe Dateien.
 sprechend: Ein `--anyway` neben dem `--force` aus § 11.3 wären zwei Flags, die
 beide „mach trotzdem" heißen und Verschiedenes tun.
 
+**Gebaut (2026-07).** Das Flag ist ein Einwegschalter wie `--cover` und `--strict`
+und steht deshalb **nur** auf der Kommandozeile — eine Def kann es nicht
+verlangen, weil das Weglassen die Entscheidung des Nutzers ist und nicht die des
+Dokuments. Der Vorlauf lehnt dann nicht ab, sondern meldet **einmal**, was
+fehlen wird; beim Schreiben lässt ein Hüllen-Writer genau die Marken aus, deren
+Fähigkeit dem Schreiber fehlt, dazu Links, Lesezeichen und den Anhang. Eine
+Hülle statt einer Prüfung an jedem `draw`-Aufruf: davon gibt es ein Dutzend, und
+eine würde irgendwann vergessen (§ 5.1).
+
 ### 10.3 Schriften
 
 **Zwei Stufen, bewusst getrennt.**

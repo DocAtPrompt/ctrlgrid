@@ -133,6 +133,13 @@ def generate(
         bool,
         typer.Option("--crop-marks", help="Draw cut guides in the imposition margin (§ 14)."),
     ] = False,
+    skip_unsupported: Annotated[
+        bool,
+        typer.Option(
+            "--skip-unsupported",
+            help="Leave out what the writer cannot draw and carry on (§ 10.2).",
+        ),
+    ] = False,
     strict: Annotated[
         bool,
         typer.Option("--strict", help="Turn media warnings into errors (§ 12.1)."),
@@ -155,7 +162,7 @@ def generate(
             definition,
             _overrides(
                 pages, format, device, orientation, names, stamp, cover, seed, strict,
-                nup, nup_sheet, crop_marks, embed_def,
+                nup, nup_sheet, crop_marks, embed_def, skip_unsupported,
             ),
         )
         destination = _destination(out, target, definition, force)
@@ -289,6 +296,7 @@ def _overrides(
     nup_sheet: str | None = None,
     crop_marks: bool = False,
     embed_def: bool = False,
+    skip_unsupported: bool = False,
 ) -> dict:
     if format is not None and device is not None:
         # § 9.2: two answers to "what medium". The loader would refuse them in a
@@ -315,6 +323,9 @@ def _overrides(
         "seed": seed,
         # § 12.1: only ever switches strictness on, like --cover.
         "strict": True if strict else None,
+        # § 10.2: the same one-way switch. Leaving a feature out is only ever
+        # the user's explicit decision, so a definition cannot ask for it.
+        "skip_unsupported": True if skip_unsupported else None,
         # § 14: imposition is a property of the print, so it is command-line
         # only. `nup` present is what turns it on; the loader resolves the rest.
         "nup": nup,

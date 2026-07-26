@@ -39,7 +39,7 @@ needs a human *and* the user has chosen to defer PyPI for now (see *Not done*).
 uv sync --extra dev && uv run pytest && uv run ruff check .
 ```
 
-1141 tests, all green, ruff clean. Sixty-odd commits on `main`, linear history,
+1147 tests, all green, ruff clean. Sixty-odd commits on `main`, linear history,
 pushed to **[github.com/DocAtPrompt/ctrlgrid](https://github.com/DocAtPrompt/ctrlgrid)**
 (public); CI runs green there on Linux (3.11–3.13), macOS and Windows. Eighteen
 presets — one per blade (`lines`, `dots`, `polar`, `form`, `maze`,
@@ -95,6 +95,7 @@ says so.
 | post-M9 `calendar` | a linked, write-on planner PDF (§ 7) — the first **document generator**: it owns heterogeneous, cross-linked pages (Index, Year two-table, Month day-list, configurable Day blocks, paginated Notes-index, Notes) instead of one pattern area. Two new mechanisms modelled on `outline`: a **`link` capability** (writer method + capability, PDF-only, PNG refused; links drawn as underlined Text) and a **document-mode page loop** in `pages.py`. Dates deterministic from the year, names from the def (English default), one-page-per-view fit-or-refuse. Pages: an opt-in **title** page (full-sheet colour via a new `DocumentPage.background` (+ an optional full-sheet `background_image`, `cover`/`contain`, transparency shows the colour), optional `logo`, and independent opt-in `show_header`/`show_footer` (replacing `plain`)), a **contents** hub, a **full-year overview** (twelve mini-months, three across, numbers as links, no cell boxes), **half-year 1 & 2** tables (short months' columns end — no empty cells), months, days, opt-in **weeks** (`week_start`-aligned), and notes. `{year}` header placeholder. Holidays come inline **or from a file** (`holidays_file`: a YAML list or a concrete-dated `.ics`, resolved against `base_dir` like `logo`, filtered to the year, merged with inline — inline wins on a date clash; `.ics` recurring/timed events skipped and counted; source named in the run report). **§ 7.12 is complete.** |
 | post-M9 `ruler` | an edge scale as frame furniture (§ 8.12): `ruler: {edges: [bottom, left], unit: cm}`. Zero at the *pattern area's* origin, so the numbers agree with the grid; ticks grow outward into the margin and reserve nothing, so switching it on moves no grid line (§ 8.1's rule for `border`, restated). Physical edges, not `inner`/`outer`. `unit` says what the numbers mean, three lengths say where the ticks are, each a whole multiple of the one below. The ladder arithmetic lives once in `ruler.py` (drawing *and* pre-flight use it); the number's height and width are asked of the writer, never guessed. Four refusals before page one; PNG refused by the existing capability path. Example `13-ruler-edge`, decision 47 |
 | post-M9 slanted `lines` | `direction: 55deg` (§ 7.1, decision 48) — spaced *perpendicular*, clipped, and anchored so that **line 0 goes through the pattern area's origin** with an unlimited family growing both ways. `0deg`/`90deg` reproduce `horizontal`/`vertical` mark for mark, which is the test that keeps it one rule. Downwards reads the cycle backwards (`Cycle.positions_between`), the perpendicular's sign points into the area, and negative perpendicular coordinates are legal. A slanted family reports **no** periodic axis, so § 7.1's "no snapping" needs no new machinery; `governing`/`log10` on one are refused. Liang–Barsky moved to `ctrlgrid/clip.py`, shared with `perspective`. Preset `calligraphy-a4`, example `14-calligraphy-italic` |
+| post-M9 `--skip-unsupported` | § 10.2's escape hatch, the last unbuilt thing the spec described: leave out what the writer cannot draw and carry on, as the user's explicit decision only (command line, never a def) and never silently — the pre-flight turns its refusal into one notice naming what will go. Implemented as a **wrapper around the writer** (`_LeavingOutWhatItCannotDraw`) rather than a check at each of the dozen `draw` sites, one of which would eventually be forgotten (§ 5.1); it drops marks by capability, plus links, bookmarks and the attachment. Also fixed on the way: a document's pages are now measured with the metrics oracle, not the writer |
 | post-M9 `net` | the eleventh blade (§ 7.14, decision 51): a `tray` or a `tuck_top` box from its **inner** dimensions, cut lines solid, creases dashed, glue tabs computed, centred and **refused rather than scaled**. The mechanism: a style produces **panels** and one rule makes the marks — an edge two panels share is a fold, an edge only one has is a cut — so a new style is a panel list, never a traced outline, and the match is exact because positions are integer µm. Every flap must span its attachment edge (that is what makes it exact). Two stated conventions: inner dimensions, and one thickness rule (a panel closing *over* a layer is widened, a flap sliding *inside* is shortened); `thickness: 0` gives the ideal net, and a test says so. Preset `box-tuck-a4`, example `16-net-tray` |
 | post-M9 `notebook` | the **second document generator**, and the first that composes blades (§ 7.13, decision 50): sections, each filled by an ordinary generator, with a linked contents page, opt-in dividers and a cover. The seam: a `DocumentPage` may carry a `Fill` (generator name + validated config) instead of marks, and **the handle calls the blade** — `pages.document_page_marks` is the one function that says what is on a page, used by the writer, the capability pre-flight and the media check. A section is a definition in miniature, validated by that blade's own `config_model` with the loader's context (so `px`/`%w` resolve there too). Document bands are now laid out **per page**, so `{page}` counts and a per-page `{section}` names the section; `calendar-a4` stayed byte-identical. `page_layout.Page` extracted from `calendar_layout` and shared. Preset `notebook-a4`, example `15-notebook` |
 | post-M9 band colour | a header/footer `Band` takes `background` (a full-width strip, band height only) and `text_color`, both default off — drawn in `layout_band` so both the blade and document paths get them; resolves the title-page contrast (§ 8.9) |
@@ -156,13 +157,20 @@ behind HEAD — re-tag at the release commit before pushing. Do **not** run
 `git push --tags`/`--follow-tags` casually: it would push that tag and fire the
 release. Plain `git push origin main` is safe.
 
-### Deferred features name their milestone
+### Deferred features named their milestone — and the list is now empty
 
-Anything specified but not built refuses with a message naming the milestone,
-never silently. `grep -rn "milestone M" ctrlgrid/` lists every one. This is
-deliberate: § 5.1 calls a PDF that is *almost* right the worst failure class
+Anything specified but not built refused with a message naming the milestone,
+never silently: § 5.1 calls a PDF that is *almost* right the worst failure class
 there is, so `border:` must never have read as an unknown key while it was
 unbuilt, and `snap:` must never have been quietly ignored.
+
+**`grep -rn "milestone M" ctrlgrid/` now finds only a docstring.** Everything the
+specification describes is built — `--skip-unsupported` (§ 10.2) was the last of
+it. The machinery stays and is worth knowing about, because the next unbuilt key
+will need it: `Section.deferred` (a per-section map of key → sentence) and
+`loader.DEFERRED_KEYS` (the same for the top level) both still work and are
+currently empty, except for `Margin.deferred`, which explains why margins are
+named `inner`/`outer` rather than `left`/`right` (§ 8.1).
 
 ## Read this before writing anything
 

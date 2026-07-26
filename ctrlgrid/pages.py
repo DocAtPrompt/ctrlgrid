@@ -648,7 +648,9 @@ def preflight(
     # § 10.2: what the writer cannot render is refused here, before a page is
     # written, naming the missing feature — the PNG writer's lack of text is
     # the first case this has ever caught.
-    _refuse_marks_the_writer_cannot_render(document, geometry, blade, plan, q, probe)
+    skipped = _refuse_marks_the_writer_cannot_render(document, geometry, blade, plan, q, probe)
+    if skipped:
+        geometry = replace(geometry, notices=geometry.notices + (skipped,))
 
     # § 12.1: the definition against the medium's resolution, once the medium
     # is fixed. A round-to-zero stroke raises here; the rest become notices,
@@ -779,6 +781,14 @@ def _metrics_oracle(q: WriterQuery) -> WriterQuery:
     return PdfWriter("unused-metrics-only")
 
 
+def _skipping_notice(missing: set[str]) -> str:
+    """What `--skip-unsupported` left out, in the user's terms (§ 10.2, § 12)."""
+    return (
+        f"--skip-unsupported: leaving out {', '.join(sorted(missing))} — the writer "
+        "cannot draw it, so those marks are not on the sheet at all (§ 10.2)"
+    )
+
+
 def _refuse_marks_the_writer_cannot_render(
     document: Document,
     geometry: Geometry,
@@ -786,7 +796,7 @@ def _refuse_marks_the_writer_cannot_render(
     plan: SheetPlan,
     writer: WriterQuery,
     probe: WriterQuery,
-) -> None:
+) -> str | None:
     """§ 10.2: refuse before rendering what the writer cannot draw, and name it.
 
     The vocabulary is complete from M1 and a writer grows into it; the missing
@@ -796,7 +806,7 @@ def _refuse_marks_the_writer_cannot_render(
     """
     caps = writer.capabilities()
     if caps >= _ALL_CAPABILITIES:
-        return
+        return None
 
     from ctrlgrid.frame import stamp_mark
 
@@ -817,7 +827,11 @@ def _refuse_marks_the_writer_cannot_render(
 
     missing = needed - caps
     if not missing:
-        return
+        return None
+    if document.skip_unsupported:
+        # § 10.2: leaving a feature out is the user's explicit decision, and it
+        # is never silent — the run says what it dropped, once.
+        return _skipping_notice(missing)
     if "text" in missing:
         hint = (
             " — the PNG writer has no font file to draw glyphs with (§ 10.4). Name a font "
@@ -900,7 +914,9 @@ def _document_preflight(
         density=document.device.density if document.device else None,
     )
     blade.check(document.config, area=geometry.area, q=probe)
-    _refuse_writer_cannot_render_document(document, blade, geometry, q, probe)
+    skipped = _refuse_writer_cannot_render_document(document, blade, geometry, q, probe)
+    if skipped:
+        geometry = replace(geometry, notices=geometry.notices + (skipped,))
 
     # § 12.1 reaches a document too: its pages are walked for the weights and
     # colours the medium has to carry. A round-to-zero stroke raises, the rest
@@ -1007,7 +1023,7 @@ def document_bands(
 
 def _refuse_writer_cannot_render_document(
     document: Document, blade: object, geometry: Geometry, writer: WriterQuery, probe: WriterQuery
-) -> None:
+) -> str | None:
     """§ 10.2 for a document: refuse before page one what the writer cannot do.
 
     A document navigates by links, so it always needs `link`; the first page's
@@ -1017,7 +1033,7 @@ def _refuse_writer_cannot_render_document(
     """
     caps = writer.capabilities()
     if caps >= _ALL_CAPABILITIES:
-        return
+        return None
     needed = {"link"}
     first = next(iter(blade.pages(document.config, area=geometry.area, q=probe)), None)
     if first is not None:
@@ -1028,7 +1044,9 @@ def _refuse_writer_cannot_render_document(
             needed.add(_MARK_CAPABILITY.get(type(mark), "vector"))
     missing = needed - caps
     if not missing:
-        return
+        return None
+    if document.skip_unsupported:
+        return _skipping_notice(missing)
     raise DefinitionError(
         f"this run needs {', '.join(sorted(missing))} and the PNG writer does not "
         "support it — a calendar's links and text need a PDF; output PDF instead (§ 10.2)"
@@ -1056,7 +1074,11 @@ def _build_document(
     # would break a path the pre-flight already approved.
     probe = _metrics_oracle(writer)
     total = _document_page_total(blade, document, geometry)
-    for index, page in enumerate(blade.pages(document.config, area=geometry.area, q=writer)):
+    # The pages are measured with the oracle, not with the writer: a generator
+    # asking for text metrics must get the same numbers whatever will finally
+    # draw them (§ 10.2), and a writer that cannot answer must not break a run
+    # the pre-flight approved — which is what `--skip-unsupported` needs.
+    for index, page in enumerate(blade.pages(document.config, area=geometry.area, q=probe)):
         context = _document_context(index, total)
         header_marks, footer_marks = document_bands(
             document, geometry, blade, context, q=probe, page=page
@@ -1104,6 +1126,44 @@ def _build_document(
     return geometry
 
 
+class _LeavingOutWhatItCannotDraw:
+    """A writer that drops what it cannot render, instead of the run being
+    refused (§ 10.2, `--skip-unsupported`).
+
+    A wrapper rather than a check at every `writer.draw(...)`: there are a dozen
+    of those and one would eventually be forgotten (§ 5.1). Everything it does
+    not override is forwarded untouched, so it stays a writer in every other
+    respect — including as a metrics oracle.
+    """
+
+    def __init__(self, writer: Writer) -> None:
+        self._writer = writer
+        self._missing = _ALL_CAPABILITIES - writer.capabilities()
+
+    def __getattr__(self, name: str):
+        return getattr(self._writer, name)
+
+    def draw(self, mark: Mark) -> None:
+        if _MARK_CAPABILITY.get(type(mark), "vector") in self._missing:
+            return
+        self._writer.draw(mark)
+
+    def link(self, lower_left, upper_right, target) -> None:
+        if "link" in self._missing:
+            return
+        self._writer.link(lower_left, upper_right, target)
+
+    def outline(self, title: str, *, index: int) -> None:
+        if "outline" in self._missing:
+            return
+        self._writer.outline(title, index=index)
+
+    def begin_document(self, meta: DocumentMeta) -> None:
+        if meta.attachment is not None and "attachment" in self._missing:
+            meta = replace(meta, attachment=None)
+        self._writer.begin_document(meta)
+
+
 def build(document: Document, writer: Writer) -> Geometry:
     """The page loop (§ 3.1): measure everything, then write everything.
 
@@ -1120,6 +1180,11 @@ def build(document: Document, writer: Writer) -> Geometry:
     from ctrlgrid.document import is_document_generator
 
     geometry, contexts, frames, cover = preflight(document, writer)
+    if document.skip_unsupported:
+        # § 10.2: the pre-flight has already said what will be left out; from
+        # here on the writer simply leaves it out.
+        writer = _LeavingOutWhatItCannotDraw(writer)
+
     blade = generators.get(document.generator)
 
     # § 7: a document generator owns its own heterogeneous, linked pages, so it
