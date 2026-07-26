@@ -94,3 +94,63 @@ def dash_arrays(path: Path, page: int = 0) -> list[list[float]]:
 
 def text_on(path: Path, page: int = 0) -> str:
     return PdfReader(str(path)).pages[page].extract_text()
+
+
+_TOKEN = re.compile(rb"(-?(?:\d+\.?\d*|\.\d+))|([A-Za-z']+)")
+
+
+def subpaths_um(path: Path, page: int = 0) -> list[list[tuple[float, float]]]:
+    """Every subpath on a page as its **on-curve** points, in micrometres.
+
+    A segment comes back as two points, a polygon as its vertices, and a circle
+    as the five points reportlab's four Bézier quarters begin and end at. That is
+    enough to measure what a definition declares — an edge length, a radius, a
+    rotation — without the test knowing how the writer chose to draw it.
+
+    Deliberately ignores the Bézier control points: they are the writer's
+    business, and a test that asserted on them would be checking reportlab.
+    """
+    stream = PdfReader(str(path)).pages[page].get_contents().get_data()
+    paths: list[list[tuple[float, float]]] = []
+    current: list[tuple[float, float]] = []
+    numbers: list[float] = []
+    for match in _TOKEN.finditer(stream):
+        number, operator = match.group(1), match.group(2)
+        if number is not None:
+            numbers.append(float(number))
+            continue
+        op = operator.decode()
+        if op == "m":
+            if len(current) > 1:
+                paths.append(current)
+            current = [(um(numbers[-2]), um(numbers[-1]))] if len(numbers) >= 2 else []
+        elif (op == "l" and len(numbers) >= 2) or (op == "c" and len(numbers) >= 6):
+            # A `c`'s last pair is its on-curve endpoint; the four before it are
+            # control points and belong to the writer, not to the geometry.
+            current.append((um(numbers[-2]), um(numbers[-1])))
+        elif op in ("S", "f", "B", "b", "s", "n"):
+            if len(current) > 1:
+                paths.append(current)
+            current = []
+        numbers = []
+    if len(current) > 1:
+        paths.append(current)
+    return paths
+
+
+def length_um(a: tuple[float, float], b: tuple[float, float]) -> float:
+    return ((a[0] - b[0]) ** 2 + (a[1] - b[1]) ** 2) ** 0.5
+
+
+def circle_um(points: list[tuple[float, float]]) -> tuple[float, float, float]:
+    """Centre and radius of a subpath that is a circle, from its on-curve points.
+
+    Fitted from the extremes rather than from any one quarter, so a rounding in
+    the writer's Bézier endpoints cannot decide the answer alone.
+    """
+    xs = [x for x, _ in points]
+    ys = [y for _, y in points]
+    cx = (min(xs) + max(xs)) / 2
+    cy = (min(ys) + max(ys)) / 2
+    radius = sum(length_um((cx, cy), point) for point in points) / len(points)
+    return cx, cy, radius

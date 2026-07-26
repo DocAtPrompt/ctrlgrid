@@ -26,9 +26,9 @@ opacity and doubles the file size.
 from __future__ import annotations
 
 from collections.abc import Iterator
-from typing import Literal
+from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from ctrlgrid.axes import AxisPeriod
 from ctrlgrid.errors import DefinitionError
@@ -72,7 +72,21 @@ class GridConfig(BaseModel):
     header_row: bool = False
     font: FontSpec = FontSpec(size="8pt")
 
+    @model_validator(mode="before")
+    @classmethod
+    def _labels_none_is_the_documented_spelling(cls, data: Any) -> Any:
+        """§ 7.10: "`labels: none` unterdrückt die Beschriftung ganz."
 
+        Leaving the key out has always done that, but the spelling the
+        specification documents met pydantic's "Input should be a valid
+        dictionary or instance of ...LabelS" — an internal class name in answer
+        to a definition copied out of § 7.10. `none` is one of the keywords
+        § 5.1 lists as standing where a value could, so it is accepted here and
+        means exactly what an absent key means.
+        """
+        if isinstance(data, dict) and data.get("labels") == "none":
+            data = {key: value for key, value in data.items() if key != "labels"}
+        return data
 class GridGenerator:
     name = "grid"
     config_model = GridConfig

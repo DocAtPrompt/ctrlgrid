@@ -32,7 +32,7 @@ from __future__ import annotations
 
 import math
 from collections.abc import Iterator
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
@@ -165,6 +165,21 @@ class PolarConfig(BaseModel):
     spokes: Spokes | None = None
     labels: PolarLabels | None = None
 
+    @model_validator(mode="before")
+    @classmethod
+    def _labels_none_is_the_documented_spelling(cls, data: Any) -> Any:
+        """§ 7.10: "`labels: none` unterdrückt die Beschriftung ganz."
+
+        Leaving the key out has always done that, but the spelling the
+        specification documents met pydantic's "Input should be a valid
+        dictionary or instance of ...LabelS" — an internal class name in answer
+        to a definition copied out of § 7.10. `none` is one of the keywords
+        § 5.1 lists as standing where a value could, so it is accepted here and
+        means exactly what an absent key means.
+        """
+        if isinstance(data, dict) and data.get("labels") == "none":
+            data = {key: value for key, value in data.items() if key != "labels"}
+        return data
     @model_validator(mode="after")
     def _something_has_to_be_drawn(self) -> PolarConfig:
         if self.rings is None and self.spokes is None:
