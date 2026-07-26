@@ -201,6 +201,8 @@ class NotebookGenerator:
                     placeholders=placeholders, contents_title=cfg.contents_title,
                     family=cfg.font.token,
                 )
+            per_item = self._sheets_per_item(section)
+            mirrored = self._mirrored_sub_sheets(section)
             for number in range(1, self._section_pages(section) + 1):
                 dest = (
                     _page_dest(index, number)
@@ -216,7 +218,21 @@ class NotebookGenerator:
                         index=number - 1, count=self._section_pages(section),
                     ),
                     placeholders=placeholders,
+                    mirrored=(number - 1) % per_item in mirrored,
                 )
+
+    def mirrored_sections(self, cfg: NotebookConfig) -> list[str]:
+        """Sections whose blade draws a mirrored sheet (§ 7.5), by label.
+
+        A query the handle asks rather than geometry pushed into the notebook —
+        the same shape as `periodic_axes` and `sheets` (§ 3.6). The refusal it
+        feeds is about the page model, so it belongs to the handle.
+        """
+        return [
+            section.name(index)
+            for index, section in enumerate(cfg.sections)
+            if self._mirrored_sub_sheets(section)
+        ]
 
     def _sheets_per_item(self, section) -> int:
         """§ 7.5's sheet plan for one section's blade, or 1 (decision 55)."""
@@ -225,6 +241,14 @@ class NotebookGenerator:
         sheets = getattr(get(section.generator), "sheets", None)
         plan = sheets(section.config) if sheets else None
         return plan.per_item if plan else 1
+
+    def _mirrored_sub_sheets(self, section) -> frozenset[int]:
+        """Which sub-sheet of an item is drawn mirrored (§ 7.5, decision 27)."""
+        from ctrlgrid.generators import get
+
+        sheets = getattr(get(section.generator), "sheets", None)
+        plan = sheets(section.config) if sheets else None
+        return plan.mirrored if plan else frozenset()
 
     def _section_pages(self, section) -> int:
         """How many pages the section occupies, dividers excluded.

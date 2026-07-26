@@ -707,7 +707,9 @@ def sheet_plan(document: Document) -> SheetPlan:
     return getter(document.config) if getter else SheetPlan()
 
 
-def _refuse_mirroring_that_cannot_line_up(document: Document, plan: SheetPlan) -> None:
+def _refuse_mirroring_that_cannot_line_up(
+    document: Document, plan: SheetPlan, *, section: str | None = None
+) -> None:
     """§ 7.5: `back_mirrored` and a shifting gutter cannot both be had.
 
     Under duplex the margins swap on even pages (§ 8.1), so the pattern area
@@ -720,7 +722,8 @@ def _refuse_mirroring_that_cannot_line_up(document: Document, plan: SheetPlan) -
     if margin.inner.um == margin.outer.um:
         return
     raise DefinitionError(
-        f"`back_mirrored` needs the pattern area to sit in the same place on both "
+        f"`back_mirrored`{f' in section `{section}`' if section else ''} needs the "
+        f"pattern area to sit in the same place on both "
         f"sides, but duplex is on and margin.inner ({margin.inner.raw}) differs from "
         f"margin.outer ({margin.outer.raw}) — the solution would land "
         f"{abs(margin.inner.um - margin.outer.um) / 1000:.1f}mm off the maze. Set "
@@ -1050,6 +1053,16 @@ def _document_preflight(
     the three page-loop lists are empty because a document does not use them.
     """
     _refuse_what_a_document_has_no_page_loop_for(document)
+    # § 7.5's refusal is about the *page model*, not about the blade, so it holds
+    # wherever a mirrored sheet is drawn. It lived on the blade path only, which
+    # is the half-a-tool split decision 52 was written about — and it belongs
+    # *here*, because `preflight` returns into this function for a document
+    # before it ever reaches the blade path's copy.
+    mirrored_sections = getattr(blade, "mirrored_sections", None)
+    for label in mirrored_sections(document.config) if mirrored_sections else []:
+        _refuse_mirroring_that_cannot_line_up(
+            document, SheetPlan(per_item=2, mirrored=frozenset({1})), section=label
+        )
     probe = _metrics_oracle(q)
     geometry = Geometry.of(
         document.sheet,
@@ -1268,7 +1281,17 @@ def _document_content(
         )
         yield Image(pos=Point(x, y), width=w, height=h, source=str(image.path))
     for mark in document_page_marks(page, area=geometry.area, context=context, q=q):
-        yield translate(mark, dx=ox, dy=oy)
+        placed = translate(mark, dx=ox, dy=oy)
+        if page.mirrored:
+            # § 7.5, and it has to be here rather than in `document_page_marks`:
+            # that function yields area-local marks, and the reflection is about
+            # the *sheet*, the physical turning edge. The three other callers —
+            # the capability pre-flight, the glyph check and the media check —
+            # therefore see an unmirrored page, which is right rather than
+            # tolerated: a reflection preserves a mark's kind, weight, colour
+            # and text, and those four are all any of them looks at.
+            placed = mirror_x(placed, about=document.sheet.width)
+        yield placed
 
 
 def _build_document(

@@ -111,6 +111,13 @@ class DocumentPage:
     can do; the notebook's has no such key and always hides both (§ 7.13)."""
     show_footer: bool = True
     """Draw the document's footer band on this page (§ 7.12)."""
+    mirrored: bool = False
+    """Draw this page's pattern reflected about the **sheet's** vertical centre
+    (§ 7.5's `back_mirrored`). The sheet's and not the pattern area's: the
+    reference is the physical turning edge, and only the handle knows where the
+    sheet is (§ 3.3). Set by a document whose section's blade states it in its
+    `SheetPlan`; carried out in `pages._document_content`, where a page's marks
+    reach sheet coordinates."""
 
     placeholders: tuple[tuple[str, str], ...] = ()
     """Per-page band placeholders, as pairs (§ 8.10, § 7.13).

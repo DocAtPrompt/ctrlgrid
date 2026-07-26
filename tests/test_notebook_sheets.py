@@ -10,7 +10,9 @@ from __future__ import annotations
 from pathlib import Path
 
 import pdfread
+import pytest
 
+from ctrlgrid.errors import DefinitionError
 from ctrlgrid.loader import loads
 from ctrlgrid.pages import build
 from ctrlgrid.writers.pdf import PdfWriter
@@ -131,3 +133,42 @@ class TestTheSheetPlanIsCarriedOut:
                 entries[words[0].content] = int(words[1].content)
         assert entries["Mazes"] == 2          # straight after the contents
         assert entries["Dots"] == 2 + 4       # four maze pages, then Dots
+
+
+class TestBackMirrored:
+    """§ 7.5: the solution goes on the back of the same sheet, mirrored about
+    the **sheet's** vertical centre, so it shows through against the light."""
+
+    def test_the_solution_page_is_the_mirror_of_the_puzzle(
+        self, tmp_path: Path
+    ) -> None:
+        path = sheet(tmp_path, notebook(maze_section(1, "back_mirrored")))
+        pages = pdfread.page_count(path)
+        puzzle = pdfread.subpaths_um(path, pages - 2)
+        solution = pdfread.subpaths_um(path, pages - 1)
+        # A5 is 148 mm wide. Mirroring about the sheet's centre sends x to
+        # 148000 - x, and the reference is the sheet, not the pattern area
+        # (§ 7.5) — that is the physical turning edge.
+        flipped = {
+            tuple(sorted((round(148_000 - x), round(y)) for x, y in drawn))
+            for drawn in solution
+        }
+        for wall in puzzle:
+            assert tuple(sorted((round(x), round(y)) for x, y in wall)) in flipped
+
+    def test_duplex_with_unequal_margins_is_refused_on_the_document_path_too(
+        self, tmp_path: Path
+    ) -> None:
+        # § 7.5: the alternating gutter moves the pattern area between front
+        # and back, and the solution would miss the maze by exactly that. The
+        # blade path has refused this since M2; the document path must too.
+        definition = (
+            "version: 1\n"
+            "page: {format: a5, margin: {top: 10mm, bottom: 10mm, "
+            "inner: 20mm, outer: 8mm}, duplex: true}\n"
+            "generator: notebook\n"
+            "sections:\n" + maze_section(1, "back_mirrored")
+        )
+        with pytest.raises(DefinitionError) as excinfo:
+            build(loads(definition, source="t"), PdfWriter(tmp_path / "never.pdf"))
+        assert "back_mirrored" in str(excinfo.value)
