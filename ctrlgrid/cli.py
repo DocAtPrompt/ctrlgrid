@@ -446,12 +446,31 @@ def _report(document: Document, path: Path, geometry: Geometry, *, quiet: bool) 
                f"{document.sheet.height / 1000:.0f} mm")
     if document.nup is not None:
         nup = document.nup
-        sheets = -(-pages // nup.per_sheet)  # ceil
-        typer.echo(
-            f"  imposed {nup.cols}x{nup.rows} on {nup.sheet_name} "
-            f"({nup.sheet_width / 1000:.0f} x {nup.sheet_height / 1000:.0f} mm) — "
-            f"{sheets} sheet(s), at 100 %, cut to size"
-        )
+        if nup.booklet:
+            padded = -(-pages // 4) * 4
+            blanks = padded - pages
+            typer.echo(
+                f"  booklet — {pages} page(s)"
+                + (f" padded to {padded}" if blanks else "")
+                + f" on {padded // 4} sheet(s)"
+                + (f" ({blanks} blank)" if blanks else "")
+                + f", {nup.sheet_name} at 100 %"
+            )
+            # § 8.2's rule for the scaling hint, applied to the turning edge:
+            # name the setting, and give the one glance that checks it. The
+            # fold runs vertically, so the sheet turns about its short edges.
+            typer.echo(
+                "  print double-sided, flipping on the SHORT edge; on the first "
+                "sheet, page 2 must come out behind page 1 — if it does not, "
+                "switch the flip"
+            )
+        else:
+            sheets = -(-pages // nup.per_sheet)  # ceil
+            typer.echo(
+                f"  imposed {nup.cols}x{nup.rows} on {nup.sheet_name} "
+                f"({nup.sheet_width / 1000:.0f} x {nup.sheet_height / 1000:.0f} mm) — "
+                f"{sheets} sheet(s), at 100 %, cut to size"
+            )
     blade = generators.get(document.generator)
     for line in blade.describe(document.config):
         typer.echo(f"  {line}")

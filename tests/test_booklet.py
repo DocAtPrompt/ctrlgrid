@@ -174,3 +174,26 @@ class TestTheRun:
                 PdfWriter(tmp_path / "never-written.pdf"),
             )
         assert "296x210mm" in str(excinfo.value)
+
+
+class TestTheReport:
+    def test_it_names_the_padding_the_sheets_and_the_turning_edge(
+        self, tmp_path: Path
+    ) -> None:
+        # § 8.2's discipline: name the setting, do not say "mind the flip".
+        from typer.testing import CliRunner
+
+        from ctrlgrid.cli import app
+
+        definition = tmp_path / "d.yaml"
+        definition.write_text(A5_LINES, encoding="utf-8")
+        result = CliRunner().invoke(
+            app,
+            ["-d", str(definition), "--pages", "6", "--booklet",
+             "--nup-sheet", "297x210mm", "-o", str(tmp_path / "b.pdf")],
+        )
+        assert result.exit_code == 0, result.output
+        assert "padded to 8" in result.output
+        assert "2 sheet(s)" in result.output
+        assert "SHORT edge" in result.output
+        assert "page 2" in result.output
