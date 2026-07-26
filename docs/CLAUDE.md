@@ -167,8 +167,12 @@ edge, so a tick now carries its position *and* its value separately. `unit` says
 **Two more things wait, and neither of them is code:**
 
 - ~~**PyPI.**~~ **Published on 2026-07-26 — `ctrlgrid`, MIT, Python ≥ 3.11, wheel
-  and sdist. Two releases so far: `v0.11.0`, the repository's first tag ever, and
-  `v0.11.1` for the metadata it should have carried.** M1's first
+  and sdist. Three releases so far: `v0.11.0`, the repository's first tag ever,
+  `v0.11.1` for the metadata it should have carried, and **`v0.12.0`
+  (2026-07-27)** — folded booklets, the turning edge, and a notebook section that
+  carries out its blade's sheet plan. That one was verified the same way from the
+  published wheel: a booklet built with `uvx --from ctrlgrid==0.12.0` comes out
+  four sheet sides at 297.000 × 210.000 mm with a 1.000 mm line spacing.** M1's first
   acceptance criterion is met at last, and measured rather than assumed: `uvx
   ctrlgrid millimeter-a4 --pages 3 -o out.pdf` installs from the network and
   produces a sheet whose MediaBox reads 210.000 × 297.000 mm with a 1.000 mm line
@@ -448,9 +452,11 @@ this project runs on — claims are backed by a command's output, never asserted
 
 **Nothing in the specification is unbuilt** — and since 2026-07-26 one thing is
 built that the specification never described: **`--booklet`**, saddle-stitch
-imposition (§ 14, decision 54). It was the only genuine gap in a document
-otherwise complete, and it is worth knowing why it was small: a booklet *is* a
-2×1 imposition, so it added an order and no geometry at all.
+imposition (§ 14, decision 54), with its turning edge (decision 56, 2026-07-27).
+It was the only genuine gap in a document otherwise complete, and it is worth
+knowing why it was small: a booklet *is* a 2×1 imposition, so it added an order
+and no geometry at all. Alongside it, decision 55 lifted the last of decision
+52's deliberately temporary refusals. All three shipped as **0.12.0**.
 
 As of 2026-07-26 the tool is also
 *published* — the sessions since 0.9.0 audited it as a stranger meets it, read
@@ -471,7 +477,7 @@ supply:
 
 | Waiting on | What |
 |---|---|
-| use | the three § 15 questions below, and 1.0.0 itself. The DSL can now meet someone other than the test suite, which is the one thing 1.0.0 has always been waiting for |
+| use | what is left of § 15's questions below — q2, q4 and the second half of q6 — and 1.0.0 itself. The DSL can now meet someone other than the test suite, which is the one thing 1.0.0 has always been waiting for |
 | an outside contributor | the empty `quirks` (decision 31) and the rM2's on-device check. **These are contribution slots, not tasks** — there is no rM2 here to measure, and the shipped figures come from reMarkable's own comparison page and match it exactly. Neither blocks anything; they turn into work if a user reports a real problem. Don't carry them in a status summary as though they were pending |
 
 The scissors row is gone from this table because the scissors have been used —
@@ -506,6 +512,19 @@ Three habits earned their place the hard way and are worth keeping:
   Every one of them was about to be written up as a bug. **Before writing "X is
   not checked", make the probe fail on purpose.**
 
+  Four more joined them on 2026-07-26/27, and they are the ones most likely to
+  recur: **the bytecode cache** — reverting a *length-preserving* edit inside the
+  same second leaves Python running the mutated `.pyc` while git reports a clean
+  tree, so clear `__pycache__` before believing a falsification; **`pytest | tail`
+  in an `&&` chain** — the pipeline's exit code is `tail`'s, so a red suite
+  committed itself (this is the second time that one has bitten; run pytest
+  unpiped and read `$?`); **a refusal written on the wrong path** — it went into
+  `preflight` when `preflight` returns into `_document_preflight` for a document
+  long before reaching it, and only the test's DID NOT RAISE said so; and
+  **`pdfread.texts_um` reading the text matrix alone** — reportlab rotates text
+  through the CTM, so every rotated string had been reported upright at (0, 0),
+  silently, with a docstring claiming otherwise.
+
 A specific paper aeroplane was considered and **refused**: it is a drawing, not
 a structure, and § 2 rules out a drawing language.
 
@@ -527,9 +546,15 @@ owner-confirmed a colour device, § 9.2.) If you are tempted to guess at a
 number, don't — that is exactly the failure mode `source`/`verified` exists to
 prevent. The seventh — the `staves` clef — is answered in § 15.3
 (embedded music font, built in M9), and it settled part of open question 2: for
-the music case, a font *is* shipped. The three that remain: whether a font must be shipped for non-Latin-1 names
+the music case, a font *is* shipped. What remains: whether a font must be shipped for non-Latin-1 names
 (q2), extra domain units like nib widths / `lpi` / rastral sizes (q4), and the
-short-edge duplex flip (q6). Each is cheap and each waits on real use rather
+**remaining half of q6** — the duplex turning edge. Half of that one is answered:
+`--booklet-flip` was built on 2026-07-27 (decision 56), and it corrected q6's own
+estimate, because a booklet needs a *rotation* and not a mirror. What is still
+open there is `back_mirrored` (§ 7.5), which assumes the long edge and names it;
+*there* it really would be the single case distinction q6 predicted, since only
+the pattern layer is mirrored and no sheet stands on its head. Each is cheap and
+each waits on real use rather
 than on a design answer — **q4 was put to the user in July 2026 while building
 the slanted families and deliberately left out**: the angle is what unlocks
 calligraphy guides and origami pre-creasing, the unit would be a convenience on
