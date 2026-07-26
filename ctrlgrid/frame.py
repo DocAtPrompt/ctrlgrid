@@ -189,7 +189,29 @@ def _at(edge: str, start: Point, *, along: Um, out: Um) -> Point:
     return Point(start.x + sign * out, start.y + along)
 
 
-def ruler_marks(ruler: RulerSpec | None, geometry: Geometry, *, q: WriterQuery) -> list[Mark]:
+def _zero_on(edge: str, extent: Um, origin: str) -> tuple[Um, int]:
+    """Where this edge's nought sits along it, and which way its numbers grow.
+
+    One expression for all five origins (§ 8.12). The axis an edge runs on takes
+    its half of the corner name — `top-left` means x from the left and y from
+    the top — and `center` puts the nought in the middle of every edge, so the
+    numbers before it are negative. That is the case a plotted function needs,
+    and it is why a tick carries its *value* separately from its position.
+    """
+    if origin == "center":
+        return extent // 2, +1
+    vertical = edge in ("left", "right")
+    from_far_end = ("top" in origin) if vertical else ("right" in origin)
+    return (extent, -1) if from_far_end else (0, +1)
+
+
+def ruler_marks(
+    ruler: RulerSpec | None,
+    geometry: Geometry,
+    *,
+    q: WriterQuery,
+    align: str = "bottom-left",
+) -> list[Mark]:
     """The edge scale (§ 8.12), in sheet coordinates.
 
     The ticks grow *outward* from the pattern edge into the margin, on
@@ -206,10 +228,18 @@ def ruler_marks(ruler: RulerSpec | None, geometry: Geometry, *, q: WriterQuery) 
 
     marks: list[Mark] = []
     height = number_height(ruler, q=q)
+    # Absent, `origin` follows the pattern's anchor: the ruler exists so the
+    # numbers agree with the grid (decision 47), and a grid anchored top-left
+    # beside a scale counting from the bottom is that disagreement (§ 8.12).
+    origin = ruler.origin or align
     for edge in ruler.edges:
         start, extent = _edge_start(edge, geometry)
         turned = edge in ("left", "right")
-        for tick in ticks(ruler, extent=extent):
+        # `direction`, not `sign`: the loop below has its own `sign` for which
+        # way is *outward* from the pattern, and one name for two ideas is how
+        # a scale ends up counting backwards.
+        zero, direction = _zero_on(edge, extent, origin)
+        for tick in ticks(ruler, extent=extent, zero=zero):
             length = tick_length(tick.kind)
             marks.append(
                 Segment(
@@ -232,7 +262,7 @@ def ruler_marks(ruler: RulerSpec | None, geometry: Geometry, *, q: WriterQuery) 
             marks.append(
                 Text(
                     pos=_at(edge, start, along=tick.at, out=out),
-                    content=label_text(ruler, at=tick.at),
+                    content=label_text(ruler, at=direction * tick.value),
                     size=ruler.font.size.um,
                     family=ruler.font.family,
                     align="center",
@@ -287,16 +317,28 @@ def check_rulers(
             )
 
     # Two numbers that overlap read as one wrong number, so the widest is
-    # measured rather than assumed (§ 10.2) — the labels are digits, and "100"
-    # is what has to fit, not "0".
-    extent = max(geometry.area.width, geometry.area.height)
-    widest = max(
-        q.text_width(
-            label_text(ruler, at=tick.at), family=ruler.font.family, size=ruler.font.size.um
+    # measured rather than assumed (§ 10.2) — and it is measured on the labels
+    # this ruler will really draw, minus signs and all: with a centred origin
+    # the widest is "-100", not "100" (§ 8.12). Same zeroes as the drawing uses,
+    # because two arithmetics for one question drift.
+    origin = ruler.origin or document.pattern.align
+    widest = 0
+    for edge in ruler.edges:
+        extent = (
+            geometry.area.height if edge in ("left", "right") else geometry.area.width
         )
-        for tick in ticks(ruler, extent=extent)
-        if tick.kind == "label"
-    )
+        zero, direction = _zero_on(edge, extent, origin)
+        for tick in ticks(ruler, extent=extent, zero=zero):
+            if tick.kind != "label":
+                continue
+            widest = max(
+                widest,
+                q.text_width(
+                    label_text(ruler, at=direction * tick.value),
+                    family=ruler.font.family,
+                    size=ruler.font.size.um,
+                ),
+            )
     if widest > ruler.label_every.um:
         raise DefinitionError(
             f"the ruler's numbers are up to {_mm(widest)} wide and stand "

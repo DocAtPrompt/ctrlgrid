@@ -366,3 +366,101 @@ class TestTheRun:
     def test_an_unknown_ruler_key_is_refused_by_the_loader(self) -> None:
         with pytest.raises(DefinitionError):
             loads(RULED + "ruler:\n  edges: [bottom]\n  every: 2mm\n", None, source="test")
+
+
+class TestWhereZeroSits:
+    """§ 8.12: `origin` says where the scale's zero is and which way its numbers
+    grow. Three real cases asked for it — a technical drawing counts from the
+    bottom left, a screen layout from the top left and downwards, and a plotted
+    function from the middle, with negatives.
+
+    Absent, it **follows `pattern.align`**: the ruler exists so the numbers
+    agree with the grid (decision 47), and a grid anchored top-left with a
+    ruler counting from the bottom is exactly the disagreement it was built to
+    prevent.
+    """
+
+    def ruler(self, **kwargs) -> RulerSpec:
+        return RulerSpec(edges=["bottom", "left"], **kwargs)
+
+    def labels(self, doc, ruler, *, align: str = "bottom-left") -> dict[str, list[str]]:
+        """The numbers of each edge, in the order they are drawn."""
+        area = geometry(doc)
+        marks = ruler_marks(ruler, area, q=Q, align=align)
+        texts = [mark for mark in marks if isinstance(mark, Text)]
+        horizontal = [t.content for t in texts if t.angle == 0.0]
+        vertical = [t.content for t in texts if t.angle == 90.0]
+        return {"bottom": horizontal, "left": vertical}
+
+    def test_by_default_it_counts_from_the_bottom_left(self) -> None:
+        doc = document(page="  margin: 20mm\n")
+        numbers = self.labels(doc, self.ruler())
+        assert numbers["bottom"][0] == "0" and numbers["left"][0] == "0"
+        assert int(numbers["bottom"][1]) > 0
+
+    def test_top_left_counts_downwards_on_the_vertical_edge(self) -> None:
+        # Screen coordinates: zero at the top, growing down. The ticks are still
+        # drawn bottom-to-top — that is the sheet's order, not the scale's — so
+        # the nought is the *last* number on the left edge and the largest is
+        # the first. The horizontal edge is untouched: only the anchored axis
+        # turns.
+        doc = document(page="  margin: 20mm\n")
+        numbers = self.labels(doc, self.ruler(origin="top-left"))
+        assert numbers["left"][-1] == "0"
+        assert int(numbers["left"][0]) > 0
+        assert numbers["bottom"][0] == "0"
+
+    def test_top_left_puts_its_zero_at_the_top_of_the_area(self) -> None:
+        doc = document(page="  margin: 20mm\n")
+        area = geometry(doc)
+        marks = ruler_marks(RulerSpec(edges=["left"], origin="top-left"), area, q=Q)
+        zero = next(m for m in marks if isinstance(m, Text) and m.content == "0")
+        assert zero.pos.y > area.origin.y + area.area.height - 5000
+
+    def test_center_labels_the_middle_zero_and_goes_negative(self) -> None:
+        doc = document(page="  margin: 20mm\n")
+        numbers = self.labels(doc, self.ruler(origin="center"))
+        assert "0" in numbers["bottom"]
+        assert any(number.startswith("-") for number in numbers["bottom"])
+        # Symmetric: whatever it counts up to, it counts down to as well.
+        values = sorted(int(number) for number in numbers["bottom"])
+        assert values[0] == -values[-1]
+
+    def test_the_ladder_hangs_on_zero_not_on_the_edge(self) -> None:
+        # With a centred origin the labelled ticks must sit symmetrically about
+        # the middle, or the 0 would fall between two ticks.
+        doc = document(page="  margin: 20mm\n")
+        area = geometry(doc)
+        marks = ruler_marks(RulerSpec(edges=["bottom"], origin="center"), area, q=Q)
+        zero = next(m for m in marks if isinstance(m, Text) and m.content == "0")
+        middle = area.origin.x + area.area.width // 2
+        assert abs(zero.pos.x - middle) <= 1
+
+    def test_without_an_origin_it_follows_the_patterns_anchor(self) -> None:
+        doc = document(page="  margin: 20mm\n")
+        followed = self.labels(doc, self.ruler(), align="top-left")
+        explicit = self.labels(doc, self.ruler(origin="top-left"), align="bottom-left")
+        assert followed == explicit
+
+    def test_an_explicit_origin_beats_the_anchor(self) -> None:
+        doc = document(page="  margin: 20mm\n")
+        numbers = self.labels(doc, self.ruler(origin="bottom-left"), align="top-left")
+        assert numbers["left"][0] == "0"
+        assert self.labels(doc, self.ruler(origin="bottom-left"))["left"] == numbers["left"]
+
+    def test_an_unknown_origin_is_refused_by_name(self) -> None:
+        with pytest.raises(ValidationError) as excinfo:
+            self.ruler(origin="middle-ish")
+        assert "middle-ish" in str(excinfo.value)
+
+    def test_the_minus_sign_counts_when_numbers_may_collide(self) -> None:
+        # The collision check measures the widest label there will actually be,
+        # and with a centred origin that one carries a minus sign.
+        doc = document(page="  margin: 20mm\n")
+        wide = RulerSpec(
+            edges=["bottom"], origin="center", mid_every="none",
+            label_every="4mm", font={"size": "10pt"},
+        )
+        with pytest.raises(DefinitionError) as excinfo:
+            check_rulers(wide, geometry(doc), doc, q=Q)
+        assert "4mm" in str(excinfo.value)

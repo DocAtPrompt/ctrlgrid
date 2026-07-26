@@ -1285,7 +1285,7 @@ def _page_marks(
     yield from hole_marks(document.page, document.sheet, is_even=context.is_even)
     # `placed` and not `geometry`: the scale measures the area *this* page got,
     # and under duplex that area sits on the other side of the sheet (§ 8.12).
-    yield from ruler_marks(document.ruler, placed, q=q)
+    yield from ruler_marks(document.ruler, placed, q=q, align=document.pattern.align)
     yield from frame
 
     stamp = stamp_mark(document.stamp, document.sheet, q=q)

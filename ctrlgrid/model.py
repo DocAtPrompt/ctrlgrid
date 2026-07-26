@@ -374,6 +374,15 @@ class RulerSpec(Section):
     """
 
     edges: tuple[Literal["bottom", "left", "top", "right"], ...]
+    #: Where the scale's zero sits and which way its numbers grow (§ 8.12).
+    #: Absent means **follow `pattern.align`**: the ruler exists so the numbers
+    #: agree with the grid, and a grid anchored top-left beside a ruler counting
+    #: from the bottom is the disagreement it was built to prevent. `center`
+    #: puts zero in the middle of each edge and prints negatives before it —
+    #: the case a plotted function needs.
+    origin: (
+        Literal["bottom-left", "top-left", "bottom-right", "top-right", "center"] | None
+    ) = None
     unit: Literal["mm", "cm", "in"] = "mm"
     step: LengthField = Length(um=1000, mm=1.0, raw="1mm")
     #: `none` leaves the medium tick out; otherwise a length on the ladder.

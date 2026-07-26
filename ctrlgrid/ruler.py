@@ -41,26 +41,39 @@ class Tick:
     """One tick: how far along the edge it sits, and how long it is drawn."""
 
     at: Um
-    """Distance from the pattern area's origin, along the edge."""
+    """Where the tick is drawn: a distance along the edge from its start."""
 
     kind: TickKind
 
+    value: Um = 0
+    """What the tick *measures*: its signed distance from the scale's zero.
+    The two differ as soon as zero is not the edge's start (§ 8.12)."""
 
-def ticks(ruler: RulerSpec, *, extent: Um) -> list[Tick]:
-    """Every tick from zero to `extent`, the longest kind winning where two
-    ladders meet. A tick past the end is not drawn: the scale measures the area
-    it borders and does not run into the corner (§ 8.12)."""
+
+def ticks(ruler: RulerSpec, *, extent: Um, zero: Um = 0) -> list[Tick]:
+    """Every tick of one edge, the longest kind winning where two ladders meet.
+
+    `zero` is where the scale's nought sits along the edge, and the ladder hangs
+    on **it** rather than on the edge's start: with a centred origin the
+    labelled ticks have to be symmetric about the middle, or the 0 would fall
+    between two of them (§ 8.12). So the walk runs outward from zero in both
+    directions and stops at the ends — a tick past the end is not drawn, because
+    the scale measures the area it borders and does not run into the corner.
+    """
     step = ruler.step.um
     result: list[Tick] = []
-    for index in range(extent // step + 1):
-        at = index * step  # an exact multiple, never accumulated (§ 3.3)
-        if at % ruler.label_every.um == 0:
+    first = -((zero + step - 1) // step)          # the lowest multiple still on the edge
+    last = (extent - zero) // step
+    for index in range(first, last + 1):
+        offset = index * step                     # exact multiples, never a sum (§ 3.3)
+        at = zero + offset
+        if offset % ruler.label_every.um == 0:
             kind: TickKind = "label"
-        elif ruler.mid_every is not None and at % ruler.mid_every.um == 0:
+        elif ruler.mid_every is not None and offset % ruler.mid_every.um == 0:
             kind = "mid"
         else:
             kind = "short"
-        result.append(Tick(at=at, kind=kind))
+        result.append(Tick(at=at, kind=kind, value=offset))
     return result
 
 
@@ -69,9 +82,13 @@ def tick_length(kind: TickKind) -> Um:
 
 
 def label_text(ruler: RulerSpec, *, at: Um) -> str:
-    """What the number at `at` reads — exactly, with the fewest digits that say
-    it, and never rounded. `label_every: 25mm` under `unit: cm` prints 2.5, and
-    a scale that printed 3 there would be worse than no scale (§ 8.12)."""
+    """What a number reads — exactly, with the fewest digits that say it, and
+    never rounded. `label_every: 25mm` under `unit: cm` prints 2.5, and a scale
+    that printed 3 there would be worse than no scale (§ 8.12).
+
+    `at` is the tick's **value**, not its position: past a centred zero it is
+    negative, and the minus sign belongs on the sheet.
+    """
     value = Decimal(at) / Decimal(_PER_UNIT[ruler.unit])
     return format(value.normalize(), "f")
 

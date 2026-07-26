@@ -1861,6 +1861,27 @@ mit dem Raster übereinstimmen, damit man am Blatt misst und zuschneidet. Der
 Kalibrierfall ist bereits beantwortet — das Deckblatt trägt Quadrat und
 100-mm-Regel (§ 8.8) — und bekommt deshalb kein zusätzliches Lineal.
 
+**Wo genau die Null sitzt, sagt `origin`** (ergänzt 2026-07-26, nach drei realen
+Fällen): `bottom-left` für die technische Zeichnung, `top-left` für den
+Bildschirmentwurf (senkrecht wird **abwärts** gezählt), `center` für den
+Funktionsplot — dort steht die Null in der Mitte jeder Kante und davor stehen
+**negative Zahlen**. `bottom-right` und `top-right` fallen aus derselben Formel
+heraus: jede Achse nimmt ihre Hälfte des Eckennamens.
+
+Fehlt `origin`, **folgt das Lineal `pattern.align`** (§ 8.5). Das ist keine
+Bequemlichkeit, sondern die Regel von oben zu Ende gedacht: Wer sein Raster oben
+links verankert, dessen erste schwere Linie liegt oben — ein Lineal, dessen Null
+unten sitzt, widerspräche genau der Übereinstimmung, für die es da ist. Ein
+ausdrückliches `origin` sticht, für den Fall „ich messe das Blatt, nicht das
+Raster".
+
+**Die Strichleiter hängt an der Null, nicht an der Blattkante.** Bei `center`
+müssen die Zahlstriche symmetrisch um die Mitte liegen, sonst fiele die 0
+zwischen zwei Striche; die Leiter läuft daher von der Null aus in beide
+Richtungen und endet an den Kanten. Ein Strich trägt deshalb seine **Position**
+und seinen **Wert** getrennt: gezeichnet wird an der Position, gedruckt wird der
+Wert, und die beiden sind erst gleich, wenn die Null am Kantenanfang sitzt.
+
 **Im Rand, ohne Platzreservierung.** Die Striche wachsen von der Musterkante
 **nach außen** in den Rand, auf `Layer.FRAME`. Der Musterbereich wird nicht
 verkleinert: § 8.1 berechnet ihn aus Rändern und Bändern allein, und ein

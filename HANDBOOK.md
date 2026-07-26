@@ -490,6 +490,26 @@ with the grid, so the first line is 0 and reading a position off the sheet needs
 no subtraction. The ticks grow outward into the margin and reserve no space:
 switching a ruler on leaves the grid exactly where it was.
 
+**`origin` says which corner that zero is, and which way the numbers grow:**
+
+| `origin` | For | What it does |
+|---|---|---|
+| `bottom-left` | technical drawing | the default: x from the left, y from the bottom |
+| `top-left` | screen layouts | y counts **downwards** from the top; x unchanged |
+| `bottom-right`, `top-right` | mirrored work | the same formula, anchored at the other corner |
+| `center` | plotting a function | zero in the middle of each edge, **negative numbers** before it |
+
+Leave it out and the ruler **follows `pattern.align`**: a grid anchored
+top-left gets a scale that starts there too. That is the point of the whole
+feature — a ruler that disagreed with the grid beside it would be worse than
+none. Write `origin` explicitly when you want the other thing: to measure the
+sheet rather than the pattern.
+
+With a centred origin the labelled ticks are symmetric about the middle (the
+ladder hangs on the zero, not on the edge), and the numbers before it carry a
+minus sign — which the collision check counts, because it measures the labels
+the sheet will really carry.
+
 Only `edges` is required. The rest follows `unit`:
 
 | `unit` | `step` | `mid_every` | `label_every` | the numbers read |
