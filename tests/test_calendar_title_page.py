@@ -133,10 +133,14 @@ def _run(page, tmp_path):
     fake document carries a real `Band` and the geometry a real `Box`, and
     "HDR"/"FTR" come out of the same `layout_band` a run uses.
     """
-    from ctrlgrid.model import Band
-    from ctrlgrid.pages import Box
+    from ctrlgrid.marks import Point
+    from ctrlgrid.model import Band, PageSpec, PatternSpec
+    from ctrlgrid.pages import Box, Geometry
 
     band = {"height": "8mm", "gap": "2mm", "font": {"size": "9pt"}}
+    # The frame furniture the document path now draws (§ 8.1) is asked of the
+    # document, so the stub carries the real sections at their defaults — all
+    # of which are "off", which is what keeps this test about the title page.
     doc = SimpleNamespace(
         source="t.yaml",
         pages=SimpleNamespace(embed_def=False),
@@ -144,14 +148,19 @@ def _run(page, tmp_path):
         config=object(),
         header=Band.model_validate({**band, "left": "HDR"}),
         footer=Band.model_validate({**band, "left": "FTR"}),
+        page=PageSpec(),
+        pattern=PatternSpec(),
+        border=None,
+        ruler=None,
+        stamp=None,
     )
     blade = SimpleNamespace(
         pages=lambda cfg, *, area, q: iter([page]),
         page_count=lambda cfg, *, area: 1,
         placeholders=lambda cfg: {},
     )
-    geometry = SimpleNamespace(
-        origin=SimpleNamespace(x=0, y=0),
+    geometry = Geometry(
+        origin=Point(0, 0),
         area=Area(width=W, height=H),
         header=Box(left=0, bottom=H - 8000, right=W, top=H),
         footer=Box(left=0, bottom=0, right=W, top=8000),

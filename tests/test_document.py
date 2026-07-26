@@ -233,3 +233,161 @@ class TestAPageMayBeFilledByABlade:
                 q=PdfWriter("unused.pdf"),
             )
         ) == [own]
+
+
+class _Recording(PdfWriter):
+    """A real writer that also keeps what it was asked to draw, per page.
+
+    The document path's defects were all *absences* — a mark that should have
+    been drawn and was not — so the test has to look at the marks themselves,
+    not at whether a file appeared.
+    """
+
+    def __init__(self, path: Path) -> None:
+        super().__init__(path)
+        self.pages_drawn: list[list] = []
+
+    def begin_page(self, width: int, height: int) -> None:
+        self.pages_drawn.append([])
+        super().begin_page(width, height)
+
+    def draw(self, mark) -> None:
+        self.pages_drawn[-1].append(mark)
+        super().draw(mark)
+
+
+NOTEBOOK = (
+    "version: 1\n"
+    "page: {format: a4, margin: 10mm}\n"
+    "generator: notebook\n"
+    "sections:\n"
+    "  - label: Journal\n"
+    "    pages: 2\n"
+    "    generator: lines\n"
+    "    families: [{direction: horizontal, base_spacing: 5mm, base_weight: 0.3pt}]\n"
+)
+
+
+def _drawn(text: str, tmp_path: Path) -> list[list]:
+    writer = _Recording(tmp_path / "doc.pdf")
+    build(loads(text, source="test"), writer)
+    return writer.pages_drawn
+
+
+class TestTheDocumentPathCarriesThePageModel:
+    """§ 8.1: the frame belongs to the *page*, and a document has pages.
+
+    `_build_document` grew as a second, thinner page path and never gained the
+    furniture the blade path draws, while the loader went on accepting the keys
+    — so a border, hole marks, a ruler, a stamp and a page background were
+    validated, reported as a successful run, and drawn nowhere. § 5.1 calls a
+    PDF that is *almost* right the worst failure class there is.
+    """
+
+    def test_duplex_moves_the_pattern_on_even_pages(self, tmp_path: Path) -> None:
+        # § 8.1: under duplex the margins swap, so everything inside them moves.
+        # A notebook is a bound book — this is the one artefact duplex exists for.
+        text = NOTEBOOK.replace(
+            "page: {format: a4, margin: 10mm}",
+            "page:\n  format: a4\n  duplex: true\n"
+            "  margin: {top: 10mm, bottom: 10mm, inner: 30mm, outer: 8mm}",
+        )
+        pages = _drawn(text, tmp_path)
+        lefts = [
+            min(mark.start.x for mark in page if hasattr(mark, "start"))
+            for page in pages
+            if any(hasattr(mark, "start") for mark in page)
+        ]
+        assert len(set(lefts)) > 1, f"every page starts at the same x: {lefts}"
+
+    def test_a_border_reaches_a_document_page(self, tmp_path: Path) -> None:
+        plain = _drawn(NOTEBOOK, tmp_path)
+        bordered = _drawn(
+            NOTEBOOK.replace("generator: notebook", "border: {weight: 0.6pt}\ngenerator: notebook"),
+            tmp_path,
+        )
+        assert sum(len(p) for p in bordered) > sum(len(p) for p in plain)
+
+    def test_hole_marks_reach_a_document_page(self, tmp_path: Path) -> None:
+        plain = _drawn(NOTEBOOK, tmp_path)
+        punched = _drawn(
+            NOTEBOOK.replace("margin: 10mm}", "margin: 10mm, hole_marks: true}"), tmp_path
+        )
+        assert sum(len(p) for p in punched) > sum(len(p) for p in plain)
+
+    def test_a_page_background_reaches_a_document_page(self, tmp_path: Path) -> None:
+        plain = _drawn(NOTEBOOK, tmp_path)
+        tinted = _drawn(
+            NOTEBOOK.replace("margin: 10mm}", "margin: 10mm, background: '#eeeeee'}"), tmp_path
+        )
+        assert sum(len(p) for p in tinted) > sum(len(p) for p in plain)
+
+    def test_a_stamp_reaches_a_document_page(self, tmp_path: Path) -> None:
+        plain = _drawn(NOTEBOOK, tmp_path)
+        stamped = _drawn(
+            NOTEBOOK.replace("generator: notebook", "stamp: {text: DRAFT}\ngenerator: notebook"),
+            tmp_path,
+        )
+        assert sum(len(p) for p in stamped) > sum(len(p) for p in plain)
+
+    def test_a_ruler_reaches_a_document_page(self, tmp_path: Path) -> None:
+        plain = _drawn(NOTEBOOK, tmp_path)
+        ruled = _drawn(
+            NOTEBOOK.replace(
+                "generator: notebook", "ruler: {edges: [bottom], unit: cm}\ngenerator: notebook"
+            ),
+            tmp_path,
+        )
+        assert sum(len(p) for p in ruled) > sum(len(p) for p in plain)
+
+
+class TestWhatADocumentDoesNotDo:
+    """Decision 42 settled that a document takes its own write path — no cover,
+    no imposition, no snap. What it did not settle is what happens when someone
+    asks for one anyway, and the answer was: nothing, silently. `--nup` went
+    further and printed an imposition summary for an imposition that had not
+    happened, which § 12 counts as worse than no message at all.
+    """
+
+    def test_nup_on_a_document_is_refused_rather_than_reported(self, tmp_path: Path) -> None:
+        document = loads(NOTEBOOK, source="test", overrides={"nup": "2x1", "nup_sheet": "a3"})
+        with pytest.raises(DefinitionError) as excinfo:
+            build(document, PdfWriter(tmp_path / "n.pdf"))
+        assert "nup" in str(excinfo.value)
+
+    def test_a_cover_on_a_document_is_refused(self, tmp_path: Path) -> None:
+        document = loads(NOTEBOOK, source="test", overrides={"cover": True})
+        with pytest.raises(DefinitionError) as excinfo:
+            build(document, PdfWriter(tmp_path / "c.pdf"))
+        assert "cover" in str(excinfo.value)
+
+    def test_an_align_on_a_document_is_refused(self, tmp_path: Path) -> None:
+        # § 8.5 anchors a *pattern* in its area; a document page is not one
+        # pattern area, and § 7.13 already refuses `align` per section.
+        text = NOTEBOOK.replace(
+            "generator: notebook", "pattern: {align: top-left}\ngenerator: notebook"
+        )
+        with pytest.raises(DefinitionError) as excinfo:
+            build(loads(text, source="test"), PdfWriter(tmp_path / "a.pdf"))
+        assert "align" in str(excinfo.value)
+
+    def test_a_section_whose_blade_needs_more_than_one_sheet_is_refused(
+        self, tmp_path: Path
+    ) -> None:
+        # A `maze` with separate solution pages states a SheetPlan (decision 27)
+        # that the handle carries out — on the blade path. The document path
+        # never asks, so the solution landed on the page *before* its puzzle and
+        # adding a title page silently redrew every maze. Refused until § 7.13
+        # says what a per-section sheet plan should mean.
+        text = (
+            "version: 1\npage: {format: a4, margin: 10mm}\ngenerator: notebook\n"
+            "sections:\n"
+            "  - label: Mazes\n"
+            "    pages: 4\n"
+            "    generator: maze\n"
+            "    cells: {x: 8, y: 8}\n"
+            "    solution: separate_page\n"
+        )
+        with pytest.raises(DefinitionError) as excinfo:
+            build(loads(text, source="test"), PdfWriter(tmp_path / "m.pdf"))
+        assert "solution" in str(excinfo.value)

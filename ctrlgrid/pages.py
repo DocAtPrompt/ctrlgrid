@@ -16,7 +16,7 @@ from __future__ import annotations
 import datetime
 import hashlib
 import re
-from collections.abc import Iterator, Mapping
+from collections.abc import Iterable, Iterator, Mapping
 from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -892,6 +892,44 @@ def _attachment(document: Document) -> Attachment | None:
     )
 
 
+def _refuse_what_a_document_has_no_page_loop_for(document: Document) -> None:
+    """Three settings a document generator cannot honour — said, not ignored.
+
+    Decision 42 settled that a document takes its own write path: no cover, no
+    imposition, no snap. What it did not settle is what happens when a run asks
+    for one anyway, and the answer had been *nothing*. `--nup` was worse than
+    silent — `cli` printed the imposition summary from `document.nup` without
+    asking whether it had been applied, so the run reported four-up on a sheet
+    of plain pages. § 12 counts a report that misleads as worse than none.
+
+    So each is refused by name, before page one, which is what the deferred-key
+    machinery of § 5.1 exists for: a key the tool does not honour never reads as
+    though it worked.
+    """
+    if document.nup is not None:
+        raise DefinitionError(
+            f"generator `{document.generator}` writes its own pages, and imposition "
+            "works on a page loop it does not have (§ 14). Its links and bookmarks "
+            "would not survive being imposed either — drop --nup, or impose the "
+            "finished PDF with a separate tool",
+            field="nup",
+        )
+    if document.pages.cover:
+        raise DefinitionError(
+            f"generator `{document.generator}` writes its own pages, so there is no "
+            "cover sheet to add in front of them (§ 8.8) — drop --cover. A document's "
+            "own title page is the place for that (§ 7.12, § 7.13)",
+            field="pages.cover",
+        )
+    if document.pattern.align != "bottom-left":
+        raise DefinitionError(
+            f"pattern.align asks for `{document.pattern.align}`, and generator "
+            f"`{document.generator}` has no single pattern to anchor — it owns its "
+            "pages, each laid out on its own (§ 8.5, § 7.13). Remove pattern.align",
+            field="pattern.align",
+        )
+
+
 def _document_preflight(
     document: Document, blade: object, q: WriterQuery
 ) -> tuple[Geometry, list[PageContext], list[list[Text]], list[Mark]]:
@@ -904,6 +942,7 @@ def _document_preflight(
     same tuple shape as `preflight` so `check` and `build` share one entry point;
     the three page-loop lists are empty because a document does not use them.
     """
+    _refuse_what_a_document_has_no_page_loop_for(document)
     probe = _metrics_oracle(q)
     geometry = Geometry.of(
         document.sheet,
@@ -1053,6 +1092,44 @@ def _refuse_writer_cannot_render_document(
     )
 
 
+def _document_content(
+    document: Document,
+    page: DocumentPage,
+    geometry: Geometry,
+    context: PageContext,
+    ox: Um,
+    oy: Um,
+    q: WriterQuery,
+) -> Iterator[Mark]:
+    """A document page's own layer: its full-sheet fills, then its marks.
+
+    These sit between the definition's `page.background` and the frame, which
+    is what `page_furniture` calls `content` — the title page's colour must
+    cover the sheet's, and the frame must sit over both (§ 7.12).
+    """
+    if page.background:
+        yield Polygon(
+            points=(
+                Point(0, 0), Point(document.sheet.width, 0),
+                Point(document.sheet.width, document.sheet.height),
+                Point(0, document.sheet.height),
+            ),
+            closed=True, weight=0.0, fill_color=page.background,
+        )
+    # ...then the background image over it, so its transparent areas show the
+    # colour through (§ 7.12). Validated in the pre-flight, so no raise here.
+    if page.background_image:
+        from ctrlgrid.images import load_image
+
+        image = load_image(page.background_image, field="title_page.background_image")
+        x, y, w, h = background_image_rect(
+            document.sheet.width, document.sheet.height, image.aspect, page.background_fit
+        )
+        yield Image(pos=Point(x, y), width=w, height=h, source=str(image.path))
+    for mark in document_page_marks(page, area=geometry.area, context=context, q=q):
+        yield translate(mark, dx=ox, dy=oy)
+
+
 def _build_document(
     document: Document, blade: object, writer: Writer, geometry: Geometry,
 ) -> Geometry:
@@ -1065,7 +1142,6 @@ def _build_document(
     so links from other pages resolve to it. `header_marks`/`footer_marks` are
     the constant bands, already in sheet coordinates, drawn per page's flags.
     """
-    ox, oy = geometry.origin.x, geometry.origin.y
     writer.begin_document(
         DocumentMeta(title=f"ctrlgrid {document.source}", attachment=_attachment(document))
     )
@@ -1080,39 +1156,33 @@ def _build_document(
     # the pre-flight approved — which is what `--skip-unsupported` needs.
     for index, page in enumerate(blade.pages(document.config, area=geometry.area, q=probe)):
         context = _document_context(index, total)
-        header_marks, footer_marks = document_bands(
-            document, geometry, blade, context, q=probe, page=page
+        # The geometry of *this* sheet side: under duplex the margins swap, and
+        # a document is the artefact that needs it most — a notebook is bound
+        # (§ 8.1). This path used one origin for the whole run and so printed
+        # every page as if it were a front.
+        placed = geometry.for_page(
+            is_even=context.is_even, sheet=document.sheet, duplex=document.page.duplex
         )
+        ox, oy = placed.origin.x, placed.origin.y
+        header_marks, footer_marks = document_bands(
+            document, placed, blade, context, q=probe, page=page
+        )
+        bands: list[Mark] = []
+        if page.show_header:
+            bands += header_marks
+        if page.show_footer:
+            bands += footer_marks
         writer.begin_page(document.sheet.width, document.sheet.height)
         writer.define_dest(page.dest)
-        # A full-sheet colour fill, painted under everything (§ 7 — the title).
-        if page.background:
-            writer.draw(Polygon(
-                points=(
-                    Point(0, 0), Point(document.sheet.width, 0),
-                    Point(document.sheet.width, document.sheet.height),
-                    Point(0, document.sheet.height),
-                ),
-                closed=True, weight=0.0, fill_color=page.background,
-            ))
-        # ...then the background image over it, so its transparent areas show the
-        # colour through (§ 7.12). Validated in the pre-flight, so no raise here.
-        if page.background_image:
-            from ctrlgrid.images import load_image
-
-            image = load_image(page.background_image, field="title_page.background_image")
-            x, y, w, h = background_image_rect(
-                document.sheet.width, document.sheet.height, image.aspect, page.background_fit
-            )
-            writer.draw(Image(pos=Point(x, y), width=w, height=h, source=str(image.path)))
-        if page.show_header:
-            for mark in header_marks:
-                writer.draw(mark)
-        if page.show_footer:
-            for mark in footer_marks:
-                writer.draw(mark)
-        for mark in document_page_marks(page, area=geometry.area, context=context, q=probe):
-            writer.draw(translate(mark, dx=ox, dy=oy))
+        for mark in page_furniture(
+            document,
+            placed,
+            is_even=context.is_even,
+            content=_document_content(document, page, geometry, context, ox, oy, probe),
+            bands=bands,
+            q=probe,
+        ):
+            writer.draw(mark)
         for link in page.links:
             writer.link(
                 Point(link.lower_left.x + ox, link.lower_left.y + oy),
@@ -1240,24 +1310,28 @@ def _page_marks(
     then lands on its own sheet or in a cell of a larger one is a separate,
     later decision that only translates it.
     """
-    from ctrlgrid.frame import (
-        background_mark,
-        border_mark,
-        hole_marks,
-        ruler_marks,
-        stamp_mark,
-    )
-
     placed = geometry.for_page(
         is_even=context.is_even, sheet=document.sheet, duplex=document.page.duplex
     )
+    yield from page_furniture(
+        document,
+        placed,
+        is_even=context.is_even,
+        content=_pattern_marks(document, placed, blade, plan, context, q),
+        bands=frame,
+        q=q,
+    )
 
-    # Marks arrive in layer order and the writer does not sort (§ 3.6), so this
-    # sequence *is* the stacking: background, pattern, frame, stamp.
-    background = background_mark(document.page.background, document.sheet)
-    if background is not None:
-        yield background
 
+def _pattern_marks(
+    document: Document,
+    placed: Geometry,
+    blade: object,
+    plan: SheetPlan,
+    context: PageContext,
+    q: WriterQuery,
+) -> Iterator[Mark]:
+    """The blade's own marks, mirrored and moved into sheet coordinates."""
     # § 7.5's `back_mirrored` is the one exception to a blade never knowing
     # which side of the sheet it is on: the handle mirrors, about the sheet's
     # centre (the physical turning edge), and only the pattern layer so header
@@ -1279,14 +1353,58 @@ def _page_marks(
             placed_mark = mirror_x(placed_mark, about=document.sheet.width)
         yield placed_mark
 
+
+def page_furniture(
+    document: Document,
+    placed: Geometry,
+    *,
+    is_even: bool,
+    content: Iterable[Mark],
+    bands: Iterable[Mark],
+    q: WriterQuery,
+) -> Iterator[Mark]:
+    """Everything the handle draws around one page's own marks (§ 8.1).
+
+    **One function, because there are two page paths.** The frame belongs to the
+    *page* — § 8.1 puts background, border, hole marks, the edge ruler and the
+    stamp there, not in the pattern — and a document generator owns pages just
+    as the page loop does. `_build_document` was written without this and drew
+    none of them for two whole generators, while the loader went on accepting
+    every key: a notebook with `hole_marks: true` validated, reported success,
+    and came out unpunched. § 5.1 calls that the worst failure class there is.
+
+    The lesson is this codebase's own, three times over — `layout_band`, the
+    writer wrapper and `document_page_marks` all exist because one site out of
+    several is eventually forgotten. So a feature added here now reaches both
+    paths or neither.
+
+    Marks arrive in layer order and the writer does not sort (§ 3.6), so this
+    sequence *is* the stacking: background, content, frame, bands, stamp.
+    `placed` is the geometry of *this* sheet side, so everything follows the
+    pattern area when duplex moves it (§ 8.1, § 8.12).
+    """
+    from ctrlgrid.frame import (
+        background_mark,
+        border_mark,
+        hole_marks,
+        ruler_marks,
+        stamp_mark,
+    )
+
+    background = background_mark(document.page.background, document.sheet)
+    if background is not None:
+        yield background
+
+    yield from content
+
     border = border_mark(document.border, placed)
     if border is not None:
         yield border
-    yield from hole_marks(document.page, document.sheet, is_even=context.is_even)
-    # `placed` and not `geometry`: the scale measures the area *this* page got,
-    # and under duplex that area sits on the other side of the sheet (§ 8.12).
+    yield from hole_marks(document.page, document.sheet, is_even=is_even)
+    # `placed` and not the run's geometry: the scale measures the area *this*
+    # page got, and under duplex that area sits on the other side of the sheet.
     yield from ruler_marks(document.ruler, placed, q=q, align=document.pattern.align)
-    yield from frame
+    yield from bands
 
     stamp = stamp_mark(document.stamp, document.sheet, q=q)
     if stamp is not None:
