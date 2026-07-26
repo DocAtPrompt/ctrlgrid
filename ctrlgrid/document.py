@@ -63,6 +63,15 @@ class Fill:
 
     generator: str
     config: Any
+    index: int = 0
+    """This page's 0-based position **within its section** (§ 7.13).
+
+    A section is a definition in miniature, so its blade is handed a page
+    context of the section's own rather than the document's. That is what makes
+    a maze section stable against a title page in front of it — and what makes
+    `page.index % 2` mean puzzle-or-solution again (§ 7.5)."""
+    count: int = 1
+    """How many pages the section has, for that context's `count`."""
 
 
 @dataclass(frozen=True, slots=True)

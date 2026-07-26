@@ -42,7 +42,7 @@ from ctrlgrid.writers import Attachment, DocumentMeta, Writer, WriterQuery
 
 if TYPE_CHECKING:
     # `loader` imports `Sheet` from here, so the arrow points one way.
-    from ctrlgrid.document import DocumentPage
+    from ctrlgrid.document import DocumentPage, Fill
     from ctrlgrid.loader import Document
 
 
@@ -1134,7 +1134,36 @@ def document_page_marks(
         from ctrlgrid import generators
 
         blade = generators.get(page.fill.generator)
-        yield from blade.generate(page.fill.config, area=area, page=context, q=q)
+        yield from blade.generate(
+            page.fill.config, area=area, page=_fill_context(page.fill, context), q=q
+        )
+
+
+def _fill_context(fill: Fill, document_context: PageContext) -> PageContext:
+    """The page context a filled page's blade is handed (§ 7.13).
+
+    Not the document's: a section is a definition in miniature, so its blade
+    counts from the section's own zero. Two readings depend on it — `maze` takes
+    `page.index % 2` for puzzle-or-solution and `page.index // 2` for the item
+    behind the seed (§ 7.5) — and both were wrong while the document's index
+    reached through, which is why an unrelated title page redrew every maze.
+
+    The name stays the document's: `{name}` belongs to the run, and a notebook
+    has no name list. The seed material is rebuilt from the section index, so
+    the same section in two documents draws the same pages (§ 10.1) — with no
+    run seed, because a document path has none. `maze` does not read it at all;
+    it seeds from its own `seed` field and `page.index`. This is here for the
+    blade that one day does.
+    """
+    return PageContext(
+        index=fill.index,
+        number=fill.index + 1,
+        count=fill.count,
+        name=document_context.name,
+        is_even=(fill.index + 1) % 2 == 0,
+        seed_material=seed_material(0, fill.index),
+        pixel_snap=document_context.pixel_snap,
+    )
 
 
 def document_bands(

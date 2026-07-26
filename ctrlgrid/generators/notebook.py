@@ -225,7 +225,10 @@ class NotebookGenerator:
                     dest=dest,
                     kind="section",
                     marks=(),
-                    fill=Fill(section.generator, section.config),
+                    fill=Fill(
+                        section.generator, section.config,
+                        index=number - 1, count=section.pages,
+                    ),
                     placeholders=placeholders,
                 )
 
