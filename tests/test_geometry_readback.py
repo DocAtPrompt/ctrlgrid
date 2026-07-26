@@ -462,3 +462,47 @@ class TestLabelsNoneIsSpelledAsSpecified:
     def test_tiling_still_takes_it(self, tmp_path: Path) -> None:
         path = sheet(tmp_path, self.blade("tiling", "shape: hex\nsize: 10mm\n"), "t.pdf")
         assert pdfread.text_on(path).strip() == ""
+
+
+class TestLogarithmicAxis:
+    """§ 7.9: "Die Positionen berechnet das Werkzeug; niemand tippt 0.4771."
+
+    Which makes it the one family whose positions a test cannot take from the
+    definition — it has to compute log10 itself. That is not circular: the
+    logarithm is mathematics, not this codebase's arithmetic, and `math.log10`
+    is an independent second opinion on it.
+    """
+
+    DEFINITION = (
+        "version: 1\n"
+        "page: {format: a4, margin: 10mm}\n"
+        "generator: lines\n"
+        "families:\n"
+        "  - direction: horizontal\n"
+        "    law: log10\n"
+        "    base_spacing: 40mm\n"
+        "    decades: 3\n"
+        "    base_weight: 0.2pt\n"
+    )
+
+    def test_the_lines_sit_where_the_logarithm_puts_them(self, tmp_path: Path) -> None:
+        drawn = segments(sheet(tmp_path, self.DEFINITION))
+        ys = sorted({round(p[0][1]) for p in drawn if abs(p[0][1] - p[1][1]) < EXACT})
+        origin = ys[0]
+        # Three decades of 40 mm: within each, 1…10 sits at log10(n) x 40 mm.
+        expected = sorted(
+            {round(decade * 40_000 + math.log10(n) * 40_000)
+             for decade in range(3) for n in range(1, 11)}
+        )
+        assert len(ys) == len(expected), (len(ys), len(expected))
+        for got, want in zip(ys, expected, strict=True):
+            assert abs((got - origin) - want) <= EXACT, ((got - origin) / 1000, want / 1000)
+
+    def test_the_block_is_exactly_decades_times_the_decade_length(
+        self, tmp_path: Path
+    ) -> None:
+        # § 7.9: a log family has a fixed total length of decades x base_spacing
+        # and does not repeat. 3 x 40 mm = 120 mm, on a 277 mm tall area.
+        drawn = segments(sheet(tmp_path, self.DEFINITION))
+        ys = sorted({round(p[0][1]) for p in drawn if abs(p[0][1] - p[1][1]) < EXACT})
+        assert abs((ys[-1] - ys[0]) - 120_000) <= EXACT, (ys[-1] - ys[0]) / 1000
