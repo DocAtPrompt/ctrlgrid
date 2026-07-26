@@ -239,3 +239,41 @@ class TestTheAlignmentLeaf:
         assert result.exit_code == 0, result.output
         assert "blank leaf" in result.output
         assert "Mazes" in result.output
+
+
+class TestTheRunDescribesWhatItBuilt:
+    def test_a_doubled_section_reports_both_numbers(self, tmp_path: Path) -> None:
+        # § 12, and decision 52's own lesson: a report that misleads is worse
+        # than none. `pages:` counts items, so a section that says 6 produces
+        # 12 — saying only "6 page(s)" would describe a document that is not
+        # the one on disk.
+        from typer.testing import CliRunner
+
+        from ctrlgrid.cli import app
+
+        definition = tmp_path / "d.yaml"
+        definition.write_text(notebook(maze_section(6, "separate_page")), encoding="utf-8")
+        result = CliRunner().invoke(
+            app, ["-d", str(definition), "-o", str(tmp_path / "o.pdf")]
+        )
+        assert result.exit_code == 0, result.output
+        assert "6 item(s)" in result.output
+        assert "12 page(s)" in result.output
+
+    def test_an_ordinary_section_still_reads_as_pages(self, tmp_path: Path) -> None:
+        # One sheet per item is every other section, and there "6 item(s) = 6
+        # page(s)" would be noise.
+        from typer.testing import CliRunner
+
+        from ctrlgrid.cli import app
+
+        definition = tmp_path / "d.yaml"
+        definition.write_text(
+            notebook(maze_section(3, "none", "Plain")), encoding="utf-8"
+        )
+        result = CliRunner().invoke(
+            app, ["-d", str(definition), "-o", str(tmp_path / "o.pdf")]
+        )
+        assert result.exit_code == 0, result.output
+        assert "3 page(s)" in result.output
+        assert "item(s)" not in result.output

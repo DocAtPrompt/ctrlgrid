@@ -130,9 +130,19 @@ class NotebookGenerator:
         lines = []
         for index, section in enumerate(cfg.sections):
             divider = " + divider" if section.divider else ""
+            # § 12: `pages:` counts *items*, so a section with a sheet plan
+            # produces more pages than the number in the definition. Reporting
+            # only that number would describe a document that is not the one on
+            # disk — the very failure decision 52 recorded for the imposition
+            # summary. Both numbers, and only where they differ.
+            pages = self._section_pages(section)
+            size = (
+                f"{section.pages} page(s)"
+                if pages == section.pages
+                else f"{section.pages} item(s) = {pages} page(s)"
+            )
             lines.append(
-                f"{section.name(index)}: {section.pages} page(s) of "
-                f"`{section.generator}`{divider}"
+                f"{section.name(index)}: {size} of `{section.generator}`{divider}"
             )
         return lines
 
