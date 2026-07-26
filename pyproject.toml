@@ -21,7 +21,7 @@ keywords = [
     "polar-graph", "tiling", "perspective-grid",
 ]
 classifiers = [
-    "Development Status :: 3 - Alpha",
+    "Development Status :: 4 - Beta",
     "Environment :: Console",
     "Intended Audience :: End Users/Desktop",
     "License :: OSI Approved :: MIT License",
@@ -59,7 +59,9 @@ dev = [
 
 [project.urls]
 Homepage = "https://github.com/DocAtPrompt/ctrlgrid"
+Documentation = "https://github.com/DocAtPrompt/ctrlgrid/blob/main/HANDBOOK.md"
 Issues = "https://github.com/DocAtPrompt/ctrlgrid/issues"
+Changelog = "https://github.com/DocAtPrompt/ctrlgrid/commits/main"
 
 [project.scripts]
 ctrlgrid = "ctrlgrid.cli:main"

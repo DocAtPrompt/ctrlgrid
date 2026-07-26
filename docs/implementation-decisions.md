@@ -980,3 +980,61 @@ one rule — a panel that closes over a layer is widened by it, a flap that slid
 inside one is shortened by it. `thickness: 0` reduces every style to its ideal
 net, and the test that says so is what keeps the rule from quietly growing
 special cases.
+
+
+## 52. A document generator carries the page model; three keys it refuses by name (§ 8.1, § 7.12, § 7.13)
+
+Decision 42 gave a document generator its own write path — "no cover, no
+imposition, no snap" — and that sentence was read as settling more than it did.
+`_build_document` grew as a second, thinner page path and never gained the frame
+the blade path draws, while the loader went on accepting every key. Measured
+before the fix: a notebook's page content streams were **byte-identical** with
+`border`, `stamp`, `hole_marks`, `ruler` and `page.background` all switched on
+and with all five removed, and `duplex` left every page laid out as a front.
+
+Two things had to be decided, and the second is the one that matters.
+
+**Which keys a document takes.** All of the page model. § 8.1 puts background,
+border, hole marks, the edge ruler and the stamp on the *page*, not in the
+pattern — and a document generator owns pages. A planner gets punched and a
+notebook gets bound, so these are not exotic on exactly the two artefacts that
+have them. `duplex` most of all: it is the reason a notebook wants a wide inner
+margin, and it was doing nothing.
+
+**Where that lives.** In one function, `pages.page_furniture`, called by both
+paths — not in a second copy inside the document path. This is the same call the
+codebase has now made four times (`layout_band`, `_LeavingOutWhatItCannotDraw`,
+`document_page_marks`, and now this), and the evidence for it is this very bug:
+six features existed on one path and not the other, silently, for two whole
+generators. A feature added there now reaches both paths or neither.
+
+The order of drawing changed as a consequence: the bands paint **after** the
+page's content, which is the blade path's order and § 6's layer order (pattern,
+then frame). Bands and pattern do not overlap, so the sheets are unchanged —
+verified by rasterising `examples/15-notebook.pdf` before and after at 72 dpi and
+comparing page by page: twelve pages, no pixel different, identical operator
+counts and text tokens. Only the bytes moved.
+
+**Three keys are refused by name** instead of accepted and ignored, using the
+mechanism § 5.1 provides for exactly this:
+
+- **`--nup`.** Imposition works on the page loop a document does not run, and
+  § 14 notes that imposing destroys links — which is most of what a calendar is.
+  This one was worse than silent: `cli` printed the imposition summary from
+  `document.nup` without asking whether it had been applied, so a run reported
+  *"imposed 2x2 on a4 — 1 sheet(s), at 100 %"* over three plain A4 pages.
+- **`--cover`.** A document writes its own first page; `title_page` is the place
+  for one.
+- **`pattern.align`.** It anchors *a pattern* within its area (§ 8.5), and a
+  document page is not one pattern area — § 7.13 already refuses it per section
+  for the same reason.
+
+**A fourth refusal, and this one is deliberately temporary.** A notebook section
+whose blade states a `SheetPlan` with more than one sheet per item — a `maze`
+with `solution: separate_page` — is refused. On the blade path the handle
+carries such a plan out (decision 27); the document path never asked, so
+solutions printed *before* their puzzles, and adding a title page silently
+redrew every maze because unrelated furniture shifted `page.index`. § 7.13 says
+nothing about what a per-section sheet plan should mean, so it is refused until
+it does rather than answered wrongly. Honouring it per section is a real design
+question, not an oversight, and is left open.

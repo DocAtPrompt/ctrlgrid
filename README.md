@@ -49,7 +49,7 @@ paper formats **and** for e-ink tablets.
 ## Examples
 
 A gallery of A4 examples — one per generator, plus a multi-page maze booklet and
-a whole linked calendar — is in [`examples/`](examples/README.md), each an
+a whole linked calendar — is in [`examples/`](https://github.com/DocAtPrompt/ctrlgrid/blob/main/examples/README.md), each an
 ordinary definition file you can copy and bend.
 
 ## The one promise
@@ -63,7 +63,7 @@ measures it, on every commit.
 
 ## Why another one
 
-Of roughly 60 comparable tools surveyed ([`docs/research.md`](docs/research.md)),
+Of roughly 60 comparable tools surveyed ([`docs/research.md`](https://github.com/DocAtPrompt/ctrlgrid/blob/main/docs/research.md)),
 three can emit more than one page and **none** can drive page content from a
 list. Ctrl+Grid is built around exactly that: one command, one finished
 multi-page PDF.
@@ -149,7 +149,7 @@ sections:
 ```
 
 One PDF on an e-ink device instead of twelve — `ctrlgrid notebook-a4 -o
-notebook.pdf`, or see [`examples/15-notebook.yaml`](examples/15-notebook.yaml).
+notebook.pdf`, or see [`examples/15-notebook.yaml`](https://github.com/DocAtPrompt/ctrlgrid/blob/main/examples/15-notebook.yaml).
 
 The interesting part is the **cycle model**: spacing, stroke weight, size, dash
 pattern and colour each follow their own repeating list, and the lists may have
@@ -199,8 +199,8 @@ the calendar adds no language of its own. It is **PDF only**: links and text
 cannot live in a PNG, and the run is refused rather than quietly stripped of its
 links.
 
-The whole example is [`examples/12-calendar-year.yaml`](examples/12-calendar-year.yaml);
-the preset is `ctrlgrid show calendar-a4`, and [`HANDBOOK.md`](HANDBOOK.md)
+The whole example is [`examples/12-calendar-year.yaml`](https://github.com/DocAtPrompt/ctrlgrid/blob/main/examples/12-calendar-year.yaml);
+the preset is `ctrlgrid show calendar-a4`, and [`HANDBOOK.md`](https://github.com/DocAtPrompt/ctrlgrid/blob/main/HANDBOOK.md)
 documents every option.
 
 ## Definition files
@@ -253,7 +253,7 @@ have metrics but no file), so a definition with a header, footer or labels on
 PNG is refused up front, naming the way out: a font file, or PDF.
 
 Adding a profile for your device is the easiest useful contribution — see
-[`CONTRIBUTING.md`](CONTRIBUTING.md).
+[`CONTRIBUTING.md`](https://github.com/DocAtPrompt/ctrlgrid/blob/main/CONTRIBUTING.md).
 
 ## Known limitations
 
@@ -323,22 +323,22 @@ to answer, it prints its help instead.
 
 ## Documentation
 
-- [`HANDBOOK.md`](HANDBOOK.md) — the user handbook: install, the page model,
+- [`HANDBOOK.md`](https://github.com/DocAtPrompt/ctrlgrid/blob/main/HANDBOOK.md) — the user handbook: install, the page model,
   every generator and option, with worked examples. **Start here.**
-- [`docs/pflichtenheft-vorlagengenerator.md`](docs/pflichtenheft-vorlagengenerator.md) —
+- [`docs/pflichtenheft-vorlagengenerator.md`](https://github.com/DocAtPrompt/ctrlgrid/blob/main/docs/pflichtenheft-vorlagengenerator.md) —
   the full specification, in German. Records not just what the tool does but why.
-- [`docs/implementation-decisions.md`](docs/implementation-decisions.md) — the
+- [`docs/implementation-decisions.md`](https://github.com/DocAtPrompt/ctrlgrid/blob/main/docs/implementation-decisions.md) — the
   points where the specification was silent, and what was decided instead.
-- [`docs/research.md`](docs/research.md) — survey of comparable tools, July 2026.
-- [`CONTRIBUTING.md`](CONTRIBUTING.md) — how to add device profiles, presets and
+- [`docs/research.md`](https://github.com/DocAtPrompt/ctrlgrid/blob/main/docs/research.md) — survey of comparable tools, July 2026.
+- [`CONTRIBUTING.md`](https://github.com/DocAtPrompt/ctrlgrid/blob/main/CONTRIBUTING.md) — how to add device profiles, presets and
   code.
 
 ## Licence
 
-MIT — see [`LICENSE`](LICENSE).
+MIT — see [`LICENSE`](https://github.com/DocAtPrompt/ctrlgrid/blob/main/LICENSE).
 
-The bundled clef font in [`ctrlgrid/data/fonts/`](ctrlgrid/data/fonts/) is
+The bundled clef font in [`ctrlgrid/data/fonts/`](https://github.com/DocAtPrompt/ctrlgrid/tree/main/ctrlgrid/data/fonts/) is
 derived from **Bravura** © Steinberg Media Technologies GmbH, under the
-[SIL Open Font License 1.1](ctrlgrid/data/fonts/OFL.txt) — subset to the four
+[SIL Open Font License 1.1](https://github.com/DocAtPrompt/ctrlgrid/blob/main/ctrlgrid/data/fonts/OFL.txt) — subset to the four
 clef glyphs, converted to TrueType, and renamed as the OFL requires for a
 modified version.

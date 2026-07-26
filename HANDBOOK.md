@@ -170,6 +170,7 @@ See [Appendix C](#appendix-c--command-line-flags) for the full list. The most
 common:
 
 ```bash
+ctrlgrid --version                                 # which version is installed
 ctrlgrid millimeter-a4 --pages 30 -o grid.pdf      # 30 numbered sheets
 ctrlgrid millimeter-a4 --cover -o grid.pdf         # + a calibration first sheet
 ctrlgrid -d mine.yaml --format a5 -o out.pdf       # override the paper format
@@ -1152,11 +1153,33 @@ footer: { height: 8mm, gap: 3mm, right: "{page} / {page_count}" }
 What is refused, before the first page: an unknown generator (with the list of
 known ones), a *document* generator inside a section — notebooks do not nest —
 `pages: 0`, an empty `sections:`, anything a section's own generator refuses for
-the page size, and a contents page too long for its sheet.
+the page size, a contents page too long for its sheet, and a section whose
+generator needs more than one sheet per item (a `maze` with `solution:
+separate_page`, whose solutions could not be paired with their puzzles here).
 
 Not in this version, and named rather than forgotten: no per-section `snap`,
 `remainder` or `align` (those are page geometry for the whole document), no
 per-section paper size.
+
+### What a document generator does and does not take
+
+Both `calendar` and `notebook` own their pages, and that decides which of the
+handle's keys apply to them.
+
+**They take the whole page model.** `page.margin` including `duplex` — the
+margins swap on even sheets, which is what a bound notebook wants — plus
+`page.background`, `page.hole_marks`, `border`, `ruler`, `stamp`, and a header
+and footer whose placeholders are filled per page (`{page}`, and `{section}` in
+a notebook).
+
+**They refuse three things by name**, rather than accepting them and doing
+nothing:
+
+| Asked for | Why it is refused |
+|---|---|
+| `--nup` | imposition works on a page loop a document does not have, and it would destroy the links a calendar is made of |
+| `--cover` | a document writes its own first page; `title_page` is the place for one |
+| `pattern.align` | it anchors *a pattern* in its area, and a document page is not one pattern area |
 
 Preset: `notebook-a4` (106 pages). Example:
 [`15-notebook.yaml`](examples/15-notebook.yaml).
@@ -1205,6 +1228,10 @@ ctrlgrid -d card.yaml --format a6 --pages 4 --nup 2x2 --nup-sheet a4 -o sheet.pd
 big sheet at full size, the run refuses (it never shrinks them — that would break
 the promise). `--crop-marks` adds trim marks. The cover sheet is exempt from
 imposition.
+
+A **document generator** (`calendar`, `notebook`) refuses `--nup` outright: it
+writes its own pages rather than running the page loop imposition works on, and
+imposing would destroy the links such a document is made of.
 
 ---
 
@@ -1290,13 +1317,12 @@ the documentation. There is one for every generator:
 
 ```
 dots-5mm            grid-a4             mandala-a4          maze-medium
-millimeter-a4       perspective-2pt-a4  phone-log-a5        polar-a4
-staves-treble-a4    tiling-hex-a4       calendar-a4         notebook-a4
-box-tuck-a4         precrease-16-a4     plot-a4
+perspective-2pt-a4  phone-log-a5        polar-a4            staves-treble-a4
+tiling-hex-a4       box-tuck-a4         calendar-a4         notebook-a4
 ```
 
-And five that are papers rather than generators — each one is `lines` with a
-different cycle, which is the argument of §9 made in files:
+And seven that are papers rather than generators — every one of them is `lines`
+with a different cycle, which is the argument of §9 made in files:
 
 | Preset | What it is |
 |---|---|
@@ -1305,6 +1331,7 @@ different cycle, which is the argument of §9 made in files:
 | `mizige-a4` | 米字格, Chinese character practice: 20 mm boxes with both midlines and both diagonals |
 | `knitting-chart-a4` | chart paper proportional to a knitting gauge — a stitch is wider than a row, so the two axes differ |
 | `plot-a4` | a sheet for plotting by hand: millimetre grid, a coordinate cross through the middle, and a scale whose zero sits there too |
+| `precrease-16-a4` | a 16 × 16 pre-creasing sheet for folding, with both diagonals — and the fold notation of §12 shown in one file |
 | `millimeter-a4` | plain 5 mm graph paper, the one to start from |
 
 ```bash
@@ -1367,6 +1394,7 @@ key.
 
 | Flag | Meaning |
 |---|---|
+| `-V`, `--version` | print the version and exit |
 | `-d <file>` | build from a definition file |
 | `-o <file>` | output path; the extension picks PDF or PNG |
 | `--pages <n>` | number of numbered sheets |
