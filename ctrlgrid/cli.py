@@ -166,6 +166,10 @@ def generate(
         bool,
         typer.Option("--crop-marks", help="Draw cut guides in the imposition margin (§ 14)."),
     ] = False,
+    booklet: Annotated[
+        bool,
+        typer.Option("--booklet", help="Impose as a folded, saddle-stitched booklet (§ 14)."),
+    ] = False,
     skip_unsupported: Annotated[
         bool,
         typer.Option(
@@ -195,7 +199,7 @@ def generate(
             definition,
             _overrides(
                 pages, format, device, orientation, names, stamp, cover, seed, strict,
-                nup, nup_sheet, crop_marks, embed_def, skip_unsupported,
+                nup, nup_sheet, crop_marks, embed_def, skip_unsupported, booklet,
             ),
         )
         destination = _destination(out, target, definition, force)
@@ -330,13 +334,20 @@ def _overrides(
     crop_marks: bool = False,
     embed_def: bool = False,
     skip_unsupported: bool = False,
+    booklet: bool = False,
 ) -> dict:
     if format is not None and device is not None:
         # § 9.2: two answers to "what medium". The loader would refuse them in a
         # definition; refuse them on the command line for the same reason.
         raise CtrlGridError("--format and --device name the medium two ways — give one (§ 9.2)")
-    if nup is None and (nup_sheet is not None or crop_marks):
-        raise CtrlGridError("--nup-sheet and --crop-marks only mean something with --nup (§ 14)")
+    if nup is not None and booklet:
+        # § 14: a booklet is a 2x1 whose order the user cannot vary, so --nup
+        # beside it would be a second spelling of one thing.
+        raise CtrlGridError("--booklet already imposes 2x1 — drop --nup (§ 14)")
+    if nup is None and not booklet and (nup_sheet is not None or crop_marks):
+        raise CtrlGridError(
+            "--nup-sheet and --crop-marks only mean something with --nup or --booklet (§ 14)"
+        )
     return {
         "pages": pages,
         "format": format,
@@ -364,6 +375,9 @@ def _overrides(
         "nup": nup,
         "nup_sheet": nup_sheet,
         "crop_marks": True if crop_marks else None,
+        # § 14: the same one-way switch as --cover — a definition cannot ask
+        # for it, because imposition is a property of the print run.
+        "booklet": True if booklet else None,
     }
 
 
@@ -387,12 +401,16 @@ def _writer_for(destination: Path, document: Document):
     """
     if destination.suffix.lower() != ".png":
         return PdfWriter(destination)
+    from ctrlgrid.impose import slots
     from ctrlgrid.media import _dpi
     from ctrlgrid.pages import sheet_plan
     from ctrlgrid.writers.png import PngWriter
 
     pages = document.pages.count * sheet_plan(document).per_item
-    sheets = pages if document.nup is None else -(-pages // document.nup.per_sheet)
+    # Asked of `slots` rather than divided by `per_sheet`: a booklet pads to a
+    # multiple of four, so 30 pages are 16 sides and not 15. One answer, so the
+    # count and the writing cannot disagree.
+    sheets = pages if document.nup is None else len(slots(pages, document.nup))
     return PngWriter(destination, dpi=_dpi(document), sheets=sheets)
 
 

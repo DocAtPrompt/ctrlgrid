@@ -7,9 +7,16 @@ file needs no PDF at all: a fold order is arithmetic a binder can check.
 
 from __future__ import annotations
 
+from pathlib import Path
+
+import pdfread
 import pytest
 
+from ctrlgrid.errors import CtrlGridError, DefinitionError
 from ctrlgrid.impose import Imposition, slots
+from ctrlgrid.loader import loads
+from ctrlgrid.pages import build
+from ctrlgrid.writers.pdf import PdfWriter
 
 
 def imposition(cols: int, rows: int, *, booklet: bool = False) -> Imposition:
@@ -92,3 +99,78 @@ class TestTheFoldOrder:
         # Two sides per physical sheet, four pages per sheet: 30 pages padded
         # to 32 is 8 sheets, so 16 sides in the PDF.
         assert len(slots(30, imposition(2, 1, booklet=True))) == 16
+
+
+# A5 is 148 x 210 mm; two side by side are 296 x 210, which needs a landscape
+# sheet. `--nup-sheet` takes a free size, so the sheet is written out.
+A5_LINES = (
+    "version: 1\n"
+    "page:\n  format: a5\n  margin: 0mm\n"
+    "generator: lines\n"
+    "families:\n"
+    "  - {direction: horizontal, base_spacing: 10mm}\n"
+)
+
+
+def booklet(pages: int, **extra):
+    overrides = {
+        "pages": pages,
+        "booklet": True,
+        "nup_sheet": "297x210mm",
+        **extra,
+    }
+    return loads(A5_LINES, overrides, source="test")
+
+
+class TestTheRun:
+    def test_eight_pages_come_out_as_four_sheet_sides(self, tmp_path: Path) -> None:
+        path = tmp_path / "b.pdf"
+        build(booklet(8), PdfWriter(path))
+        assert pdfread.page_count(path) == 4
+        width, height = pdfread.media_box_um(path)
+        assert (round(width), round(height)) == (297_000, 210_000)
+
+    def test_six_pages_still_take_two_sheets(self, tmp_path: Path) -> None:
+        path = tmp_path / "b.pdf"
+        build(booklet(6), PdfWriter(path))
+        assert pdfread.page_count(path) == 4
+
+    def test_booklet_and_nup_together_are_refused(self) -> None:
+        from ctrlgrid.cli import _overrides
+
+        with pytest.raises(CtrlGridError) as excinfo:
+            _overrides(None, None, None, None, nup="2x2", booklet=True)
+        assert "--booklet" in str(excinfo.value) and "--nup" in str(excinfo.value)
+
+    def test_a_document_generator_refuses_the_booklet_by_name(
+        self, tmp_path: Path
+    ) -> None:
+        text = (
+            "version: 1\n"
+            "page: {format: a5, margin: 10mm}\n"
+            "generator: notebook\n"
+            "sections:\n"
+            "  - {label: 'Dots', pages: 2, generator: dots,\n"
+            "     grid: {x: {base_spacing: 5mm}, y: {base_spacing: 5mm}}}\n"
+        )
+        with pytest.raises(DefinitionError) as excinfo:
+            build(
+                loads(text, {"booklet": True, "nup_sheet": "297x210mm"}, source="t"),
+                PdfWriter(tmp_path / "never-written.pdf"),
+            )
+        assert "--booklet" in str(excinfo.value)
+
+    def test_a_portrait_sheet_is_refused_with_the_landscape_hint(
+        self, tmp_path: Path
+    ) -> None:
+        # Two A5 pages need 296 mm of width; A4 portrait has 210. The message
+        # has to name the sheet that would work, or the user is left doing the
+        # arithmetic the tool just did (§ 12). The named size is the block
+        # itself — 296 x 210 — which is a legal free size and fits exactly;
+        # A4 landscape (297 x 210) is the same sheet with a millimetre spare.
+        with pytest.raises(DefinitionError) as excinfo:
+            build(
+                loads(A5_LINES, {"pages": 4, "booklet": True}, source="t"),
+                PdfWriter(tmp_path / "never-written.pdf"),
+            )
+        assert "296x210mm" in str(excinfo.value)

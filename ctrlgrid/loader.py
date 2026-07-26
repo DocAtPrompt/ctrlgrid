@@ -572,14 +572,28 @@ def device_profiles() -> dict[str, DeviceProfile]:
 
 
 def _resolve_nup(overrides: Mapping[str, Any]) -> Imposition | None:
-    """§ 14: build the imposition from `--nup` / `--nup-sheet`, or None."""
+    """§ 14: build the imposition from `--nup` or `--booklet`, or None."""
+    from dataclasses import replace
+
+    crop = bool(overrides.get("crop_marks"))
+    sheet = overrides.get("nup_sheet") or "a4"
+    if overrides.get("booklet"):
+        # § 14: two pages per sheet follow from folding once — they are not the
+        # user's to vary, which is why there is no `--nup 2x1` to write here.
+        width, height = resolve_size(sheet)
+        return Imposition(
+            cols=2,
+            rows=1,
+            sheet_width=width,
+            sheet_height=height,
+            sheet_name=sheet,
+            crop_marks=crop,
+            booklet=True,
+        )
     if "nup" not in overrides:
         return None
-    sheet = overrides.get("nup_sheet") or "a4"
     imposition = parse_nup(overrides["nup"], sheet, resolve_size)
-    if overrides.get("crop_marks"):
-        from dataclasses import replace
-
+    if crop:
         imposition = replace(imposition, crop_marks=True)
     return imposition
 

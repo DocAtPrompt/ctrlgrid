@@ -986,12 +986,13 @@ def _refuse_what_a_document_has_no_page_loop_for(document: Document) -> None:
     though it worked.
     """
     if document.nup is not None:
+        flag = "--booklet" if document.nup.booklet else "--nup"
         raise DefinitionError(
             f"generator `{document.generator}` writes its own pages, and imposition "
             "works on a page loop it does not have (§ 14). Its links and bookmarks "
-            "would not survive being imposed either — drop --nup, or impose the "
+            f"would not survive being imposed either — drop {flag}, or impose the "
             "finished PDF with a separate tool",
-            field="nup",
+            field="booklet" if document.nup.booklet else "nup",
         )
     if document.pages.cover:
         raise DefinitionError(

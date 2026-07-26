@@ -65,12 +65,24 @@ class Imposition:
         block_h = self.rows * page_height
         if block_w <= self.sheet_width and block_h <= self.sheet_height:
             return
+        if self.booklet:
+            # § 12: name the sheet that *would* work. A booklet always needs a
+            # landscape sheet — two portrait pages side by side — and the format
+            # table stores its sizes portrait (§ 9.1), so `--nup-sheet a4` can
+            # never be it. Turning the sheet silently would be the tool deciding
+            # against that one convention, so it names the free size instead and
+            # the fix is a copy-paste rather than arithmetic done twice.
+            hint = (
+                f"A booklet needs a landscape sheet: try --nup-sheet "
+                f"{block_w // 1000:.0f}x{block_h // 1000:.0f}mm or larger"
+            )
+        else:
+            hint = "Use a larger --nup-sheet, a smaller page format, or a smaller --nup"
         raise DefinitionError(
             f"{self.cols}x{self.rows} pages at 100 % need {_mm(block_w)} x {_mm(block_h)}, "
             f"sheet {self.sheet_name} is {_mm(self.sheet_width)} x {_mm(self.sheet_height)} "
-            "— imposition never scales (§ 8.2, § 14). Use a larger --nup-sheet, a smaller "
-            "page format, or a smaller --nup",
-            field="nup",
+            f"— imposition never scales (§ 8.2, § 14). {hint}",
+            field="booklet" if self.booklet else "nup",
         )
 
     def cell(self, position: int, page_width: Um, page_height: Um) -> Point:
