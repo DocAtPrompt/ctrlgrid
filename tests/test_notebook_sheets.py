@@ -70,3 +70,64 @@ class TestASectionIsARunOfItsOwn:
         )
         pages = pdfread.page_count(path)
         assert pdfread.subpaths_um(path, pages - 2) == pdfread.subpaths_um(path, pages - 1)
+
+
+DOTS = (
+    '  - {label: "Dots", pages: 2, generator: dots,\n'
+    "     grid: {x: {base_spacing: 5mm}, y: {base_spacing: 5mm}}}\n"
+)
+
+
+class TestTheSheetPlanIsCarriedOut:
+    """§ 7.5 on the blade path: "`--pages 10` ergibt zehn Rätsel auf zwanzig
+    Blättern." One rule for both paths, so `pages:` counts items here too."""
+
+    def test_ten_puzzles_take_twenty_pages(self, tmp_path: Path) -> None:
+        path = sheet(tmp_path, notebook(maze_section(10, "separate_page")))
+        # contents + 20 maze pages, no title page and no divider asked for.
+        assert pdfread.page_count(path) == 1 + 20
+
+    def test_the_solution_belongs_to_the_puzzle_before_it(
+        self, tmp_path: Path
+    ) -> None:
+        # § 7.5: odd sheets are puzzles, even ones their solutions. What makes
+        # a solution *that* puzzle's is geometric: the maze walls are the same
+        # drawing, and the solution page adds a path on top. So the puzzle's
+        # walls must all appear on the solution page.
+        path = sheet(tmp_path, notebook(maze_section(2, "separate_page")))
+        first = pdfread.page_count(path) - 4
+        puzzle = {tuple(p) for p in pdfread.subpaths_um(path, first)}
+        solution = {tuple(p) for p in pdfread.subpaths_um(path, first + 1)}
+        assert puzzle and puzzle <= solution
+        assert len(solution) > len(puzzle)
+
+    def test_a_second_puzzle_is_a_different_maze(self, tmp_path: Path) -> None:
+        path = sheet(tmp_path, notebook(maze_section(2, "separate_page")))
+        first = pdfread.page_count(path) - 4
+        assert pdfread.subpaths_um(path, first) != pdfread.subpaths_um(path, first + 2)
+
+    def test_the_contents_still_names_the_page_the_next_section_starts_on(
+        self, tmp_path: Path
+    ) -> None:
+        # `page_count` and `_section_starts` share one arithmetic, and doubling
+        # a section must move both. The contents page prints the number, and the
+        # section's own header answers `{section}` — two independent facts.
+        definition = (
+            "version: 1\n"
+            "page: {format: a5, margin: 10mm}\n"
+            'header: {height: 8mm, gap: 2mm, left: "{section}"}\n'
+            'footer: {height: 8mm, gap: 2mm, right: "{page}"}\n'
+            "generator: notebook\n"
+            "sections:\n" + maze_section(2, "separate_page") + DOTS
+        )
+        path = sheet(tmp_path, definition)
+        rows: dict[int, list] = {}
+        for text in pdfread.texts_um(path, 0):
+            rows.setdefault(round(text.y), []).append(text)
+        entries = {}
+        for line in rows.values():
+            words = sorted(line, key=lambda t: t.x)
+            if len(words) == 2 and words[1].content.isdigit():
+                entries[words[0].content] = int(words[1].content)
+        assert entries["Mazes"] == 2          # straight after the contents
+        assert entries["Dots"] == 2 + 4       # four maze pages, then Dots

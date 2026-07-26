@@ -371,14 +371,15 @@ class TestWhatADocumentDoesNotDo:
             build(loads(text, source="test"), PdfWriter(tmp_path / "a.pdf"))
         assert "align" in str(excinfo.value)
 
-    def test_a_section_whose_blade_needs_more_than_one_sheet_is_refused(
+    def test_a_section_whose_blade_needs_more_than_one_sheet_is_carried_out(
         self, tmp_path: Path
     ) -> None:
-        # A `maze` with separate solution pages states a SheetPlan (decision 27)
-        # that the handle carries out — on the blade path. The document path
-        # never asks, so the solution landed on the page *before* its puzzle and
-        # adding a title page silently redrew every maze. Refused until § 7.13
-        # says what a per-section sheet plan should mean.
+        # This was a refusal until 2026-07-26, and deliberately so: decision 52
+        # would not answer what a per-section sheet plan means before § 7.13
+        # said. Decision 55 says it — `pages:` counts *items*, exactly as § 7.5
+        # reads `--pages` on the blade path — so four puzzles are eight pages,
+        # and the refusal is gone rather than merely relaxed. Its detail lives
+        # in `tests/test_notebook_sheets.py`.
         text = (
             "version: 1\npage: {format: a4, margin: 10mm}\ngenerator: notebook\n"
             "sections:\n"
@@ -388,9 +389,9 @@ class TestWhatADocumentDoesNotDo:
             "    cells: {x: 8, y: 8}\n"
             "    solution: separate_page\n"
         )
-        with pytest.raises(DefinitionError) as excinfo:
-            build(loads(text, source="test"), PdfWriter(tmp_path / "m.pdf"))
-        assert "solution" in str(excinfo.value)
+        path = tmp_path / "m.pdf"
+        build(loads(text, source="test"), PdfWriter(path))
+        assert len(PdfReader(str(path)).pages) == 1 + 4 * 2
 
 
 class TestTheBookmarkGuardIsReachable:
