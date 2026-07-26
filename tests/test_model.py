@@ -162,3 +162,38 @@ class TestPagesSpec:
     def test_the_cover_is_off_by_default(self) -> None:
         # § 8.8: only `--cover` or `pages.cover: true` switches it on.
         assert PagesSpec().cover is False
+
+
+class TestAPartialMargin:
+    """`margin: 5mm` works, so setting one side is the obvious next step — and
+    it produced `line 2, page.bottom: Field required`.
+
+    Three things wrong at once: `page.bottom` is not a field that exists (it is
+    `page.margin.bottom`), the line pointed at `page:` rather than at the margin,
+    and "Field required" named one of the three missing sides without saying that
+    a margin is all-or-nothing. § 12 asks a message to let the user act.
+    """
+
+    DEFINITION = (
+        "version: 1\npage:\n  format: a4\n  margin:\n    top: 15mm\n"
+        "generator: lines\nfamilies: [{direction: horizontal, base_spacing: 5mm}]\n"
+    )
+
+    def test_it_names_the_margin_and_the_sides_that_are_missing(self) -> None:
+        from ctrlgrid.errors import DefinitionError
+        from ctrlgrid.loader import loads
+
+        with pytest.raises(DefinitionError) as excinfo:
+            loads(self.DEFINITION, source="t")
+        message = str(excinfo.value)
+        assert "page.bottom" not in message
+        assert "margin" in message
+        for side in ("bottom", "inner", "outer"):
+            assert side in message
+
+    def test_the_scalar_shorthand_still_works(self) -> None:
+        from ctrlgrid.loader import loads
+
+        text = self.DEFINITION.replace("margin:\n    top: 15mm", "margin: 15mm")
+        document = loads(text, source="t")
+        assert document.sheet.margin.top.raw == "15mm"

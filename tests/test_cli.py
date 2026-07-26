@@ -346,3 +346,34 @@ class TestFailingLoudly:
         result = runner.invoke(app, ["-d", str(definition), "-o", str(out)])
         assert result.exit_code != 0
         assert not out.exists()
+
+
+class TestTheVersionFlag:
+    """`--version` is the first thing anyone types after installing.
+
+    It did not exist, and because `PresetAsCommand` hands anything unrecognised
+    to `generate`, the answer was `No such option: --version (Possible options:
+    --cover)` — a suggestion that has nothing to do with what was asked. The
+    version is in every PDF's /Creator and on the cover sheet; it should also be
+    where a person looks for it.
+    """
+
+    def test_it_prints_the_packaged_version(self) -> None:
+        from typer.testing import CliRunner
+
+        from ctrlgrid import __version__
+        from ctrlgrid.cli import app
+
+        result = CliRunner().invoke(app, ["--version"])
+        assert result.exit_code == 0
+        assert __version__ in result.output
+
+    def test_the_short_form_does_too(self) -> None:
+        from typer.testing import CliRunner
+
+        from ctrlgrid import __version__
+        from ctrlgrid.cli import app
+
+        result = CliRunner().invoke(app, ["-V"])
+        assert result.exit_code == 0
+        assert __version__ in result.output

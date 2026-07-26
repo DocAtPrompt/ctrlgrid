@@ -219,3 +219,38 @@ class TestPresets:
             load_preset("millimeter-a5")
         message = str(excinfo.value)
         assert "millimeter-a5" in message and "millimeter-a4" in message
+
+
+class TestAnUnknownKeyNamesTheAlternatives:
+    """Every other "unknown X" refusal in the tool lists what there is —
+    presets, generators, devices, formats, placeholders, ruler edges. The one
+    for DSL keys did not, so the commonest act of all (copy a preset, switch the
+    blade) ended in `unknown key \\`families\\`` and nowhere to go.
+    """
+
+    def test_a_blade_key_that_is_no_near_miss_lists_that_blade_s_keys(self) -> None:
+        from ctrlgrid.errors import DefinitionError
+        from ctrlgrid.loader import loads
+
+        text = (
+            "version: 1\npage: {format: a4}\ngenerator: dots\n"
+            "families: [{direction: horizontal, base_spacing: 5mm}]\n"
+        )
+        with pytest.raises(DefinitionError) as excinfo:
+            loads(text, source="t")
+        message = str(excinfo.value)
+        assert "families" in message
+        # the keys `dots` actually takes (§ 7.2)
+        assert "grid" in message and "base_size" in message and "combine" in message
+
+    def test_a_near_miss_still_gets_its_suggestion(self) -> None:
+        from ctrlgrid.errors import DefinitionError
+        from ctrlgrid.loader import loads
+
+        text = (
+            "version: 1\npage: {format: a4}\ngenerator: lines\nfamilie: []\n"
+            "families: [{direction: horizontal, base_spacing: 5mm}]\n"
+        )
+        with pytest.raises(DefinitionError) as excinfo:
+            loads(text, source="t")
+        assert "did you mean `families`" in str(excinfo.value)

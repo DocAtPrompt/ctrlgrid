@@ -157,6 +157,23 @@ class Margin(Section):
         """
         if isinstance(value, str):
             value = dict.fromkeys(("top", "bottom", "inner", "outer"), value)
+        if isinstance(value, dict):
+            # A margin is all four sides or none. Letting pydantic report the
+            # first missing one produced `page.bottom: Field required` — a field
+            # path that does not exist (it would be `page.margin.bottom`), on
+            # the line of `page:`, naming one of three absences. § 12 asks the
+            # message to let the user act, and the way out is either the other
+            # three sides or the scalar shorthand, so it says both.
+            missing = [
+                side for side in ("top", "bottom", "inner", "outer") if side not in value
+            ]
+            if missing and len(missing) < 4:
+                given = ", ".join(f"`{side}`" for side in value if side not in Margin.deferred)
+                raise ValueError(
+                    f"a margin names all four sides — top, bottom, inner and outer. "
+                    f"{given} given; add {', '.join(missing)}, or write `margin: 5mm` "
+                    "for all four alike (§ 8.1)"
+                )
         return cls.model_validate(value)
 
     @classmethod

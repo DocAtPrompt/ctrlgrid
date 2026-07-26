@@ -46,6 +46,21 @@ class GridAxis(Section):
     spacing: CycleField = ONE
     offset: RelativeLengthField = Length(um=0, mm=0.0, raw="0mm")
 
+    @model_validator(mode="after")
+    def _the_axis_advances(self) -> GridAxis:
+        """§ 12 point 6, and the same guard `lines` carries on its families.
+
+        Asked here rather than left to the cycle walk: by the time the walk
+        sees it the value has travelled through `periodic_axes`, which knows
+        neither the field nor the line, and § 12 wants both.
+        """
+        if self.base_spacing.um <= 0:
+            raise ValueError(
+                f"`base_spacing` is {self.base_spacing.raw} — an axis whose base is zero "
+                "or less never advances and would draw every dot on the first (§ 5.3)"
+            )
+        return self
+
 
 class Grid(Section):
     x: GridAxis
@@ -161,6 +176,7 @@ class DotsGenerator:
                 extent_um=area.width,
                 offset_um=cfg.grid.x.offset.um,
                 field="grid.x.base_spacing",
+                base_raw=cfg.grid.x.base_spacing.raw,
                 pixel_dpi=page.pixel_of("x"),
             )
         )
@@ -170,6 +186,7 @@ class DotsGenerator:
                 extent_um=area.height,
                 offset_um=cfg.grid.y.offset.um,
                 field="grid.y.base_spacing",
+                base_raw=cfg.grid.y.base_spacing.raw,
                 pixel_dpi=page.pixel_of("y"),
             )
         )

@@ -205,6 +205,23 @@ class Family(Section, Dashable):
         return self
 
     @model_validator(mode="after")
+    def _the_family_advances(self) -> Family:
+        """§ 12 point 6: a spacing of nothing is not a very tight spacing.
+
+        This has to be asked *before* the stroke check below, which would
+        otherwise answer it — and answer it wrongly. `base_spacing: 0mm` used to
+        produce "stroke width 0.15pt is not narrower than the spacing 0mm — a
+        common cause is writing mm where pt was meant": every word true, the
+        diagnosis wrong, and the user sent to look at a stroke that is fine.
+        """
+        if self.base_spacing.um <= 0:
+            raise ValueError(
+                f"`base_spacing` is {self.base_spacing.raw} — a family whose base is zero "
+                "or less never advances and would draw every line on the first (§ 5.3)"
+            )
+        return self
+
+    @model_validator(mode="after")
     def _stroke_fits_between_the_lines(self) -> Family:
         """§ 12 point 6: the commonest user error is writing mm where pt was meant.
 
@@ -457,6 +474,7 @@ class LinesGenerator:
             upper_um=math.ceil(upper),
             offset_um=family.offset.um,
             field="families",
+            base_raw=family.base_spacing.raw,
         ):
             foot = Point(round(distance * normal[0]), round(distance * normal[1]))
             clipped = clip_to_area(
@@ -506,6 +524,8 @@ class LinesGenerator:
             base_um=family.base_spacing.um,
             extent_um=extent,
             offset_um=family.offset.um,
+            field="families",
+            base_raw=family.base_spacing.raw,
             pixel_dpi=pixel_dpi,
         ):
             # The index keeps counting through positions that are skipped, so

@@ -664,6 +664,9 @@ def preflight(
         snapped={axis for axis, _ in geometry.pixel_snap},
     )
     geometry = replace(geometry, notices=geometry.notices + tuple(findings))
+    date_notice = _date_notice(document)
+    if date_notice:
+        geometry = replace(geometry, notices=geometry.notices + (date_notice,))
 
     contexts = list(
         page_contexts(
@@ -892,6 +895,30 @@ def _attachment(document: Document) -> Attachment | None:
     )
 
 
+def _date_notice(document: Document) -> str | None:
+    """§ 8.10's second demand about `{date}`, which had never been built.
+
+    The first — that `{date}` is allowed and makes the result depend on the day
+    it was made — was. The second is that the tool **says so once per run**,
+    because otherwise a definition in version control quietly produces different
+    bytes tomorrow and the byte comparison that guards this project's own
+    gallery fails with nothing to explain it. The comment beside the
+    substitution claimed this notice existed; it did not.
+    """
+    fields = []
+    for band in (document.header, document.footer):
+        if band is None:
+            continue
+        fields += [band.left, band.center, band.right]
+    if any(isinstance(value, str) and "{date}" in value for value in fields):
+        return (
+            "{date} makes this run depend on the day it was made — the same definition "
+            "will produce different bytes tomorrow (§ 8.10). Write the date as text if "
+            "you want the sheet to be reproducible"
+        )
+    return None
+
+
 def _refuse_what_a_document_has_no_page_loop_for(document: Document) -> None:
     """Three settings a document generator cannot honour — said, not ignored.
 
@@ -965,6 +992,9 @@ def _document_preflight(
 
     findings = media_findings(document, probe, strict=document.strict)
     geometry = replace(geometry, notices=geometry.notices + tuple(findings))
+    date_notice = _date_notice(document)
+    if date_notice:
+        geometry = replace(geometry, notices=geometry.notices + (date_notice,))
 
     # The bands are laid out **per page** when they are written (§ 8.10:
     # placeholders are filled per page, and this path was the one exception).

@@ -32,6 +32,26 @@ from decimal import ROUND_HALF_UP, Decimal
 from ctrlgrid.errors import DefinitionError
 
 
+def _as_written(values: Sequence[Decimal]) -> str:
+    """A cycle as the user typed it, not as Python holds it (§ 12).
+
+    `[Decimal('0'), Decimal('0')]` is a repr of the implementation; the user
+    wrote `[0, 0]`, and § 12 asks for the error to speak their words.
+    """
+    return "[" + ", ".join(f"{value:g}" for value in values) + "]"
+
+
+def _as_mm(um: int) -> str:
+    """A fallback for a value whose original text did not reach here.
+
+    Never raw micrometres: § 3.3 keeps `Length.raw` precisely so that a message
+    can say `0.15pt`, and "52900 µm" is the unusable message § 12 names. Where
+    the raw text is genuinely unavailable, millimetres are at least a unit a
+    person measures in.
+    """
+    return f"{um / 1000:g}mm"
+
+
 @dataclass(frozen=True, slots=True)
 class Cycle:
     """A repeating list of dimensionless multiples."""
@@ -69,7 +89,9 @@ class Cycle:
         """The multiple that applies to mark `index`."""
         return self.values[index % len(self.values)]
 
-    def _refuse_a_walk_that_cannot_advance(self, *, base_um: int, field: str | None) -> None:
+    def _refuse_a_walk_that_cannot_advance(
+        self, *, base_um: int, field: str | None, base_raw: str | None = None
+    ) -> None:
         """The two conditions under which any walk over this cycle never ends.
 
         Both walks below step outwards until a position falls past a bound. If
@@ -83,12 +105,14 @@ class Cycle:
         """
         if base_um <= 0:
             raise DefinitionError(
-                f"the base value must be greater than zero, got {base_um} µm", field=field
+                f"the base value is {base_raw or _as_mm(base_um)} and must be greater than "
+                "zero, or the pattern never advances (§ 5.3)",
+                field=field,
             )
         if self.total <= 0:
             raise DefinitionError(
-                f"the spacing cycle {list(self.values)} sums to zero, so the pattern would "
-                "never advance — at least one entry must be greater than zero (§ 5.3)",
+                f"the spacing cycle {_as_written(self.values)} sums to zero, so the pattern "
+                "would never advance — at least one entry must be greater than zero (§ 5.3)",
                 field=field,
             )
 
@@ -99,6 +123,7 @@ class Cycle:
         extent_um: int,
         offset_um: int = 0,
         field: str | None = None,
+        base_raw: str | None = None,
         pixel_dpi: int | None = None,
     ) -> Iterator[tuple[int, int]]:
         """Yield `(index, position)` for every mark inside `[0, extent_um]`.
@@ -114,7 +139,7 @@ class Cycle:
         micrometres, or a 45-pixel cell would come out 4.995mm instead of the
         true 4.991mm. Off (`None`) is the ordinary exact-micrometre path.
         """
-        self._refuse_a_walk_that_cannot_advance(base_um=base_um, field=field)
+        self._refuse_a_walk_that_cannot_advance(base_um=base_um, field=field, base_raw=base_raw)
         if pixel_dpi:
             return self._walk_pixels(
                 base_um=base_um, extent_um=extent_um, offset_um=offset_um, dpi=pixel_dpi
@@ -129,6 +154,7 @@ class Cycle:
         upper_um: int,
         offset_um: int = 0,
         field: str | None = None,
+        base_raw: str | None = None,
     ) -> Iterator[tuple[int, int]]:
         """Every mark in `[lower_um, upper_um]`, which may reach below zero.
 
@@ -146,10 +172,10 @@ class Cycle:
         The index goes on counting downwards, so `weight.at(index)` and
         `color[index % len]` mean below line 0 what they mean above it.
         """
-        self._refuse_a_walk_that_cannot_advance(base_um=base_um, field=field)
+        self._refuse_a_walk_that_cannot_advance(base_um=base_um, field=field, base_raw=base_raw)
         if lower_um > upper_um:
             raise DefinitionError(
-                f"the range {lower_um}…{upper_um} µm runs backwards", field=field
+                f"the range {_as_mm(lower_um)}…{_as_mm(upper_um)} runs backwards", field=field
             )
         below = []
         index = -1

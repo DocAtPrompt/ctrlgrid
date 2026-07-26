@@ -425,3 +425,47 @@ class TestMoreValidation:
                 {"families": [{"direction": "horizontal", "base_spacng": "5mm"}]}
             )
         assert "base_spacng" in str(excinfo.value)
+
+
+class TestABaseSpacingThatCannotAdvance:
+    """§ 12 point 6: a base spacing of zero or less is refused at the model.
+
+    The cycle walk guards it as a backstop, but by then the value has travelled
+    through `periodic_axes` and the message can name neither the field nor the
+    line — and § 12 asks for both, which is why `ruamel.yaml` is used at all
+    (§ 13).
+    """
+
+    DEFINITION = (
+        "version: 1\n"
+        "page: {format: a4}\n"
+        "generator: lines\n"
+        "families:\n"
+        "  - direction: horizontal\n"
+        "    base_spacing: 5mm\n"
+    )
+
+    def test_a_zero_base_spacing_blames_the_spacing_and_not_the_stroke(self) -> None:
+        # It *was* caught — by the plausibility check, which said "stroke width
+        # 0.15pt is not narrower than the spacing 0mm … a common cause is
+        # writing mm where pt was meant". Every word of that is true and the
+        # diagnosis is wrong: the stroke is fine, the spacing is nothing. § 12
+        # asks the message to let the user act, so it has to name the spacing.
+        from ctrlgrid.errors import DefinitionError
+        from ctrlgrid.loader import loads
+
+        with pytest.raises(DefinitionError) as excinfo:
+            loads(self.DEFINITION.replace("base_spacing: 5mm", "base_spacing: 0mm"), source="t")
+        message = str(excinfo.value)
+        assert "base_spacing" in message and "0mm" in message
+        assert "stroke width" not in message
+
+    def test_a_negative_base_spacing_is_refused_in_the_user_s_unit(self) -> None:
+        from ctrlgrid.errors import DefinitionError
+        from ctrlgrid.loader import loads
+
+        with pytest.raises(DefinitionError) as excinfo:
+            loads(self.DEFINITION.replace("base_spacing: 5mm", "base_spacing: -0.2in"), source="t")
+        message = str(excinfo.value)
+        assert "base_spacing" in message and "-0.2in" in message
+        assert "stroke width" not in message

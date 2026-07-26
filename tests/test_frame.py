@@ -7,6 +7,8 @@ nothing about the metrics the output is built from.
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 from pydantic import ValidationError
 
@@ -195,3 +197,40 @@ class TestBandColourDrawing:
     def test_no_colour_no_text_is_still_empty(self) -> None:
         band = Band(height="12mm")
         assert layout_band(band, BAND, q=Q, page=PAGE, section="header", sheet_width=SHEET_W) == []
+
+
+class TestTheDateNoticeIsActuallyGiven:
+    """§ 8.10 makes two demands about `{date}`, not one.
+
+    The first — that it is allowed, and that it makes the result depend on the
+    day — was built. The second is that *the tool says so once per run*, so that
+    a definition in version control which produces different bytes tomorrow does
+    not do it silently. The comment at the substitution claimed the notice
+    existed; no notice producer mentioned the date.
+    """
+
+    DEFINITION = (
+        "version: 1\n"
+        "page: {format: a4}\n"
+        "header: {height: 10mm, gap: 4mm, left: 'made {date}'}\n"
+        "generator: lines\n"
+        "families: [{direction: horizontal, base_spacing: 5mm, base_weight: 0.3pt}]\n"
+    )
+
+    def test_a_run_using_date_says_that_it_is_no_longer_reproducible(self, tmp_path: Path) -> None:
+        from ctrlgrid.loader import loads
+        from ctrlgrid.pages import preflight
+        from ctrlgrid.writers.pdf import PdfWriter
+
+        document = loads(self.DEFINITION, source="t")
+        geometry, _, _, _ = preflight(document, PdfWriter(tmp_path / "d.pdf"))
+        assert any("{date}" in notice for notice in geometry.notices)
+
+    def test_a_run_without_it_stays_quiet(self, tmp_path: Path) -> None:
+        from ctrlgrid.loader import loads
+        from ctrlgrid.pages import preflight
+        from ctrlgrid.writers.pdf import PdfWriter
+
+        text = self.DEFINITION.replace("made {date}", "made by hand")
+        geometry, _, _, _ = preflight(loads(text, source="t"), PdfWriter(tmp_path / "d.pdf"))
+        assert not any("{date}" in notice for notice in geometry.notices)

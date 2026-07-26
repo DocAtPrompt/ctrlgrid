@@ -119,6 +119,22 @@ class TestRefusals:
         with pytest.raises(DefinitionError):
             Cycle.of([Decimal(1)]).positions(base_um=0, extent_um=10000)
 
+    def test_the_refusals_speak_the_user_s_units_and_not_micrometres(self) -> None:
+        # § 3.3 and § 12: values are named in the unit the user wrote. "-5000 µm"
+        # to someone who typed `-5mm` is the message § 12 calls unusable, and
+        # `Length` carries `.raw` for exactly this.
+        with pytest.raises(DefinitionError) as excinfo:
+            Cycle.of([Decimal(1)]).positions(base_um=-5000, extent_um=10000, base_raw="-5mm")
+        message = str(excinfo.value)
+        assert "-5mm" in message and "µm" not in message
+
+    def test_a_refusal_quotes_the_cycle_as_it_was_written(self) -> None:
+        # `[Decimal('0'), Decimal('0')]` is Python's repr, not the user's `[0, 0]`.
+        with pytest.raises(DefinitionError) as excinfo:
+            Cycle.of([Decimal(0), Decimal(0)]).positions(base_um=1000, extent_um=10000)
+        message = str(excinfo.value)
+        assert "[0, 0]" in message and "Decimal" not in message
+
     def test_the_both_ways_walk_refuses_the_same_two_things(self) -> None:
         # `positions_between` is the slanted family's path (§ 7.1), and it walks
         # outwards from line 0 until a position falls past the bound. A cycle

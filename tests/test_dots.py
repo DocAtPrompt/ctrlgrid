@@ -203,3 +203,32 @@ class TestOnTheSheet:
         for path in (first, second):
             build(loads(self.DEFINITION, source="test"), PdfWriter(path))
         assert first.read_bytes() == second.read_bytes()
+
+
+class TestAGridThatCannotAdvance:
+    """The same rule as `lines` (§ 12 point 6), and for the same reason: caught
+    at the model, the message can name the axis and the line; caught in the walk
+    it can name neither, because by then the value has passed through
+    `periodic_axes` and lost its field.
+    """
+
+    DEFINITION = (
+        "version: 1\n"
+        "page: {format: a4}\n"
+        "generator: dots\n"
+        "grid:\n"
+        "  x: {base_spacing: 5mm}\n"
+        "  y: {base_spacing: 5mm}\n"
+    )
+
+    def test_a_zero_spacing_on_one_axis_names_that_axis(self) -> None:
+        from ctrlgrid.errors import DefinitionError
+        from ctrlgrid.loader import loads
+
+        with pytest.raises(DefinitionError) as excinfo:
+            loads(
+                self.DEFINITION.replace("x: {base_spacing: 5mm}", "x: {base_spacing: 0mm}"),
+                source="t",
+            )
+        message = str(excinfo.value)
+        assert "grid.x" in message and "0mm" in message and "line 5" in message

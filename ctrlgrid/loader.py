@@ -758,7 +758,8 @@ def _check_unknown_keys(
     rest: dict[str, Any], config_model: type[BaseModel], raw: CommentedMap
 ) -> None:
     """§ 12 point 4: an unknown key is an error, with a suggestion if one is close."""
-    known = HANDLE_KEYS | set(config_model.model_fields)
+    blade_keys = set(config_model.model_fields)
+    known = HANDLE_KEYS | blade_keys
     for key in rest:
         if key in DEFERRED_KEYS:
             raise DefinitionError(
@@ -766,14 +767,45 @@ def _check_unknown_keys(
             )
         if key not in known:
             raise DefinitionError(
-                _unknown(key, known), field=None, line=_line(raw, (key,))
+                _unknown(key, known, blade_keys=blade_keys),
+                field=None,
+                line=_line(raw, (key,)),
             )
 
 
-def _unknown(key: str, known: set[str]) -> str:
+#: Beyond this many, listing the alternatives stops being help and becomes a
+#: wall of text. No shipped section comes close; the cap is there so a future
+#: one with fifty keys degrades to the bare refusal rather than to noise.
+_MOST_KEYS_WORTH_LISTING = 24
+
+
+def _unknown(key: str, known: set[str], *, blade_keys: set[str] | None = None) -> str:
+    """§ 12 point 4, and the pattern every other refusal in the tool follows.
+
+    A near miss gets the suggestion. When there is none the key is not a typo
+    but a key from somewhere else — copying a preset and changing the blade is
+    the commonest way to arrive here — and "unknown key `families`" alone is a
+    dead end: nothing tells the user what `dots` does take. Every other unknown
+    (preset, generator, device, format, placeholder, ruler edge) names the
+    alternatives, so this one does too.
+
+    The two vocabularies are listed **apart**. A definition is a handle section
+    and a blade section (§ 5.2), and merging the two into one alphabetical run
+    puts `combine` between `color` and `defs` — which reads as a wall rather
+    than as an answer to "what does this generator take?".
+    """
     close = difflib.get_close_matches(key, sorted(known), n=1)
-    hint = f" — did you mean `{close[0]}`?" if close else ""
-    return f"unknown key `{key}`{hint}"
+    if close:
+        return f"unknown key `{key}` — did you mean `{close[0]}`?"
+    if not known or len(known) > _MOST_KEYS_WORTH_LISTING * 2:
+        return f"unknown key `{key}`"
+    if blade_keys:
+        handle = sorted(known - blade_keys)
+        return (
+            f"unknown key `{key}` — this generator takes: {', '.join(sorted(blade_keys))}. "
+            f"Page and frame keys: {', '.join(handle)}"
+        )
+    return f"unknown key `{key}` (this section takes: {', '.join(sorted(known))})"
 
 
 def _apply_overrides(handle: dict[str, Any], overrides: Mapping[str, Any]) -> None:

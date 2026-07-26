@@ -48,8 +48,15 @@ class PresetAsCommand(TyperGroup):
     forms § 11 shows first.
     """
 
+    #: Options that belong to the group itself and must never be handed on to
+    #: `generate`. Without this, `ctrlgrid --version` became
+    #: `ctrlgrid generate --version`, and the answer was "No such option:
+    #: --version (Possible options: --cover)" — a suggestion about an unrelated
+    #: flag, in reply to the first thing anyone types after installing.
+    GROUP_OPTIONS = ("-h", "--help", "-V", "--version")
+
     def parse_args(self, ctx, args: list[str]) -> list[str]:
-        if args and args[0] not in self.commands and args[0] not in ("-h", "--help"):
+        if args and args[0] not in self.commands and args[0] not in self.GROUP_OPTIONS:
             args = ["generate", *args]
         return super().parse_args(ctx, args)
 
@@ -75,13 +82,39 @@ def _stdin_is_a_tty() -> bool:
     return sys.stdin.isatty()
 
 
+def _print_version(value: bool) -> None:
+    """`--version`, and then nothing else — the conventional early exit."""
+    if not value:
+        return
+    from ctrlgrid import __version__
+
+    typer.echo(f"ctrlgrid {__version__}")
+    raise typer.Exit()
+
+
 @app.callback(invoke_without_command=True)
-def _entry(ctx: typer.Context) -> None:
+def _entry(
+    ctx: typer.Context,
+    version: Annotated[
+        bool,
+        typer.Option(
+            "-V",
+            "--version",
+            help="Print the version and exit.",
+            callback=_print_version,
+            is_eager=True,
+        ),
+    ] = False,
+) -> None:
     """No subcommand and a terminal → the preset browser; otherwise the help.
 
     § 11.2 makes `ctrlgrid` with no arguments a preset browser. Piped or in CI
     there is no one to answer the prompts, so the old behaviour — the help —
     stands, and the tool never hangs on a prompt that will never be answered.
+
+    `--version` sits on the group rather than on `generate`: it answers a
+    question about the *tool*, not about a run, and the version is otherwise
+    only visible inside a PDF's /Creator or on the cover sheet (§ 8.8).
     """
     if ctx.invoked_subcommand is not None:
         return
