@@ -31,7 +31,7 @@ is, see the specification, [`pflichtenheft-vorlagengenerator.md`](docs/pflichten
 11. [The cover sheet and embedding the definition](#11-the-cover-sheet-and-embedding-the-definition)
 12. [The generators](#12-the-generators)
 13. [E-ink and devices](#13-e-ink-and-devices)
-14. [N-up imposition](#14-n-up-imposition)
+14. [Imposition: n-up and booklets](#14-imposition-n-up-and-booklets)
 15. [Output formats](#15-output-formats)
 16. [Batch output: name lists](#16-batch-output-name-lists)
 17. [Fonts](#17-fonts)
@@ -165,7 +165,8 @@ If a target file already exists, the run refuses rather than overwrite it. Pass
 ### Flags
 
 All flags beat the definition file (the command line always wins). Switch-style
-flags (`--cover`, `--strict`, `--embed-def`, `--skip-unsupported`) only ever
+flags (`--cover`, `--strict`, `--embed-def`, `--skip-unsupported`,
+`--crop-marks`, `--booklet`) only ever
 turn something *on* — the
 definition decides when the flag is absent.
 
@@ -1308,7 +1309,7 @@ checked just like a PNG.
 
 ---
 
-## 14. N-up imposition
+## 14. Imposition: n-up and booklets
 
 Print several small pages onto one large sheet, **without scaling**:
 

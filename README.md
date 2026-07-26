@@ -318,18 +318,30 @@ arithmetic if they do not fit, unlike `pdfjam` and `pdfcpu`. The intended use is
 the reverse of the usual one: define a small format, impose it onto a large
 sheet, cut it up — `--format a6 --nup 2x2` puts four A6 pages on A4.
 `--crop-marks` adds cut guides in the margin; `--nup-sheet` picks the sheet.
+
+`--booklet` is the same rule folded: it imposes a saddle-stitched booklet at
+100 %, pads the page count to a multiple of four (and says so), and needs a
+**landscape** sheet, because two portrait pages sit side by side — the refusal
+names the size that works.
 Imposition drops PDF bookmarks, and the calibration cover sheet is left out of
 it.
 
 **5. `{date}` makes output date-dependent.** Two runs on different days produce
 different files. If you want a reproducible sheet, write the date as text.
 
-**6. Solutions printed on the back need long-edge duplex.** `solution:
+**6. Two duplex modes turn the paper differently.** A booklet is built for a
+**short-edge** flip by default — the fold is vertical, so the sheet turns about
+its short edges — and `--booklet-flip long` builds it the other way. Maze
+solutions printed on the back are the separate case below, and they assume the
+**long** edge; the two are not the same setting, and each run names the one it
+wants.
+
+**7. Solutions printed on the back need long-edge duplex.** `solution:
 back_mirrored` prints the maze solution mirrored on the reverse so it lines up
 when held to the light. Short-edge flipping puts it upside down, and whether it
 shows through at all depends on your paper.
 
-**7. There is no GUI**, and none is planned. `ctrlgrid` with no arguments opens
+**8. There is no GUI**, and none is planned. `ctrlgrid` with no arguments opens
 an interactive preset browser — pick a preset, a page count and an output path
 (§ 11.2) — and that is as far as it goes. Piped or in CI, where there is no one
 to answer, it prints its help instead.

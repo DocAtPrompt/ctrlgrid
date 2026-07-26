@@ -2580,7 +2580,7 @@ GitHub Actions führt die Suite bei jedem Push und PR aus.
 
 ### 13.3 Dokumentationspflichten (README)
 
-Sieben Punkte sind über dieses Dokument verstreut, die der Nutzer **vor** dem
+Neun Punkte sind über dieses Dokument verstreut, die der Nutzer **vor** dem
 ersten Lauf wissen muss. Sie stehen hier gesammelt, damit keiner beim Schreiben
 des README vergessen wird — jeder von ihnen führt sonst zu einer Überraschung,
 die wie ein Fehler des Werkzeugs aussieht.
@@ -2608,12 +2608,16 @@ die wie ein Fehler des Werkzeugs aussieht.
    über die **lange Kante**, und ob die Lösung wirklich durchscheint, hängt an
    Papierstärke und Opazität. Beides außerhalb unserer Kontrolle, beides
    überraschend, wenn es nicht dasteht.
+9. **Zwei Duplexmodi wenden verschieden** (ergänzt 2026-07-27). Ein Heft (§ 14)
+   ist für die **kurze** Kante gebaut, `back_mirrored` (§ 7.5) setzt die
+   **lange** voraus. Wer beides kennt, verwechselt sie sonst — jeder Lauf nennt
+   deshalb die Kante, die *er* meint.
 
 Ergänzend: Die Presets sind zugleich Beispieldokumentation (§ 9.3), das README
 soll also auf sie verweisen statt eine eigene Syntaxreferenz aufzumachen, die
 auseinanderdriftet.
 
-**Umgesetzt in `README.md`.** Die sieben Einschränkungen stehen dort unter
+**Umgesetzt in `README.md`.** Die Einschränkungen stehen dort unter
 „Known limitations"; Punkt 6 aus der Liste oben (kein GUI) und Punkt 7
 (Installation) sind in den Fließtext gewandert, weil sie dort weniger nach
 Entschuldigung klingen. Solange keine Implementierung existiert, trägt das
