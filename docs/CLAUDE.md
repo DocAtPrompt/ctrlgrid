@@ -42,9 +42,10 @@ below; the short version is that the core promises — dimensional accuracy and
 byte-identical output — held under measurement, and the edges did not.
 
 The only thing between here and 1.0.0 is still *use*: nobody outside has written
-a definition, and nobody has yet cut a net out and folded it. 1.0.0 is a promise
-about the **DSL**, and it should wait until that promise has been checked against
-paper by someone other than the test suite.
+a definition. 1.0.0 is a promise about the **DSL**, and it should wait until that
+promise has been checked against paper by someone other than the test suite.
+(One half of that sentence is now settled: **the box has been folded** — see
+*Not done*.)
 
 The version lives in **one** place, `ctrlgrid/__init__.py`; `pyproject.toml`
 reads it dynamically and the release workflow compares the git tag against it.
@@ -177,9 +178,15 @@ edge, so a tick now carries its position *and* its value separately. `unit` says
   `pyproject.toml`'s `description` against what the tool actually does before a
   release, not after. GitHub's description, topics and homepage are the other
   half of the same question and can be changed at any time.
-- **Nobody has cut a net out and folded it.** `examples/16-net-tray.yaml` checks
-  the geometry, `box-tuck-a4` also checks the thickness rule. The tests agree
-  with the arithmetic; only paper can disagree with it (§ 7.14).
+- ~~**Nobody has cut a net out and folded it.**~~ **Folded on 2026-07-26, and it
+  closes.** `box-tuck-a4` was printed at 100 %, cut and assembled by the owner:
+  *"hervorragend"*. That is the stronger of the two proofs available — the tray
+  would have checked only the geometry, while the tuck-top also exercises the
+  **thickness rule** of § 7.14, the one convention there that was *decided*
+  rather than derived (a panel closing over a layer is widened by `thickness`, a
+  flap sliding inside one is shortened by it). No test can disagree with that
+  rule; card can, and did not. `net` is therefore the one blade whose output has
+  been verified as a physical object, which is what § 7.14 built it for.
 - **1.0.0 waits on use**, not on features — see the version note at the top.
 
 ### Deferred features named their milestone — and the list is now empty
@@ -419,9 +426,11 @@ supply:
 
 | Waiting on | What |
 |---|---|
-| a device | the empty `quirks` (decision 31), and the rM2 figures nobody has measured on the device — the Paper Pro is owner-checked, the rM2 is not |
-| a pair of scissors | print `examples/16-net-tray.yaml` and `box-tuck-a4` at 100 %, cut, fold. The tray checks the geometry; the tuck-top also checks the thickness rule. **No test can do this**, and until someone does, the tests only agree with themselves |
 | use | the three § 15 questions below, and 1.0.0 itself. The DSL can now meet someone other than the test suite, which is the one thing 1.0.0 has always been waiting for |
+| an outside contributor | the empty `quirks` (decision 31) and the rM2's on-device check. **These are contribution slots, not tasks** — there is no rM2 here to measure, and the shipped figures come from reMarkable's own comparison page and match it exactly. Neither blocks anything; they turn into work if a user reports a real problem. Don't carry them in a status summary as though they were pending |
+
+The scissors row is gone from this table because the scissors have been used —
+see *Not done*.
 
 If a new feature *is* wanted, the recipe has not changed since M1: a design
 settled with the user first when there is a real fork in it, then a plan, then

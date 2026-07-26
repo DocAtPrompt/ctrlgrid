@@ -1368,6 +1368,15 @@ gestanzt.
    wird um ebenso viel kürzer. Bei `thickness: 0` verschwindet jede Zugabe und
    das Netz ist das ideale — ein Test hält genau das fest.
 
+**Am Karton geprüft (2026-07-26).** `box-tuck-a4` wurde bei 100 % gedruckt,
+ausgeschnitten und gefaltet: die Schachtel schließt. Das ist der Nachweis, den
+diese Klinge tragen sollte und den **kein Test führen kann** — die Steckschachtel
+belastet nicht nur die Geometrie (das täte die Wanne auch), sondern gerade die
+zweite Konvention oben, die *entschieden* und nicht hergeleitet ist. Die
+Zugaberegel ist damit nicht mehr nur mit sich selbst konsistent, sondern mit
+Material. Weitere Bauarten (siehe unten) sind damit von der Bedingung befreit,
+erst zu warten, bis eine bestehende gefaltet wurde.
+
 **Bauarten.** `tray`: Boden, vier Wände, an den Enden der beiden Stirnwände je
 eine verjüngte Klebelasche. `tuck_top`: ein Wandstreifen (`length`, `width + t`,
 `length + t`, `width + t`) mit Klebelasche, dazu oben wie unten ein Deckel
