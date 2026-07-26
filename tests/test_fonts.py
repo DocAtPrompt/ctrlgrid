@@ -235,3 +235,94 @@ class TestOnTheSheet:
         }
         for line in summary(document(FILE_FONT)):
             assert line.split("  ")[0] in labels, line
+
+
+class TestGlyphsAreCheckedInGeneratorTextToo:
+    """§ 12 point 13 asks the pre-flight to measure "Kopf-, Fuß- **und
+    Beschriftungstext**" and then: "sind alle Glyphen in der Schrift vorhanden?"
+
+    Only the bands were ever asked. A grid label, a segment label, a form title
+    or a calendar's month name went unchecked — so `months: [styczeń, …]` passed
+    `check`, reported a successful run, and put `stycze` and a box on the paper.
+    The standard PDF fonts reach Latin-1 and no further (§ 10.3), which is
+    exactly why `missing_glyphs` exists.
+    """
+
+    POLISH_GRID = (
+        "version: 1\n"
+        "page: {format: a4, margin: 15mm}\n"
+        "generator: grid\n"
+        "cells: {x: 3, y: 3}\n"
+        'labels: {columns: ["Łódź", "Kraków", "Gdańsk"], rows: "n"}\n'
+    )
+
+    def test_a_label_the_standard_fonts_cannot_draw_is_refused(self) -> None:
+        from ctrlgrid.errors import DefinitionError
+        from ctrlgrid.loader import loads
+        from ctrlgrid.pages import preflight
+        from ctrlgrid.writers.pdf import PdfWriter
+
+        with pytest.raises(DefinitionError) as excinfo:
+            preflight(loads(self.POLISH_GRID, source="t"), PdfWriter("unused.pdf"))
+        message = str(excinfo.value)
+        assert "Ł" in message or "ń" in message
+        assert "font" in message  # the way out is naming a font file (§ 10.3)
+
+    def test_latin_1_labels_are_fine(self) -> None:
+        from ctrlgrid.loader import loads
+        from ctrlgrid.pages import preflight
+        from ctrlgrid.writers.pdf import PdfWriter
+
+        text = self.POLISH_GRID.replace(
+            '["Łódź", "Kraków", "Gdańsk"]', '["Köln", "Nîmes", "Ávila"]'
+        )
+        preflight(loads(text, source="t"), PdfWriter("unused.pdf"))
+
+    def test_a_calendar_month_name_is_checked_as_well(self) -> None:
+        # The case that started this: a document generator's own text.
+        from ctrlgrid.errors import DefinitionError
+        from ctrlgrid.loader import loads
+        from ctrlgrid.pages import preflight
+        from ctrlgrid.writers.pdf import PdfWriter
+
+        text = (
+            "version: 1\n"
+            "page: {format: a4, margin: 12mm}\n"
+            "generator: calendar\n"
+            "year: 2027\n"
+            "months: [styczeń, luty, marzec, kwiecień, maj, czerwiec, lipiec,\n"
+            "         sierpień, wrzesień, październik, listopad, grudzień]\n"
+        )
+        with pytest.raises(DefinitionError) as excinfo:
+            preflight(loads(text, source="t"), PdfWriter("unused.pdf"))
+        assert "ń" in str(excinfo.value)
+
+    def test_a_named_font_file_that_covers_them_is_accepted(self) -> None:
+        # § 10.3's stage 2 is the documented way out, so it has to actually work.
+        #
+        # Turkish rather than Polish, and that is the point of the fixture: Vera
+        # ships with reportlab and has 256 glyphs — it covers `ğ` and `ş`, which
+        # the standard fonts lack, and it does *not* cover `ń`. My first version
+        # of this test asked Vera for Polish, failed, and looked like a bug in
+        # the check. It was a bug in the probe.
+        from pathlib import Path
+
+        import reportlab
+
+        from ctrlgrid.errors import DefinitionError
+        from ctrlgrid.loader import loads
+        from ctrlgrid.pages import preflight
+        from ctrlgrid.writers.pdf import PdfWriter
+
+        turkish = self.POLISH_GRID.replace(
+            '["Łódź", "Kraków", "Gdańsk"]', '["Ağrı", "Muş", "Sivas"]'
+        )
+        with pytest.raises(DefinitionError):
+            preflight(loads(turkish, source="t"), PdfWriter("unused.pdf"))
+
+        vera = Path(reportlab.__file__).parent / "fonts" / "Vera.ttf"
+        with_font = turkish.replace(
+            "cells: {x: 3, y: 3}\n",
+            f"cells: {{x: 3, y: 3}}\nfont: {{file: '{vera}', size: 8pt}}\n",
+        )
+        preflight(loads(with_font, source="t"), PdfWriter("unused.pdf"))

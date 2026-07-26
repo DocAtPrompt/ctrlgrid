@@ -631,6 +631,7 @@ def preflight(
     blade.check(document.config, area=geometry.area, q=probe)
 
     check_page_furniture(document, geometry, q=probe)
+    check_text_glyphs(document, geometry, blade, q=probe)
 
     # § 10.2: what the writer cannot render is refused here, before a page is
     # written, naming the missing feature — the PNG writer's lack of text is
@@ -851,6 +852,65 @@ def _band_has_text(band: Band | None) -> bool:
     return any(isinstance(getattr(band, side), str) for side in ("left", "center", "right"))
 
 
+def check_text_glyphs(
+    document: Document, geometry: Geometry, blade: object, *, q: WriterQuery
+) -> None:
+    """Every glyph a generator draws must exist in the font (§ 12 point 13).
+
+    § 12 point 13 asks the pre-flight to measure "Kopf-, Fuß- und
+    Beschriftungstext" and then whether all glyphs are present. Only the bands
+    were ever asked (`layout_band`), so a grid label, a segment label, a form
+    title or a calendar's month name went unchecked — and the standard PDF fonts
+    reach Latin-1 and no further (§ 10.3). `months: [styczeń, …]` therefore
+    passed `check`, reported success, and put a box on the paper: the silent
+    almost-right of § 5.1, in the one place the tool had a query built to
+    prevent it.
+
+    Characters are collected as a **set per font**, not strings: a year planner
+    draws tens of thousands of them and has a few dozen distinct ones, so the
+    cost is the walk and not the checking. For a document that walk is every
+    page, for the same reason the media check walks every page (decision 49) — a
+    month name only appears on its own month's pages.
+    """
+    from ctrlgrid.document import is_document_generator
+
+    seen: dict[str, set[str]] = {}
+    source: dict[tuple[str, str], str] = {}
+
+    def take(mark: Mark) -> None:
+        if not isinstance(mark, Text) or not mark.content:
+            return
+        chars = seen.setdefault(mark.family, set())
+        for char in mark.content:
+            if char not in chars:
+                chars.add(char)
+                source[(mark.family, char)] = mark.content
+
+    if is_document_generator(blade):
+        total = _document_page_total(blade, document, geometry)
+        for index, page in enumerate(blade.pages(document.config, area=geometry.area, q=q)):
+            for mark in document_page_marks(
+                page, area=geometry.area, context=_document_context(index, total), q=q
+            ):
+                take(mark)
+    else:
+        context = next(page_contexts(count=1, snap=geometry.pixel_snap))
+        for mark in blade.generate(document.config, area=geometry.area, page=context, q=q):
+            take(mark)
+
+    for family, chars in sorted(seen.items()):
+        missing = q.missing_glyphs("".join(sorted(chars)), family=family)
+        if not missing:
+            continue
+        where = source[(family, missing[0])]
+        raise DefinitionError(
+            f"{' '.join(missing)} — not covered by the font this generator draws with"
+            f" (in {where!r}). The standard PDF fonts reach Latin-1 and no further,"
+            " so Polish, Czech, Hungarian, Turkish and Romanian text needs a font of"
+            " its own: name one with `font: {file: /path/to/font.ttf}` (§ 10.3)"
+        )
+
+
 def _refuse_snap_where_it_has_no_meaning(document: Document, blade: object) -> None:
     """§ 8.3: for some blades snapping is an error, never a guess.
 
@@ -1000,6 +1060,7 @@ def _document_preflight(
     )
     blade.check(document.config, area=geometry.area, q=probe)
     check_page_furniture(document, geometry, q=probe)
+    check_text_glyphs(document, geometry, blade, q=probe)
     skipped = _refuse_writer_cannot_render_document(document, blade, geometry, q, probe)
     if skipped:
         geometry = replace(geometry, notices=geometry.notices + (skipped,))
