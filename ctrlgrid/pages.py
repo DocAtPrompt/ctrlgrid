@@ -630,20 +630,7 @@ def preflight(
     # answer: does the circle fit, and do the segment labels fit (§ 7.6).
     blade.check(document.config, area=geometry.area, q=probe)
 
-    # § 8.12: the ruler is measured against the geometry the pattern got, and
-    # refused before page one rather than while pages are written (§ 12 point
-    # 13). Under duplex the margins swap, so both sides are asked.
-    from ctrlgrid.frame import check_rulers
-
-    for is_even in ((False, True) if document.page.duplex else (False,)):
-        check_rulers(
-            document.ruler,
-            geometry.for_page(
-                is_even=is_even, sheet=document.sheet, duplex=document.page.duplex
-            ),
-            document,
-            q=probe,
-        )
+    check_page_furniture(document, geometry, q=probe)
 
     # § 10.2: what the writer cannot render is refused here, before a page is
     # written, naming the missing feature — the PNG writer's lack of text is
@@ -962,15 +949,42 @@ def _refuse_what_a_document_has_no_page_loop_for(document: Document) -> None:
         )
 
 
+def check_page_furniture(document: Document, geometry: Geometry, *, q: WriterQuery) -> None:
+    """Refuse the frame that cannot fit, before page one (§ 12 point 13).
+
+    The counterpart of `page_furniture`, and it exists for the same reason. That
+    function unified what the two page paths *draw*; the checking stayed in two
+    places, and the document path promptly went without — so a notebook drew a
+    ruler whose strip does not fit the margin while the blade path refused the
+    identical page. Drawing and checking are one feature and belong to one pair
+    of functions, both called from both paths.
+
+    Under duplex the margins swap, so both sides of the sheet are asked (§ 8.1).
+    """
+    from ctrlgrid.frame import check_rulers
+
+    for is_even in ((False, True) if document.page.duplex else (False,)):
+        check_rulers(
+            document.ruler,
+            geometry.for_page(
+                is_even=is_even, sheet=document.sheet, duplex=document.page.duplex
+            ),
+            document,
+            q=q,
+        )
+
+
 def _document_preflight(
     document: Document, blade: object, q: WriterQuery
 ) -> tuple[Geometry, list[PageContext], list[list[Text]], list[Mark]]:
     """Measure and validate a document generator (§ 7), the calendar's path.
 
     None of the blade-specific machinery applies — no snap, no sheet plan, no
-    frames, no cover: a document owns its own pages. It still measures the
-    pattern area every page is handed, runs the generator's own `check`, and
-    refuses on a writer that cannot carry its links or text (§ 10.2). Returns the
+    page cycle, no cover: a document owns its own pages. What *does* apply is
+    everything about the page itself: it measures the pattern area every page is
+    handed, runs the generator's own `check`, checks the frame furniture with
+    `check_page_furniture` exactly as the blade path does, lays out the bands per
+    page, and refuses on a writer that cannot carry its links or text (§ 10.2). Returns the
     same tuple shape as `preflight` so `check` and `build` share one entry point;
     the three page-loop lists are empty because a document does not use them.
     """
@@ -985,6 +999,7 @@ def _document_preflight(
         density=document.device.density if document.device else None,
     )
     blade.check(document.config, area=geometry.area, q=probe)
+    check_page_furniture(document, geometry, q=probe)
     skipped = _refuse_writer_cannot_render_document(document, blade, geometry, q, probe)
     if skipped:
         geometry = replace(geometry, notices=geometry.notices + (skipped,))

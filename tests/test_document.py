@@ -434,3 +434,39 @@ class TestTheBookmarkGuardIsReachable:
         writer.outline = lambda title, *, index: recorded.append(title)
         _LeavingOutWhatItCannotDraw(writer).outline("January", index=0)
         assert recorded == ["January"]
+
+
+class TestFurnitureIsCheckedOnBothPathsToo:
+    """Drawing the frame on both paths is only half of it — it has to be
+    *checked* on both paths as well.
+
+    `page_furniture` unified what is drawn. The pre-flight stayed two separate
+    functions, so a document drew a ruler whose strip does not fit the margin
+    instead of refusing before page one (§ 8.12, § 12 point 13). The blade path
+    refused the identical page. Exactly the failure this whole pass was about,
+    reintroduced by the fix for it: with two sites, one gets forgotten.
+    """
+
+    RULER = "ruler: {edges: [bottom], unit: cm}\n"
+    NARROW = "page: {format: a4, margin: 2mm}\n"
+
+    def test_a_document_refuses_a_ruler_that_does_not_fit(self, tmp_path: Path) -> None:
+        text = (
+            "version: 1\n" + self.NARROW + self.RULER + "generator: notebook\n"
+            "sections:\n"
+            "  - label: G\n    pages: 1\n    generator: lines\n"
+            "    families: [{direction: horizontal, base_spacing: 5mm, base_weight: 0.3pt}]\n"
+        )
+        with pytest.raises(DefinitionError) as excinfo:
+            build(loads(text, source="test"), PdfWriter(tmp_path / "r.pdf"))
+        message = str(excinfo.value)
+        assert "ruler" in message and "mm" in message
+
+    def test_a_blade_refuses_the_same_page(self, tmp_path: Path) -> None:
+        # The two paths must agree, which is the point of the test above.
+        text = (
+            "version: 1\n" + self.NARROW + self.RULER + "generator: lines\n"
+            "families: [{direction: horizontal, base_spacing: 5mm, base_weight: 0.3pt}]\n"
+        )
+        with pytest.raises(DefinitionError):
+            build(loads(text, source="test"), PdfWriter(tmp_path / "b.pdf"))
