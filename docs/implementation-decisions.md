@@ -1192,3 +1192,48 @@ Worth recording is where that refusal was written first: on the blade path, wher
 it could never fire, because `preflight` returns into `_document_preflight` for a
 document long before reaching it. The test said DID NOT RAISE, which is what it
 was written for.
+
+
+## 56. The turning edge is a rotation, not a mirror (§ 14, § 15 point 6)
+
+§ 15 point 6 had stood open since M2 with an estimate attached: a switch for the
+other turning edge "wäre eine einzige Fallunterscheidung beim Spiegeln". Building
+it for `--booklet` showed the estimate was wrong, and the reason is worth keeping
+because it is a fact about paper rather than about this code.
+
+A booklet sheet is landscape with a vertical fold. Turned about its **short**
+edges it pivots on a vertical axis: left and right exchange, up stays up, and the
+back is drawn upright with the pair swapped — that is the default and what was
+already built. Turned about its **long** edges it pivots on a horizontal axis:
+left and right stay where they are and the sheet comes out **upside down**. The
+only way the reader sees the back the right way up is to print it upside down.
+
+So the switch needed a half turn of whole imposed pages, and `mirror_x` cannot
+give one: it deliberately does not reflect text (decision 27, § 7.5), because
+mirrored writing is what nobody wants. Upside-down writing is exactly what is
+wanted here, since the reader turns the paper. `marks.rotate_180` is therefore
+the third transformation in the vocabulary, and the first that carries text with
+it — `angle` gains 180° and the anchor moves, while `align` is left alone,
+because a rigid half turn puts a left-aligned label's box exactly where the
+rotation sends it.
+
+**The fold order is the same for both edges**, and getting that wrong first is
+the part worth recording. The obvious implementation swaps the back's two pages
+*and* rotates the side — and that exchanges the halves twice, so page 2 lands
+back where it started. A half turn already exchanges them. `slots` therefore
+returns one order and `Imposition.rotates(side)` says which sides are turned; a
+test asserts the two orders are identical, so the mistake cannot come back.
+
+Two smaller calls: `--booklet-flip` takes `short | long` and refuses a third
+spelling as a typo rather than a wish, and it is refused without `--booklet`,
+like `--nup-sheet`. The run report names the *chosen* edge and the other switch
+as the way out, rather than always saying "short" — a report that keeps naming a
+setting the run did not use is worse than none (§ 12).
+
+One test-infrastructure bug fell out of this and would have bitten anything that
+ever measured rotated text. `tests/pdfread.texts_um` read the **text matrix**
+only, and reportlab draws rotated text by turning the **CTM** and then setting
+the string at the origin. So every rotated string had been reported as upright
+and sitting at (0, 0) — silently, and its docstring claimed the opposite. It now
+tracks `q`/`Q`/`cm` and composes the two matrices, which also makes § 8.12's
+rotated ruler numbers measurable for the first time.

@@ -170,6 +170,10 @@ def generate(
         bool,
         typer.Option("--booklet", help="Impose as a folded, saddle-stitched booklet (§ 14)."),
     ] = False,
+    booklet_flip: Annotated[
+        str | None,
+        typer.Option(help="Which edge the printer turns on: short (default) or long (§ 14)."),
+    ] = None,
     skip_unsupported: Annotated[
         bool,
         typer.Option(
@@ -200,6 +204,7 @@ def generate(
             _overrides(
                 pages, format, device, orientation, names, stamp, cover, seed, strict,
                 nup, nup_sheet, crop_marks, embed_def, skip_unsupported, booklet,
+                booklet_flip,
             ),
         )
         destination = _destination(out, target, definition, force)
@@ -335,11 +340,19 @@ def _overrides(
     embed_def: bool = False,
     skip_unsupported: bool = False,
     booklet: bool = False,
+    booklet_flip: str | None = None,
 ) -> dict:
     if format is not None and device is not None:
         # § 9.2: two answers to "what medium". The loader would refuse them in a
         # definition; refuse them on the command line for the same reason.
         raise CtrlGridError("--format and --device name the medium two ways — give one (§ 9.2)")
+    if booklet_flip is not None and booklet_flip not in ("short", "long"):
+        # § 14: two edges, and a third spelling is a typo rather than a wish.
+        raise CtrlGridError(
+            f"--booklet-flip is `short` or `long` — got {booklet_flip!r} (§ 14)"
+        )
+    if booklet_flip is not None and not booklet:
+        raise CtrlGridError("--booklet-flip only means something with --booklet (§ 14)")
     if nup is not None and booklet:
         # § 14: a booklet is a 2x1 whose order the user cannot vary, so --nup
         # beside it would be a second spelling of one thing.
@@ -378,6 +391,8 @@ def _overrides(
         # § 14: the same one-way switch as --cover — a definition cannot ask
         # for it, because imposition is a property of the print run.
         "booklet": True if booklet else None,
+        # § 14, § 15 point 6: which edge the printer turns the sheet about.
+        "booklet_flip": booklet_flip,
     }
 
 
@@ -476,10 +491,11 @@ def _report(document: Document, path: Path, geometry: Geometry, *, quiet: bool) 
             # § 8.2's rule for the scaling hint, applied to the turning edge:
             # name the setting, and give the one glance that checks it. The
             # fold runs vertically, so the sheet turns about its short edges.
+            other = "LONG" if nup.flip == "short" else "SHORT"
             typer.echo(
-                "  print double-sided, flipping on the SHORT edge; on the first "
-                "sheet, page 2 must come out behind page 1 — if it does not, "
-                "switch the flip"
+                f"  print double-sided, flipping on the {nup.flip.upper()} edge; on "
+                "the first sheet, page 2 must come out behind page 1 — if it does "
+                f"not, use --booklet-flip {other.lower()}"
             )
             if not _shows_page_numbers(document):
                 # § 12: an instruction nobody can act on is a bug, and the one

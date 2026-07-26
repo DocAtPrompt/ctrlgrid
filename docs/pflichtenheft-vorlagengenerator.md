@@ -2714,11 +2714,28 @@ vierzig Seiten wird der Falzversatz sichtbar; eine Falzversatz-Kompensation wär
 eine geratene Zahl und entfällt aus demselben Grund wie die Falzzugabe je Rille
 (§ 7.14).
 
-**Eine Wendekante, laut benannt.** Das PDF ist für das Wenden über die **kurze
-Kante** gebaut — der Falz läuft senkrecht, das Blatt dreht sich also um seine
-kurzen Kanten. Der Laufbericht nennt die Einstellung *und* den einen Handgriff,
-der sie prüft (Seite 2 muss hinter Seite 1 liegen), wie § 8.2 es für die
-Skalierung verlangt. Kein Schalter: siehe § 15 Punkt 6.
+**Die Wendekante ist wählbar, und die Vorgabe ist die kurze** (`--booklet-flip
+short | long`, ergänzt 2026-07-26). Der Falz läuft senkrecht, also dreht sich ein
+Querbogen um seine kurzen Kanten: links und rechts tauschen, oben bleibt oben.
+Das ist die Vorgabe. Über die **lange** Kante gewendet bleiben die Hälften, wo
+sie sind, und das Blatt steht kopf — die Rückseite wird deshalb **um 180° gedreht
+gedruckt**, damit der Leser sie nach dem Wenden richtig herum sieht.
+
+Die **Falzordnung ist für beide Kanten dieselbe**. Das ist keine Bequemlichkeit,
+sondern Geometrie: eine halbe Drehung vertauscht die beiden Hälften bereits, und
+zusätzlich umzusortieren vertauschte sie zweimal. Der Unterschied ist allein die
+Drehung der Rückseiten.
+
+Dafür gibt es `rotate_180` im Markenvokabular — eine **Drehung**, keine
+Spiegelung, und damit die erste Transformation, die **Text mitnimmt**:
+`mirror_x`/`mirror_y` lassen Schrift ausdrücklich stehen (§ 7.5, § 8.5), weil
+spiegelverkehrte Schrift niemand will. Kopfstehende Schrift will man hier sehr
+wohl, denn der Leser dreht das Papier.
+
+Der Laufbericht nennt die *gewählte* Einstellung, den Handgriff, der sie prüft
+(Seite 2 muss hinter Seite 1 liegen), und den Schalter für den anderen Fall — wie
+§ 8.2 es für die Skalierung verlangt. Ein unbekannter Wert wird abgelehnt, und
+`--booklet-flip` ohne `--booklet` ebenfalls.
 
 **Und er merkt, wenn dieser Handgriff nicht geht** (ergänzt 2026-07-26, nach dem
 ersten gedruckten Heft). Auf leerem Rasterpapier — dem häufigsten, was dieses
@@ -2817,13 +2834,16 @@ Bewusst noch offen:
    unabhängigen Parsern (pypdf, pikepdf/qpdf). Offen bleibt nur der ursprüngliche
    *Verdacht* — wie Betrachter und Synchronisationsdienste mit Anhängen umgehen;
    das entscheidet die Praxis, nicht der Code.
-6. **Wendekante beim Duplexdruck.** Zwei Stellen setzen eine voraus:
-   `back_mirrored` (§ 7.5) die **lange** Kante, `--booklet` (§ 14) die **kurze**
-   — beide nennen sie, statt zu raten, und `--booklet` nennt zusätzlich den
-   Handgriff, mit dem der Nutzer sie am ersten Bogen prüft. Ob ein Schalter
-   nötig ist, zeigt erst die Praxis; er wäre eine einzige Fallunterscheidung und
-   säße beim Heft in `impose._folded`, wo Vorder- und Rückseite eines Bogens
-   entstehen.
+6. **Wendekante beim Duplexdruck.** ~~Ob ein Schalter nötig ist, zeigt die
+   Praxis.~~ **Für das Heft gebaut (2026-07-26):** `--booklet-flip short | long`,
+   Vorgabe kurz (§ 14). Die Einschätzung „eine einzige Fallunterscheidung beim
+   Spiegeln" traf dabei **nicht** zu: eine Spiegelung genügt nicht, die Rückseite
+   muss um 180° *gedreht* werden, und eine Drehung nimmt anders als eine
+   Spiegelung den Text mit — daher `rotate_180` als dritte Transformation im
+   Vokabular. Offen bleibt allein `back_mirrored` (§ 7.5), das weiterhin die
+   lange Kante voraussetzt und sie benennt; dort *wäre* es die eine
+   Fallunterscheidung, weil nur die Musterebene gespiegelt wird und kein Blatt
+   kopfsteht.
 
 ### 15.1 Vorgesehen, aber nicht in v1
 

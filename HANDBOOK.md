@@ -1336,6 +1336,17 @@ on the **short** edge, fold the stack in half, staple through the fold. The run
 report names the flip and the one thing to check on the first sheet: page 2 must
 come out behind page 1.
 
+If your printer turns the paper the other way, say so and build it again:
+
+```bash
+ctrlgrid millimeter-a4 --format a5 --pages 8 --booklet --booklet-flip long \
+    --nup-sheet 297x210mm -o booklet.pdf
+```
+
+The backs then come out printed upside down, which is exactly right: a long-edge
+turn shows them upside down, so they have to be printed that way to be read the
+right way up.
+
 If your pages carry no numbers — plain grid paper, say — nothing on the sheet
 shows whether the flip was right, and the run says so. Add a footer for one test
 run:
@@ -1542,6 +1553,7 @@ key.
 | `--nup <CxR>` | N-up imposition, never scaled |
 | `--nup-sheet <format>` | the sheet format for imposition |
 | `--booklet` | impose as a folded, saddle-stitched booklet, never scaled |
+| `--booklet-flip <short\|long>` | which edge the printer turns on (default short) |
 | `--crop-marks` | trim marks with `--nup` or `--booklet` |
 | `--force` | overwrite an existing output file |
 | `--quiet` | report only the output path |

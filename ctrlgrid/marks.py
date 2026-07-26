@@ -189,6 +189,45 @@ def mirror_x(mark: Mark, *, about: Um) -> Mark:
     raise TypeError(f"not a mark: {mark!r}")  # pragma: no cover
 
 
+def rotate_180(mark: Mark, *, width: Um, height: Um) -> Mark:
+    """Turn a mark half a turn about the centre of a sheet `width` x `height`.
+
+    The third crossing of § 6, and it is a **rotation**, not a reflection — the
+    distinction is the whole reason it exists. `--booklet-flip long` (§ 14) has
+    the printer turn the sheet about its long edge, which puts the back upside
+    down; the only way the reader sees it the right way up is to print it upside
+    down to begin with.
+
+    So unlike `mirror_x` and `mirror_y`, this one **does** carry the text with
+    it: `angle` gains 180° and the anchor moves. Upside-down writing is exactly
+    what is wanted here, because the reader turns the paper. `align` is left
+    alone: a half turn is rigid, so a left-aligned label still starts at its
+    anchor and runs the other way, which is precisely where its box lands.
+    """
+    def turn(point: Point) -> Point:
+        return Point(width - point.x, height - point.y)
+
+    match mark:
+        case Segment():
+            return replace(mark, start=turn(mark.start), end=turn(mark.end))
+        case Arc():
+            return replace(
+                mark, center=turn(mark.center), start_angle=mark.start_angle + 180.0
+            )
+        case Polygon():
+            return replace(mark, points=tuple(turn(point) for point in mark.points))
+        case Dot():
+            return replace(mark, pos=turn(mark.pos))
+        case Image():
+            return replace(
+                mark,
+                pos=Point(width - mark.pos.x - mark.width, height - mark.pos.y - mark.height),
+            )
+        case Text():
+            return replace(mark, pos=turn(mark.pos), angle=mark.angle + 180.0)
+    raise TypeError(f"not a mark: {mark!r}")  # pragma: no cover
+
+
 def mirror_y(mark: Mark, *, about: Um) -> Mark:
     """Reflect a mark in the horizontal line at `about / 2` (§ 8.5).
 

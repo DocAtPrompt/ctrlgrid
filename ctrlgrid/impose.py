@@ -50,6 +50,21 @@ class Imposition:
     #: `crop_mark_segments` never read this. Only `slots` does, which is why it
     #: sits on the request beside `crop_marks` and not in the geometry.
     booklet: bool = False
+    flip: str = "short"
+    """Which edge the printer turns the sheet about, for a booklet (§ 14).
+
+    `short` is the default and the one a landscape sheet with a vertical fold
+    wants: turning about the short edges swaps left and right and leaves up
+    alone. `long` turns the sheet over instead, so the halves stay put and the
+    back has to be printed upside down — see `rotates`."""
+
+    def rotates(self, side: int) -> bool:
+        """Whether sheet side `side` (0-based, front first) is printed turned.
+
+        Only a booklet turned about its long edge, and only its backs: the
+        front is the side the printer lays down first and is never rotated.
+        """
+        return self.booklet and self.flip == "long" and side % 2 == 1
 
     @property
     def per_sheet(self) -> int:
@@ -149,6 +164,9 @@ def slots(page_count: int, imposition: Imposition) -> list[list[int | None]]:
     the one `Imposition.cell` numbers: 0 is top-left, reading order.
     """
     if imposition.booklet:
+        # The order is the same for either turning edge. A long-edge turn is
+        # answered by rotating the back *side* (see `rotates`), and a half turn
+        # already swaps the two halves — doing both would swap them twice.
         return _folded(page_count)
     per = imposition.per_sheet
     return [

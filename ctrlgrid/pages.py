@@ -35,6 +35,7 @@ from ctrlgrid.marks import (
     Um,
     mirror_x,
     mirror_y,
+    rotate_180,
     translate,
 )
 from ctrlgrid.model import Band, Margin, PatternSpec
@@ -1610,14 +1611,23 @@ def _write_imposed(
     outline after imposing.
     """
     page_w, page_h = document.sheet.width, document.sheet.height
-    for sheet in slots(len(rendered), nup):
+    for side, sheet in enumerate(slots(len(rendered), nup)):
         writer.begin_page(nup.sheet_width, nup.sheet_height)
+        # § 14: turned about its long edge, a sheet's back comes out upside
+        # down, so it is *printed* upside down. A half turn and not a mirror —
+        # the text turns with the paper, which is exactly what the reader does.
+        turned = nup.rotates(side)
         for position, index in enumerate(sheet):
             if index is None:
                 continue
             cell = nup.cell(position, page_w, page_h)
             for mark in rendered[index][1]:
-                writer.draw(translate(mark, dx=cell.x, dy=cell.y))
+                placed = translate(mark, dx=cell.x, dy=cell.y)
+                if turned:
+                    placed = rotate_180(
+                        placed, width=nup.sheet_width, height=nup.sheet_height
+                    )
+                writer.draw(placed)
         for mark in nup.crop_mark_segments(page_w, page_h):
             writer.draw(mark)
         writer.end_page()

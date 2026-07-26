@@ -19,7 +19,9 @@ from ctrlgrid.pages import build
 from ctrlgrid.writers.pdf import PdfWriter
 
 
-def imposition(cols: int, rows: int, *, booklet: bool = False) -> Imposition:
+def imposition(
+    cols: int, rows: int, *, booklet: bool = False, flip: str = "short"
+) -> Imposition:
     return Imposition(
         cols=cols,
         rows=rows,
@@ -27,6 +29,7 @@ def imposition(cols: int, rows: int, *, booklet: bool = False) -> Imposition:
         sheet_height=297_000,
         sheet_name="a4",
         booklet=booklet,
+        flip=flip,
     )
 
 
@@ -285,3 +288,141 @@ class TestTheSheetsThemselves:
         first = self.sheet(tmp_path, 6, "1.pdf")
         second = self.sheet(tmp_path, 6, "2.pdf")
         assert first.read_bytes() == second.read_bytes()
+
+
+class TestTheTurningEdge:
+    """§ 14, § 15 point 6: which edge the printer turns the sheet about.
+
+    A booklet sheet is landscape and its fold is vertical, so turning it about
+    its **short** edges swaps left and right and leaves up alone — that is the
+    default, and the back is drawn upright with the pair swapped. Turning it
+    about the **long** edges leaves left and right alone and turns the sheet
+    over, so the back keeps its halves and each page has to be printed upside
+    down for the reader to see it the right way up.
+    """
+
+    def test_the_short_edge_default_swaps_the_halves(self) -> None:
+        assert slots(8, imposition(2, 1, booklet=True)) == [
+            [7, 0], [1, 6], [5, 2], [3, 4],
+        ]
+
+    def test_the_order_is_the_same_for_either_edge(self) -> None:
+        # The cells hold the same pages either way. What differs is that a
+        # long-edge back is *turned over*, and a half turn already exchanges
+        # the two halves — reordering as well would exchange them twice, which
+        # is the mistake this test exists to keep out.
+        assert slots(8, imposition(2, 1, booklet=True, flip="long")) == slots(
+            8, imposition(2, 1, booklet=True)
+        )
+
+    def test_only_the_backs_are_turned_over(self) -> None:
+        # The front of a sheet is never rotated whichever edge is used: it is
+        # the side the printer lays down first.
+        long = imposition(2, 1, booklet=True, flip="long")
+        assert [long.rotates(side) for side in range(4)] == [False, True, False, True]
+
+    def test_the_short_edge_turns_nothing_over(self) -> None:
+        short = imposition(2, 1, booklet=True)
+        assert [short.rotates(side) for side in range(4)] == [False] * 4
+
+    def test_plain_nup_never_turns_anything_over(self) -> None:
+        assert not imposition(2, 2).rotates(1)
+
+
+class TestTheLongEdgeOnPaper:
+    """Read back off the sheet, because what matters is what the reader sees
+    after turning the paper."""
+
+    def build(self, tmp_path: Path, flip: str) -> Path:
+        path = tmp_path / f"{flip}.pdf"
+        build(
+            loads(NUMBERED, {"pages": 8, "booklet": True, "booklet_flip": flip,
+                             "nup_sheet": "297x210mm"}, source="t"),
+            PdfWriter(path),
+        )
+        return path
+
+    @pytest.mark.parametrize("flip,same_half", [("long", True), ("short", False)])
+    def test_page_two_sits_behind_page_one(
+        self, tmp_path: Path, flip: str, same_half: bool
+    ) -> None:
+        # The claim that matters, as geometry rather than as an order: page 1's
+        # number sits in one half of the front, and page 2's must sit in the
+        # half that ends up behind it. A long-edge turn keeps the halves, so it
+        # is the *same* half; the short-edge default swaps them, so it is the
+        # other one.
+        path = self.build(tmp_path, flip)
+        one = next(t for t in pdfread.texts_um(path, 0) if t.content == "1")
+        two = next(t for t in pdfread.texts_um(path, 1) if t.content == "2")
+        middle = 297_000 / 2
+        assert ((one.x > middle) == (two.x > middle)) is same_half
+
+    def test_the_backs_are_printed_upside_down_and_the_fronts_are_not(
+        self, tmp_path: Path
+    ) -> None:
+        # A long-edge turn shows the back upside down, so it is printed upside
+        # down. The front never is — it is the side laid down first.
+        path = self.build(tmp_path, "long")
+        for side in range(pdfread.page_count(path)):
+            angles = {t.angle for t in pdfread.texts_um(path, side)}
+            assert angles == ({180.0} if side % 2 else {0.0}), side
+
+    def test_the_short_edge_prints_nothing_upside_down(self, tmp_path: Path) -> None:
+        path = self.build(tmp_path, "short")
+        for side in range(pdfread.page_count(path)):
+            assert {t.angle for t in pdfread.texts_um(path, side)} == {0.0}, side
+
+
+class TestTheFlipIsReportedAndChecked:
+    def report(self, tmp_path: Path, *flags: str) -> str:
+        from typer.testing import CliRunner
+
+        from ctrlgrid.cli import app
+
+        definition = tmp_path / "d.yaml"
+        definition.write_text(A5_LINES, encoding="utf-8")
+        result = CliRunner().invoke(
+            app,
+            ["-d", str(definition), "--pages", "8", "--booklet",
+             "--nup-sheet", "297x210mm", "-o", str(tmp_path / "b.pdf"), *flags],
+        )
+        assert result.exit_code == 0, result.output
+        return result.output
+
+    def test_the_default_still_says_short(self, tmp_path: Path) -> None:
+        assert "SHORT edge" in self.report(tmp_path)
+
+    def test_the_long_edge_is_named_when_it_is_chosen(self, tmp_path: Path) -> None:
+        # § 8.2's form: name the setting the user must make. It would be worse
+        # than useless to keep saying SHORT while printing for LONG.
+        output = self.report(tmp_path, "--booklet-flip", "long")
+        assert "LONG edge" in output
+        assert "SHORT" not in output
+
+    def test_an_unknown_edge_is_refused_naming_both(self, tmp_path: Path) -> None:
+        from typer.testing import CliRunner
+
+        from ctrlgrid.cli import app
+        definition = tmp_path / "d.yaml"
+        definition.write_text(A5_LINES, encoding="utf-8")
+        result = CliRunner().invoke(
+            app,
+            ["-d", str(definition), "--pages", "8", "--booklet",
+             "--booklet-flip", "sideways", "-o", str(tmp_path / "b.pdf")],
+        )
+        assert result.exit_code != 0
+        assert "short" in result.output and "long" in result.output
+
+    def test_the_flip_without_a_booklet_is_refused(self, tmp_path: Path) -> None:
+        from typer.testing import CliRunner
+
+        from ctrlgrid.cli import app
+        definition = tmp_path / "d.yaml"
+        definition.write_text(A5_LINES, encoding="utf-8")
+        result = CliRunner().invoke(
+            app,
+            ["-d", str(definition), "--booklet-flip", "long",
+             "-o", str(tmp_path / "b.pdf")],
+        )
+        assert result.exit_code != 0
+        assert "--booklet" in result.output

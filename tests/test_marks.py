@@ -23,6 +23,7 @@ from ctrlgrid.marks import (
     Segment,
     Text,
     mirror_y,
+    rotate_180,
     translate,
 )
 
@@ -119,3 +120,51 @@ class TestArea:
     def test_an_area_is_the_size_of_the_pattern_area_with_the_origin_at_zero(self) -> None:
         area = Area(width=200000, height=250000)
         assert (area.width, area.height) == (200000, 250000)
+
+
+class TestRotate180:
+    """A rigid half turn about the sheet's centre (§ 14).
+
+    Not a mirror, and the difference is the whole reason it exists: `mirror_x`
+    refuses to reflect text, because mirrored writing is what nobody wants. A
+    half turn *must* carry the text with it — a page number left upright over an
+    upside-down grid would be the sheet lying about which way is up.
+    """
+
+    W, H = 297_000, 210_000
+
+    def turn(self, mark):
+        return rotate_180(mark, width=self.W, height=self.H)
+
+    def test_a_segment_maps_to_the_opposite_corner(self) -> None:
+        turned = self.turn(Segment(start=Point(10_000, 20_000), end=Point(30_000, 20_000)))
+        assert turned.start == Point(self.W - 10_000, self.H - 20_000)
+        assert turned.end == Point(self.W - 30_000, self.H - 20_000)
+
+    def test_turning_twice_is_the_identity(self) -> None:
+        # The property that says it is a rotation and not something near one.
+        original = Segment(start=Point(1_000, 2_000), end=Point(3_000, 44_000))
+        assert self.turn(self.turn(original)) == original
+
+    def test_text_turns_with_the_page(self) -> None:
+        text = Text(pos=Point(10_000, 20_000), content="7", size=3_000)
+        turned = self.turn(text)
+        assert turned.pos == Point(self.W - 10_000, self.H - 20_000)
+        assert turned.angle == 180.0
+        # Alignment is *not* flipped: a half turn is rigid, so a left-aligned
+        # label still starts at its anchor and now runs the other way, which is
+        # exactly where the original box lands. Flipping it would move the box.
+        assert turned.align == text.align
+
+    def test_an_image_keeps_its_size_and_moves_by_its_far_corner(self) -> None:
+        image = Image(pos=Point(10_000, 20_000), width=50_000, height=40_000, source="x.png")
+        turned = self.turn(image)
+        assert (turned.width, turned.height) == (50_000, 40_000)
+        assert turned.pos == Point(self.W - 10_000 - 50_000, self.H - 20_000 - 40_000)
+
+    def test_an_arc_keeps_its_sweep_and_turns_its_start(self) -> None:
+        arc = Arc(center=Point(40_000, 50_000), radius=10_000, start_angle=30.0, sweep=90.0)
+        turned = self.turn(arc)
+        assert turned.center == Point(self.W - 40_000, self.H - 50_000)
+        assert turned.sweep == 90.0
+        assert turned.start_angle % 360 == 210.0

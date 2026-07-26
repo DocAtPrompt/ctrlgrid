@@ -8,6 +8,7 @@ definition asked for.
 
 from __future__ import annotations
 
+import math
 import re
 from dataclasses import dataclass
 from pathlib import Path
@@ -104,16 +105,38 @@ class PlacedText:
     y: float
     content: str
     size_pt: float
+    angle: float = 0.0
+    """Rotation in degrees, from the text matrix — 0 for upright text.
+
+    Needed because a rotation is a geometric fact about the sheet: § 8.12 turns
+    the ruler's numbers 90°, and a booklet turned about its long edge prints its
+    backs at 180° (§ 14). Rounded to three places, so an exact quarter or half
+    turn reads as 90.0 or 180.0 rather than as a float with a tail."""
 
 
-_TEXT = re.compile(
-    (
-        rf"BT\s+{_NUMBER} {_NUMBER} {_NUMBER} {_NUMBER} {_NUMBER} {_NUMBER} Tm\s*"
-        r"\((?P<content>(?:\\.|[^\\)])*)\) Tj"
-    ).encode()
+_TEXT_TOKEN = re.compile(
+    rb"(-?(?:\d+\.?\d*|\.\d+))"           # a number
+    rb"|\((?P<string>(?:\\.|[^\\)])*)\)"      # a literal string
+    rb"|/F(?P<font>\d+)"                    # a font name
+    rb"|(?P<op>[A-Za-z']+)"                 # an operator
 )
-_FONT_SIZE = re.compile(rf"/F\d+ {_NUMBER} Tf".encode())
 _ESCAPE = re.compile(rb"\\([0-7]{1,3})|\\(.)")
+
+_IDENTITY = (1.0, 0.0, 0.0, 1.0, 0.0, 0.0)
+
+
+def _compose(m: tuple[float, ...], n: tuple[float, ...]) -> tuple[float, ...]:
+    """`m` then `n` — PDF's [a b c d e f] applied in that order."""
+    a1, b1, c1, d1, e1, f1 = m
+    a2, b2, c2, d2, e2, f2 = n
+    return (
+        a1 * a2 + b1 * c2,
+        a1 * b2 + b1 * d2,
+        c1 * a2 + d1 * c2,
+        c1 * b2 + d1 * d2,
+        e1 * a2 + f1 * c2 + e2,
+        e1 * b2 + f1 * d2 + f2,
+    )
 
 
 def _pdf_string(raw: bytes) -> str:
@@ -132,29 +155,58 @@ def texts_um(path: Path, page: int = 0) -> list[PlacedText]:
 
     Positions, not just characters: whether a nav strip sits at the right edge
     or a column of day numbers is right-aligned is *geometry*, and
-    `extract_text` throws exactly that away. Only the translation of the text
-    matrix is reported — a rotated string (§ 8.12) still gives its origin.
+    `extract_text` throws exactly that away.
+
+    The **current transformation matrix is tracked**, and that is not a detail.
+    reportlab draws rotated text by turning the CTM and then setting the string
+    at the origin (`translate`, `rotate`, `Tm` at 0 0), so a reader that looked
+    at the text matrix alone would report every rotated string as upright and
+    sitting at (0, 0) — silently, and only for the strings whose position
+    matters most (§ 8.12's ruler numbers, § 14's turned booklet backs). So the
+    text matrix is composed with the CTM, and both the position and the angle
+    come out of the result.
     """
     stream = PdfReader(str(path)).pages[page].get_contents().get_data()
     placed: list[PlacedText] = []
+    ctm: tuple[float, ...] = _IDENTITY
+    stack: list[tuple[float, ...]] = []
+    text_matrix: tuple[float, ...] = _IDENTITY
+    numbers: list[float] = []
     size = 0.0
-    position = 0
-    while True:
-        found = _TEXT.search(stream, position)
-        if found is None:
-            return placed
-        for match in _FONT_SIZE.finditer(stream, position, found.start()):
-            size = float(match.group(1))
-        numbers = [float(found.group(index)) for index in range(1, 7)]
-        placed.append(
-            PlacedText(
-                um(numbers[4]),
-                um(numbers[5]),
-                _pdf_string(found.group("content")),
-                size,
+    pending: str | None = None
+
+    for match in _TEXT_TOKEN.finditer(stream):
+        if match.group(1) is not None:
+            numbers.append(float(match.group(1)))
+            continue
+        if match.group("string") is not None:
+            pending = _pdf_string(match.group("string"))
+            continue
+        if match.group("font") is not None:
+            numbers = []
+            continue
+        op = match.group("op").decode()
+        if op == "q":
+            stack.append(ctm)
+        elif op == "Q":
+            ctm = stack.pop() if stack else _IDENTITY
+        elif op == "cm" and len(numbers) >= 6:
+            ctm = _compose(tuple(numbers[-6:]), ctm)
+        elif op == "Tf" and numbers:
+            size = numbers[-1]
+        elif op == "Tm" and len(numbers) >= 6:
+            text_matrix = tuple(numbers[-6:])
+        elif op == "Tj" and pending is not None:
+            a, b, _, _, e, f = _compose(text_matrix, ctm)
+            placed.append(
+                PlacedText(
+                    um(e), um(f), pending, size,
+                    round(math.degrees(math.atan2(b, a)) % 360, 3),
+                )
             )
-        )
-        position = found.end()
+            pending = None
+        numbers = []
+    return placed
 
 
 _TOKEN = re.compile(rb"(-?(?:\d+\.?\d*|\.\d+))|([A-Za-z']+)")

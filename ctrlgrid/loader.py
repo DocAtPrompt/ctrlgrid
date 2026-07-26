@@ -589,6 +589,7 @@ def _resolve_nup(overrides: Mapping[str, Any]) -> Imposition | None:
             sheet_name=sheet,
             crop_marks=crop,
             booklet=True,
+            flip=overrides.get("booklet_flip") or "short",
         )
     if "nup" not in overrides:
         return None
