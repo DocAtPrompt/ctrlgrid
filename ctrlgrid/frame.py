@@ -264,7 +264,7 @@ def ruler_marks(
                     pos=_at(edge, start, along=tick.at, out=out),
                     content=label_text(ruler, at=direction * tick.value),
                     size=ruler.font.size.um,
-                    family=ruler.font.family,
+                    family=ruler.font.token,
                     align="center",
                     angle=90.0 if turned else 0.0,
                     color=ruler.color,
@@ -335,7 +335,7 @@ def check_rulers(
                 widest,
                 q.text_width(
                     label_text(ruler, at=direction * tick.value),
-                    family=ruler.font.family,
+                    family=ruler.font.token,
                     size=ruler.font.size.um,
                 ),
             )

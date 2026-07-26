@@ -391,3 +391,46 @@ class TestWhatADocumentDoesNotDo:
         with pytest.raises(DefinitionError) as excinfo:
             build(loads(text, source="test"), PdfWriter(tmp_path / "m.pdf"))
         assert "solution" in str(excinfo.value)
+
+
+class TestTheBookmarkGuardIsReachable:
+    """§ 10.2 requires `--skip-unsupported` to leave out links, **bookmarks**
+    and the attachment.
+
+    The wrapper had the guard — `if "outline" in self._missing: return` — and it
+    could never fire, because `_ALL_CAPABILITIES` never contained `"outline"`
+    and `_missing` is that set minus the writer's. The git history shows the set
+    being extended for `attachment` and then for `link` as each guard was added;
+    `outline` was the one that was not. Harmless only because `PngWriter.outline`
+    happens to be a no-op today — a guard that cannot fire is not a guard.
+    """
+
+    def test_a_writer_without_the_capability_has_its_bookmarks_dropped(self) -> None:
+        from ctrlgrid.pages import _ALL_CAPABILITIES, _LeavingOutWhatItCannotDraw
+
+        assert "outline" in _ALL_CAPABILITIES
+
+        class _NoBookmarks:
+            def __init__(self) -> None:
+                self.titles: list[str] = []
+
+            def capabilities(self) -> set[str]:
+                return _ALL_CAPABILITIES - {"outline"}
+
+            def outline(self, title: str, *, index: int) -> None:
+                self.titles.append(title)
+
+        inner = _NoBookmarks()
+        _LeavingOutWhatItCannotDraw(inner).outline("January", index=0)
+        assert inner.titles == []
+
+    def test_the_pdf_writer_still_declares_it_and_keeps_them(self) -> None:
+        from ctrlgrid.pages import _LeavingOutWhatItCannotDraw
+        from ctrlgrid.writers.pdf import PdfWriter
+
+        writer = PdfWriter("unused.pdf")
+        assert "outline" in writer.capabilities()
+        recorded: list[str] = []
+        writer.outline = lambda title, *, index: recorded.append(title)
+        _LeavingOutWhatItCannotDraw(writer).outline("January", index=0)
+        assert recorded == ["January"]

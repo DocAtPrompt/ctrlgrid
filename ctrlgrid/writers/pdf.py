@@ -67,7 +67,7 @@ class PdfWriter:
         """
         return {
             "vector", "color", "text", "opacity", "arc", "polygon", "image_png",
-            "attachment", "link",
+            "attachment", "link", "outline",
         }
 
     def text_width(self, content: str, *, family: str, size: Um) -> Um:

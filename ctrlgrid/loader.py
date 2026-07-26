@@ -266,6 +266,7 @@ def loads(text: str, overrides: Mapping[str, Any] | None = None, *, source: str)
     pages, names, notices = _resolve_names(pages, overrides)
     notices += _hole_mark_notices(page)
     _check_fonts({"header": header, "footer": footer}, raw)
+    _check_ruler_font(ruler, raw)
     header = _resolve_images(header, raw, source, section="header")
     footer = _resolve_images(footer, raw, source, section="footer")
 
@@ -327,6 +328,22 @@ def _resolve_names(
     # Short lists repeat cyclically; long ones are cut by the same expression.
     laid_out = [names[index % len(names)] for index in range(count)]
     return pages, laid_out, notices
+
+
+def _check_ruler_font(ruler: RulerSpec | None, raw: CommentedMap) -> None:
+    """The edge scale names a font too, and it was never opened (§ 8.12, § 10.3).
+
+    A `ruler: {font: {file: …}}` validated and then did nothing at all: the file
+    was not read, the licence not checked, and the numbers came out in the
+    default sans. Silently ignoring what the user asked for is § 5.1's
+    almost-right failure, and this is where the line number still exists.
+    """
+    if ruler is None or ruler.font.file is None:
+        return
+    try:
+        fonts.load_font(ruler.font.file, field="ruler.font.file")
+    except DefinitionError as error:
+        raise error.at(line=_line(raw, ("ruler", "font", "file"))) from None
 
 
 def _check_fonts(bands: dict[str, Band | None], raw: CommentedMap) -> None:

@@ -464,3 +464,94 @@ class TestWhereZeroSits:
         with pytest.raises(DefinitionError) as excinfo:
             check_rulers(wide, geometry(doc), doc, q=Q)
         assert "4mm" in str(excinfo.value)
+
+
+class TestNoTickRunsOffTheEdge:
+    """`ticks`'s own docstring rules this out — "a tick past the end is not
+    drawn, because the scale measures the area it borders and does not run into
+    the corner" — and § 8.12 says the ladder ends at the edges.
+
+    The first index was `-ceil(zero / step)` where it has to be `-(zero // step)`:
+    one step too far whenever zero is not a whole number of steps from the edge
+    start, which `origin: center` makes the ordinary case rather than a corner
+    one.
+    """
+
+    def _spec(self):
+        from ctrlgrid.model import RulerSpec
+
+        return RulerSpec.model_validate({"edges": ["bottom"], "unit": "mm"})
+
+    def test_a_centred_zero_on_an_odd_extent_stays_on_the_edge(self) -> None:
+        from ctrlgrid.ruler import ticks
+
+        for extent in (175_500, 200_500, 267_300):
+            got = ticks(self._spec(), extent=extent, zero=extent // 2)
+            assert got, extent
+            assert min(tick.at for tick in got) >= 0, (extent, min(t.at for t in got))
+            assert max(tick.at for tick in got) <= extent, extent
+
+    def test_a_zero_at_the_edge_start_is_unchanged(self) -> None:
+        from ctrlgrid.ruler import ticks
+
+        got = ticks(self._spec(), extent=100_000, zero=0)
+        assert [tick.at for tick in got][:3] == [0, 1_000, 2_000]
+        assert max(tick.at for tick in got) == 100_000
+
+
+class TestARulerFontIsActuallyUsed:
+    """`ruler: {font: {file: …}}` validated, and then nothing happened.
+
+    Three sites pass `ruler.font.family` to the writer where every other `Text`
+    in the codebase passes `.token` — the one string that carries a file font
+    through seam 3 (§ 10.3, decision 15). So a named font file was accepted,
+    never opened, and the numbers came out in the default sans. Silently
+    ignoring what the user asked for is § 5.1's almost-right failure.
+    """
+
+    DEFINITION = (
+        "version: 1\n"
+        "page: {format: a4, margin: 15mm}\n"
+        "ruler: {edges: [bottom], unit: cm}\n"
+        "generator: lines\n"
+        "families: [{direction: horizontal, base_spacing: 5mm, base_weight: 0.3pt}]\n"
+    )
+
+    def test_a_font_file_that_is_not_there_is_refused(self) -> None:
+        from ctrlgrid.errors import DefinitionError
+        from ctrlgrid.loader import loads
+
+        text = self.DEFINITION.replace(
+            "unit: cm}", "unit: cm, font: {file: /nope/definitely-missing.ttf}}"
+        )
+        with pytest.raises(DefinitionError) as excinfo:
+            loads(text, source="t")
+        assert "definitely-missing.ttf" in str(excinfo.value)
+
+    def test_the_numbers_carry_the_font_token_not_the_bare_family(self) -> None:
+        # Vera ships with reportlab, so a real file font is available without
+        # adding a fixture — the same one `test_fonts` uses.
+        from pathlib import Path
+
+        import reportlab
+
+        from ctrlgrid.frame import ruler_marks
+        from ctrlgrid.loader import loads
+        from ctrlgrid.marks import Text
+        from ctrlgrid.pages import Geometry
+        from ctrlgrid.writers.pdf import PdfWriter
+
+        vera = Path(reportlab.__file__).parent / "fonts" / "Vera.ttf"
+        text = self.DEFINITION.replace("unit: cm}", f"unit: cm, font: {{file: '{vera}'}}}}")
+        document = loads(text, source="t")
+        geometry = Geometry.of(
+            document.sheet, header=document.header, footer=document.footer
+        )
+        marks = list(
+            ruler_marks(document.ruler, geometry, q=PdfWriter("unused.pdf"), align="bottom-left")
+        )
+        numbers = [mark for mark in marks if isinstance(mark, Text)]
+        assert numbers
+        token = document.ruler.font.token
+        assert token != document.ruler.font.family, "the fixture must actually differ"
+        assert all(mark.family == token for mark in numbers)

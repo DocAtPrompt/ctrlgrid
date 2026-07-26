@@ -745,7 +745,12 @@ def _refuse_mirroring_that_cannot_line_up(document: Document, plan: SheetPlan) -
 #: renders anything, so the check below can skip the sampling entirely.
 _ALL_CAPABILITIES = {
     "vector", "color", "opacity", "arc", "polygon", "image_png", "text",
-    "attachment", "link",
+    # Not mark kinds: § 10.2 lists what `--skip-unsupported` leaves out as
+    # "Links, Lesezeichen und den Anhang", and the wrapper below guards all
+    # three. `outline` was missing here, so its guard could never fire — the
+    # set had been extended for `attachment` and for `link` as each guard was
+    # written, and this one was not.
+    "attachment", "link", "outline",
 }
 
 

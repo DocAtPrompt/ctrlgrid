@@ -62,7 +62,13 @@ def ticks(ruler: RulerSpec, *, extent: Um, zero: Um = 0) -> list[Tick]:
     """
     step = ruler.step.um
     result: list[Tick] = []
-    first = -((zero + step - 1) // step)          # the lowest multiple still on the edge
+    # The lowest multiple of the step that is still *on* the edge. Floor, not
+    # ceiling: `-ceil(zero / step)` overshoots by one whenever zero is not a
+    # whole number of steps from the edge's start, and puts the first tick a
+    # fraction of a step into the corner. With `origin: center` that is the
+    # ordinary case rather than a corner one — a 175.5 mm extent put it at
+    # −0.25 mm — which is why the docstring above and the drawing disagreed.
+    first = -(zero // step)
     last = (extent - zero) // step
     for index in range(first, last + 1):
         offset = index * step                     # exact multiples, never a sum (§ 3.3)
@@ -100,7 +106,7 @@ def number_height(ruler: RulerSpec, *, q: WriterQuery) -> Um:
     what § 10.2 has a query for, and a guessed proportion is precisely the kind
     of almost-right number this project keeps finding in its own bugs.
     """
-    ascent, _descent = q.text_metrics(family=ruler.font.family, size=ruler.font.size.um)
+    ascent, _descent = q.text_metrics(family=ruler.font.token, size=ruler.font.size.um)
     return ascent
 
 
