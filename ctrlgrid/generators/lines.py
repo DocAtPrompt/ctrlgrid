@@ -1,8 +1,8 @@
-"""`lines` — the blade M1 carries (§ 7.1).
+"""`lines` — the first blade, and the one the whole cycle model rests on (§ 7.1).
 
-Any number of families. Squared, ruled, isometric, calligraphic, logarithmic
-and Cornell paper are all this one generator with different cycles; the ones
-this milestone does not reach yet say so by name rather than failing as typos.
+Any number of families. Squared, ruled, isometric, calligraphic, logarithmic,
+slanted and Cornell paper are all this one generator with different cycles —
+six of the nineteen shipped presets are `lines` and nothing else.
 
 The blade computes in local coordinates with the origin at the bottom left of
 the pattern area (§ 3.5) and never learns what a margin is (§ 3.3). Mark 0 of a

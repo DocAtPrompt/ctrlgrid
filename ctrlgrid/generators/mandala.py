@@ -5,9 +5,11 @@ A mandala here is a **template to draw on**, not a finished drawing. That is the
 whole reason it is parametric and not a shape language (§ 2): the tool lays down
 the scaffold and a few motif families that carry the N-fold symmetry, and the
 hand fills the rest. So the motif is built-in elements the user parameterises —
-a rosette of overlapping circles (`Arc`) and inscribed regular or star polygons
-(`Polygon`) — the two § 7.11 names, each needing one of the two curved-or-many
-primitives (§ 6).
+rings and spokes as a scaffold, and on top of it rosettes, petals, beads,
+scallops, pinwheels and inscribed regular or star polygons — the seven families
+§ 7.11 names. They need four of the six primitives (§ 6): `Arc`, `Segment`,
+`Polygon` and — for a ring of beads — `Dot`. No primitive was added for any of
+them, which is the point: a petal is two arcs, not a path (decision 41).
 
 It shares the coordinate arithmetic of `polar` through `polar_geometry` — centre,
 outer radius, the point at a radius and an angle — but **not** the cycle model
@@ -580,8 +582,13 @@ def _polygon(spec: PolygonSpec, sectors: int, center: Point, outer: Um) -> Polyg
 def _max_reach(cfg: MandalaConfig, outer: Um) -> tuple[Um, str]:
     """The farthest any mark reaches from the centre, and what reaches it.
 
-    The scaffold and the polygons reach the rim at most; a rosette reaches
-    `at + radius`. Whichever is farthest decides whether the disc fits (§ 8.2).
+    Every family is asked, because most of them can reach past the rim: a
+    rosette `at + radius`, a petal its tip (plus a lateral term for a fat leaf),
+    a bead ring `at + size / 2`, a scallop `at + depth`, a pinwheel `at + size`,
+    and a polygon its own `radius`, which is unbounded. The scaffold reaches
+    `outer` — which is itself a candidate, since an explicit `outer_radius` is
+    honoured as written and only `auto` fits by construction. Whichever is
+    farthest decides whether the disc fits (§ 8.2).
     """
     reaches: list[tuple[Um, str]] = []
     if cfg.rings is not None or cfg.spokes is not None:

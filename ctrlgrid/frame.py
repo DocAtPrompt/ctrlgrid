@@ -1,4 +1,5 @@
-"""The frame: header, footer, and — from M2 — border, stamp and hole marks.
+"""The frame: header, footer, border, background, hole marks, the edge ruler
+and the stamp — everything the handle draws around a pattern (§ 8.1, § 8.12).
 
 Everything here belongs to the handle, not to a blade (§ 3). Two rules from the
 specification do the shaping:
@@ -166,10 +167,12 @@ _EDGES: dict[str, tuple[str, int]] = {
 
 
 def _edge_start(edge: str, geometry: Geometry) -> tuple[Point, Um]:
-    """Where zero sits for this edge, and how far the scale runs.
+    """Where this edge *starts*, and how far it runs.
 
-    Zero is the pattern area's origin corner — the numbers agree with the grid,
-    not with the paper's corner (§ 8.12).
+    Not where zero sits: that is `_zero_on`, which reads `origin` and may put
+    the nought in the middle of the edge or at its far end (§ 8.12). What is
+    true of both is that they are anchored to the **pattern area** and not to
+    the paper's corner, so the numbers agree with the grid.
     """
     origin, area = geometry.origin, geometry.area
     if edge == "bottom":

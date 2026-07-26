@@ -84,7 +84,11 @@ class NotebookSection(Section):
 
 
 class TitlePage(Section):
-    """An opt-in cover, the same shape the calendar's has (§ 7.12)."""
+    """An opt-in cover: a title and an optional subtitle, and nothing else.
+
+    Deliberately smaller than the calendar's title page (§ 7.12), which also
+    carries a background colour and image, a logo and per-band opt-ins. A
+    notebook divider does that job here if one is wanted."""
 
     title: str
     subtitle: str | None = None

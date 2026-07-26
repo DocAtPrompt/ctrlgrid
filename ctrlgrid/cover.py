@@ -322,10 +322,16 @@ def _summary_block(
     """
     lines = summary(document)
     size = BODY_SIZE
-    while size > MIN_SUMMARY_SIZE and any(
+    # The test is against the size the step would *reach*, not the one it starts
+    # from: testing before decrementing let the loop cross the floor it names —
+    # from 9pt in half-point steps the last landing was 4.51pt, under the 5pt
+    # `MIN_SUMMARY_SIZE` declares as the point where the summary stops being
+    # readable. A floor a loop can step over is not a floor.
+    STEP = 176  # ~0.5pt
+    while size - STEP >= MIN_SUMMARY_SIZE and any(
         q.text_width(line, family="mono", size=size) > width for line in lines
     ):
-        size -= 176  # ~0.5pt
+        size -= STEP
 
     step = _text_height(q, size=size)
     cursor = top

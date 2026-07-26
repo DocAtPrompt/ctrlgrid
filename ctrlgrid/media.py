@@ -11,9 +11,12 @@ warnings, said once before rendering; two things make them errors instead —
 a value that rounds to **zero** pixels, which vanishes outright, and `--strict`,
 which turns every warning into an error so a CI run can guard a preset set.
 
-The check reads the blade's own marks rather than asking each blade about its
-weights and colours: one medium-agnostic pass serves all eight, exactly as
-§ 12.1 wants — resolution is a property of the sheet, not of the generator.
+The check reads the marks themselves rather than asking each generator about its
+weights and colours: one medium-agnostic pass serves every one of them, exactly
+as § 12.1 wants — resolution is a property of the sheet, not of the generator.
+A blade is sampled on page 0, which shows everything a repeating pattern has; a
+document generator has unequal pages, so **all** of them are walked and one mark
+is kept per distinct weight and colour (decision 49).
 """
 
 from __future__ import annotations

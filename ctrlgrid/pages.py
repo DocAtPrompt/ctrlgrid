@@ -1174,8 +1174,14 @@ def _build_document(
     Each page's marks and links come in area-local coordinates (§ 3.3); the
     handle translates both onto the sheet by the one origin the geometry holds,
     exactly as the blade path does. The destination is defined before the marks,
-    so links from other pages resolve to it. `header_marks`/`footer_marks` are
-    the constant bands, already in sheet coordinates, drawn per page's flags.
+    so links from other pages resolve to it.
+
+    The bands are laid out **per page**, not once for the run: `{page}` counts
+    and `{section}` names the section a page belongs to (§ 8.10, § 7.13). And the
+    geometry is taken per page too, because under duplex the margins swap and a
+    notebook is a bound book (§ 8.1). Everything around a page's own marks —
+    background, border, hole marks, ruler, bands, stamp — comes from
+    `page_furniture`, the one function the blade path uses as well.
     """
     writer.begin_document(
         DocumentMeta(title=f"ctrlgrid {document.source}", attachment=_attachment(document))

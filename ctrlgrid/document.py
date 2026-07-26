@@ -1,4 +1,4 @@
-"""The document-generator seam (§ 7, the calendar).
+"""The document-generator seam (§ 7) — `calendar` and `notebook` stand on it.
 
 An ordinary generator (a *blade*) fills one pattern area and knows nothing of
 pages (§ 3.3). A **document generator** is the opposite: it owns pages and their
@@ -8,12 +8,14 @@ carrying its own marks (the six primitives, area-local), its link rectangles and
 its destination key.
 
 The handle (`pages.build`) detects a document generator by the presence of
-`pages` and runs a *document mode*: for each page it sets the page size, defines
-the destination (a bookmark), draws the marks translated onto the sheet, draws
-the links, and moves on. Existing blades are untouched — they keep `generate`
-exactly as it is. Everything about page geometry still stays on the handle side:
-the generator is handed the same pattern area every blade gets and translates
-nothing itself (§ 3.3).
+`pages` and runs a *document mode*: for each page it takes that sheet side's
+geometry (duplex swaps the margins), lays out the bands, sets the page size,
+defines the destination, and draws — the page's own full-sheet colour and
+image, its marks or the blade that fills it, and everything `page_furniture`
+puts around them — then the links and the bookmark, and moves on. Existing
+blades are untouched: they keep `generate` exactly as it is. Everything about
+page geometry still stays on the handle side — the generator is handed the same
+pattern area every blade gets and translates nothing itself (§ 3.3).
 
 Links are annotations, not drawing primitives, so — like the bookmark
 `outline()` — they live outside the six primitives (§ 6). A `Link` names two
@@ -78,7 +80,12 @@ class DocumentPage:
     marks: tuple[Mark, ...]
     links: tuple[Link, ...] = ()
     fill: Fill | None = None
-    """A blade that fills this page, drawn under the page's own marks (§ 7.13)."""
+    """A blade that fills this page (§ 7.13).
+
+    Drawn **after** the page's own marks, and so over them: `document_page_marks`
+    yields `marks` first and the writer does not sort (§ 3.6). No page uses both
+    today — a filled page carries no marks of its own — but the order is the one
+    that holds if one ever does."""
     title: str | None = None
     background: str | None = None
     """A full-sheet colour fill painted under everything — the title page's
@@ -91,7 +98,8 @@ class DocumentPage:
     """`cover` (fill, crop overflow) or `contain` (fit inside) for the image."""
     show_header: bool = True
     """Draw the document's header band on this page (§ 7.12). The title page
-    turns it off unless `title_page.header` opts back in."""
+    turns it off unless it opts back in — which only the calendar's title page
+    can do; the notebook's has no such key and always hides both (§ 7.13)."""
     show_footer: bool = True
     """Draw the document's footer band on this page (§ 7.12)."""
 

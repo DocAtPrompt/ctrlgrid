@@ -7,7 +7,9 @@ another is the almost-right sheet of § 5.1.
 
 No marks here and no page: positions along an edge, the strings beside them,
 and the width of the strip a ruler needs. Micrometres throughout (§ 3.3), and
-the positions are exact multiples of the step rather than a running sum.
+each tick is computed from its index rather than from the tick before it — a
+*value* is an exact multiple of the step, and a *position* is that value
+plus wherever zero sits on the edge (§ 8.12).
 """
 
 from __future__ import annotations

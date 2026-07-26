@@ -26,8 +26,10 @@ from ctrlgrid.errors import DefinitionError
 from ctrlgrid.marks import Layer, Point, Segment, Um
 
 #: How far a crop mark reaches into the margin, and how far it is held off the
-#: page edge so the cut line itself stays clean. Both are clamped to the margin
-#: actually available, so a tight sheet still gets marks, just shorter ones.
+#: page edge so the cut line itself stays clean. The *length* is clamped to the
+#: margin actually available, so a tight sheet gets shorter marks; the gap is
+#: fixed, and a margin narrower than it gets no marks on that pair of edges at
+#: all rather than a mark drawn over a page (see `_tick`).
 MARK_LENGTH = 4_000
 MARK_GAP = 1_000
 MARK_WEIGHT = 0.2

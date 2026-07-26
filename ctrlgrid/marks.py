@@ -9,7 +9,8 @@ PDF writer may do less at first and says what it can do through
 Why exactly these six:
 
 * `Arc` covers full circles, rings and segment arcs, and is the precondition
-  for polar grids (§ 7.6) and later mandalas. PDF, SVG and Pillow all have arcs.
+  for polar grids (§ 7.6) and for `mandala`, where a petal is two arcs rather
+  than a path (§ 7.11). PDF, SVG and Pillow all have arcs.
 * `Polygon` replaces a rectangle primitive — a rectangle is a quadrilateral,
   and hexagons, triangles and rhombi of the tiling generators come free.
 * `Dot` survives next to `Arc` because dot grids are the performance-critical

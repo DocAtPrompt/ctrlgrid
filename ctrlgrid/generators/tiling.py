@@ -12,8 +12,9 @@ clip and no scale, so a tile that does not fit whole is left out, and the block
 of whole tiles is centred in the pattern area. § 8.2 rules out the alternative.
 
 Every shape is described the same way: a step vector per column and per row, an
-offset for odd rows or columns, and the tile's own outline. Adding a shape is
-one entry in `_SHAPES` and nothing else.
+offset for odd rows or columns, and the tile's own outline. Adding a shape means
+a value in the `Shape` alias and a branch in `_tile` — there is no shape table,
+though the arithmetic is uniform enough that there could be one.
 """
 
 from __future__ import annotations

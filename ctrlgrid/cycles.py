@@ -12,7 +12,9 @@ position is one multiplication away from its index, `Decimal` costs nothing
 here and buys exactness.
 
 **Positions are derived, never accumulated.** For index k with an n-entry
-cycle:
+cycle — with one deliberate exception, `_walk_pixels`, which accumulates in
+**whole pixels** because that is exactly what § 8.3.1 asks for and rounding an
+accumulated micrometre position would leave the unevenness the mode removes:
 
     position(k) = offset + base x (k // n x sum(cycle) + prefix_sum(k mod n))
 

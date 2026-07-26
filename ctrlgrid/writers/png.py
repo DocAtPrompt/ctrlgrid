@@ -17,8 +17,9 @@ on a smoothed average of them. Evenness is what `snap: pixel` (§ 8.3.1) is for.
 **Text is not drawn here.** The standard PDF fonts have fixed metrics but no
 file (§ 10.3), and Pillow needs a file to draw a glyph. Rather than substitute a
 font nobody chose, the writer declares it cannot do text (§ 10.2) and the
-pre-flight refuses a run that would put text on a PNG, naming the way out. The
-pad templates this path exists for carry no text.
+pre-flight refuses a run that would put text on a PNG, naming the way out —
+or drops the text and says so, if `--skip-unsupported` was asked for. The pad
+templates this path exists for carry no text.
 """
 
 from __future__ import annotations
@@ -59,7 +60,8 @@ class PngWriter:
         """What a raster of vector marks can do (§ 10.2).
 
         Deliberately without `text`: see the module docstring. The pre-flight
-        checks a run's marks against this set and refuses what is missing.
+        checks a run's marks against this set and refuses what is missing, or
+        leaves it out under `--skip-unsupported` (§ 10.2).
         """
         return {"vector", "color", "opacity", "arc", "polygon", "image_png"}
 
@@ -103,8 +105,12 @@ class PngWriter:
         """PNG has no bookmarks; a data-driven run just gets numbered files."""
 
     def define_dest(self, key: str) -> None:
-        """PNG has no destinations; it declares no `link` capability, so a run
-        that needs links is refused before this is reached (§ 10.2)."""
+        """PNG has no destinations, so this does nothing.
+
+        A run that needs links is normally refused before it gets here, since
+        PNG declares no `link` capability — but under `--skip-unsupported` the
+        run continues and this *is* reached, which is why it is a no-op rather
+        than a raise (§ 10.2)."""
 
     def link(self, lower_left, upper_right, target: str) -> None:
         """PNG has no link annotations — see `define_dest`."""

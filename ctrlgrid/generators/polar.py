@@ -1,6 +1,7 @@
 """`polar` — rings and spokes (§ 7.6), and the hard test of § 14.
 
-Every other blade is cartesian. This one is deliberately the *second*, not the
+It was the first blade that is not cartesian — `mandala` later joined it on the
+shared `polar_geometry`. This one is deliberately the *second*, not the
 last: if the handle copes with a polar generator — pattern area, frame,
 capability check, label measurement — the architecture holds, and if it does
 not, that is better learnt after blade two than after blade seven.

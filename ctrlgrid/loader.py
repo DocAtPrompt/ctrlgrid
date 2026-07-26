@@ -61,8 +61,9 @@ HANDLE_KEYS = {
     "page", "header", "footer", "border", "ruler", "stamp", "pattern", "pages",
 }
 
-#: Keys the specification defines on the top level and this milestone does not
-#: implement. Named, so they cannot be mistaken for typos.
+#: Top-level keys the code does not implement, named so they cannot be mistaken
+#: for typos (§ 5.1). Currently empty — everything the specification describes
+#: is built — and kept for the next key that is not.
 DEFERRED_KEYS: dict[str, str] = {}
 
 #: Walking the loaded structure is where a YAML bomb detonates, because
@@ -347,13 +348,18 @@ def _check_ruler_font(ruler: RulerSpec | None, raw: CommentedMap) -> None:
 
 
 def _check_fonts(bands: dict[str, Band | None], raw: CommentedMap) -> None:
-    """Open every named font file here, where the line number is still known.
+    """Open the bands' font files here, where the line number is still known.
 
     § 10.3 refuses a font whose licence forbids embedding, and § 12 wants that
     refusal to point at the line that named it — which the writer, three seams
     away, could no longer do. Doing it here also means `check` catches it and
     the pre-flight rule of § 12 point 13 holds without any further work: the
     file is opened before any page exists.
+
+    Bands and the ruler (`_check_ruler_font`) are covered. A font file named by
+    a **blade** — `grid`, `polar.labels`, `form.title`, `tiling` — is not, and
+    is caught later by the writer, so its message carries neither field nor
+    line. A real gap, named here rather than left to be discovered.
     """
     for section, band in bands.items():
         if band is None or band.font.file is None:

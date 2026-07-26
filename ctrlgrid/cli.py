@@ -409,8 +409,9 @@ def _destination(
 
 
 def _page_count(document: Document, geometry: Geometry) -> int:
-    """The page count to report. A document generator (the calendar, § 7) counts
-    its own pages; a blade is `pages.count` times its per-item sheets (§ 7.5)."""
+    """The page count to report. A document generator — `calendar` or `notebook`
+    (§ 7.12, § 7.13) — counts its own pages; a blade is `pages.count` times its
+    per-item sheets (§ 7.5)."""
     blade = generators.get(document.generator)
     if hasattr(blade, "page_count"):
         return blade.page_count(document.config, area=geometry.area)

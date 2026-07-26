@@ -1,11 +1,12 @@
-"""Drawing for the `calendar` generator (§ 7) — phase 4.
+"""Drawing for the `calendar` generator (§ 7).
 
 Kept apart from `calendar.py` (the config, dates and orchestration) because the
 two do different jobs: this module knows only how to lay ink and link rectangles
 into one page's area, and nothing about which pages exist or how they are
 ordered. Every function here fills a `Page` — a small builder that accumulates
 the six primitives and the link rectangles in area-local coordinates (origin
-bottom-left, § 3.5); the handle translates them onto the sheet.
+bottom-left, § 3.5); the handle translates them onto the sheet. `Page` itself
+lives in `page_layout.py`, shared with `notebook` since § 7.13.
 
 A link's visible part is an underlined `Text` (a `Segment` under an ordinary
 `Text`), and the `Link` rectangle is the text's own box — minimal ink and bytes.
@@ -269,9 +270,12 @@ def contents_page(page: Page, cfg, n: Nav, months, notes_index) -> DocumentPage:
 
 
 def year_overview_page(page: Page, cfg, n: Nav, months, weekdays) -> DocumentPage:
-    """A single-page whole year: twelve mini-months, three across (§ 7). Only
-    numbers as links — the month name → its month, a day number → its day. No
-    cell boxes; it fits one page and the reader zooms (§ 8.2)."""
+    """A single-page whole year: twelve mini-months, three across (§ 7).
+
+    Everything that links is a word or a number the page already prints — the
+    month name → its month, a day number → its day, a week number → its week
+    where week pages exist. No cell boxes; it fits one page and the reader
+    zooms (§ 8.2)."""
     nav(page, n)
     top = pt(16)
     page.text(0, top, f"{cfg.year} · full year", pt(15), INK)

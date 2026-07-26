@@ -6,8 +6,10 @@ arithmetic and the page *orchestration* — which pages exist, in what order, wi
 which destination keys and links; the drawing of each page lives in
 `calendar_layout.py`.
 
-The core views (Index, Year, Month, Day, Notes) are always produced; Quarter and
-Week are opt-in, each enabled by its own `*_view` section. Dates come from `year`
+Contents, the year overview, the two half-year tables, the months and the days
+are always produced; weeks, notes and a title page are opt-in, each enabled by
+its own section. (An earlier Quarter view was dropped for the single-page year
+overview.) Dates come from `year`
 and `week_start` through the standard library's proleptic Gregorian calendar —
 deterministic, no wall-clock (§ 10.1). Names are taken from the definition with
 English defaults, strictly language-neutral (§ 7.8).
@@ -452,9 +454,11 @@ class CalendarGenerator:
         """Fit-or-refuse: what can only be judged against the area (§ 9, § 12).
 
         The structural refusals are already in the config validators; here are
-        the two that depend on the page size — a day whose fixed block heights
-        exceed the page, and a month whose 31 day rows cannot fit at a readable
-        size. Nothing is ever scaled or scrolled (§ 8.2); the reader zooms.
+        the four that depend on the page size — a day whose fixed block heights
+        exceed the page, a contents list too long for one page, a mini-month too
+        wide for its cell in the year overview, and a month whose 31 day rows
+        cannot fit at a readable size. Nothing is ever scaled or scrolled
+        (§ 8.2); the reader zooms.
         """
         if cfg.day is not None:
             fixed = sum(int(b.height[:-1]) for b in cfg.day.blocks if b.height != "rest")

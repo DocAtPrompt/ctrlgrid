@@ -10,10 +10,12 @@ Three rules from the specification shape the whole file:
 * **Unknown keys are errors** (§ 5.1). A typo in a bent preset copy otherwise
   produces a PDF that is *almost* right, which is the worst failure class there
   is. `extra="forbid"` does that work.
-* **A key the specification describes but this milestone does not implement
-  says so by name.** Reporting `border` as an unknown key would be a lying
-  error message: it is not a typo, it is M2. Silence would be worse still — the
-  user would get a PDF without the border they asked for.
+* **A key the specification describes but the code does not implement says so
+  by name.** Reporting such a key as unknown would be a lying error message —
+  it is not a typo — and silence would be worse still, since the user would get
+  a PDF without the thing they asked for. Everything the specification describes
+  is now built, so the mechanism (`Section.deferred`) is empty except for
+  `Margin`, and it stays for the next unbuilt key.
 * **After validation there are no unit strings left** (§ 3.6). Lengths arrive
   as text and leave as `Length`.
 """
@@ -102,8 +104,12 @@ class Section(BaseModel):
 
     model_config = ConfigDict(extra="forbid", frozen=True)
 
-    #: Keys the specification defines and this milestone does not implement,
-    #: mapped to the sentence the user gets instead of "unknown key".
+    #: Keys a user might reasonably write that this section does not take,
+    #: mapped to the sentence they get instead of "unknown key". Empty on every
+    #: section but `Margin`, whose `left`/`right` are not deferred at all — they
+    #: are names the specification deliberately does not use (§ 8.1). The
+    #: mechanism outlived its original purpose (keys awaiting a milestone) and
+    #: is kept for the next one.
     deferred: ClassVar[dict[str, str]] = {}
 
     @model_validator(mode="before")
@@ -377,8 +383,9 @@ _RULER_LADDERS: dict[str, tuple[str, str, str]] = {
 class RulerSpec(Section):
     """A printed scale along one or more sheet edges (§ 8.12).
 
-    Zero is the pattern area's origin, so the numbers agree with the grid and
-    not with the paper's corner: this is a working scale, and the calibration
+    Zero sits on the pattern area — which corner, and which way the numbers
+    grow, is what `origin` says below — and never in the paper's corner: this
+    is a working scale that has to agree with the grid, and the calibration
     case already has the cover sheet (§ 8.8). It is drawn *into the margin* and
     reserves nothing, so switching it on leaves the pattern exactly where it
     was — the rule § 8.1 states for `border`, restated here.

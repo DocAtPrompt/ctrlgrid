@@ -8,8 +8,10 @@ generators too (§ 3.2): a grid label has to fit its cell just as a header has
 to fit its band.
 
 Capabilities exist so the vocabulary can be complete from M1 while a writer
-still grows into it (§ 14). What a writer cannot do it does not silently drop —
-the pre-flight check refuses the run and names the missing feature.
+still grows into it (§ 14). What a writer cannot do is never silently dropped:
+the pre-flight refuses the run and names the missing feature — or, with
+`--skip-unsupported`, says once what will be left out and then leaves it out
+(§ 10.2). Either way the user is told.
 """
 
 from __future__ import annotations
@@ -47,7 +49,8 @@ class Attachment:
     definition, unre-encoded — and `filename` the name a viewer offers to save
     it under. A writer that cannot carry a file does not declare the
     `attachment` capability, and the pre-flight refuses the run rather than
-    dropping the attachment silently (§ 10.2).
+    dropping the attachment silently — unless `--skip-unsupported` was asked
+    for, which drops it and says so (§ 10.2).
     """
 
     filename: str

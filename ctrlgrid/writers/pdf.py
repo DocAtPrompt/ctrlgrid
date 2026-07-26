@@ -63,7 +63,9 @@ class PdfWriter:
         """What this writer can render today (§ 10.2, § 14).
 
         The vocabulary is complete from M1; a writer grows into it, and the
-        pre-flight check refuses anything missing instead of dropping it.
+        pre-flight refuses anything missing instead of dropping it — unless
+        `--skip-unsupported` says to drop it and report that (§ 10.2). This
+        writer is missing nothing, so neither applies to it.
         """
         return {
             "vector", "color", "text", "opacity", "arc", "polygon", "image_png",
