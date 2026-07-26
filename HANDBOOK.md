@@ -510,6 +510,25 @@ ladder hangs on the zero, not on the edge), and the numbers before it carry a
 minus sign — which the collision check counts, because it measures the labels
 the sheet will really carry.
 
+**A centred zero is the middle of the pattern area, and the grid does not know
+that.** If you want the scale's nought to fall *on* a grid line — a coordinate
+cross wants exactly that — two numbers have to agree with it, and neither is
+obvious:
+
+1. **The pattern area must be an even multiple of the emphasised period.** With
+   a millimetre grid emphasised every fifth line, the area has to be a multiple
+   of 10 mm in that direction, or its middle lands between two heavy lines. It
+   is the *area* that counts, not the format: `297mm − 2 × 8.5mm = 280mm` works,
+   `297mm − 2 × 14mm = 269mm` does not.
+2. **The weight cycle must put the heavy line first.** A cycle counts from mark
+   0, so `weight: [2.4, 1, 1, 1, 1]` emphasises the area's own edge and every
+   5 mm from there. Ordinary millimetre paper is written the other way round
+   (`[1, 1, 1, 1, 2.7]`), which puts the heavy lines at 4, 9, 14 mm — where the
+   middle will never be.
+
+`plot-a4` is the worked example, and a test measures both agreements out of its
+finished PDF.
+
 Only `edges` is required. The rest follows `unit`:
 
 | `unit` | `step` | `mid_every` | `label_every` | the numbers read |

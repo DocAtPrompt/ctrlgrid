@@ -15,8 +15,20 @@
 #     too, and its ladder hangs on that nought rather than on the sheet's edge,
 #     so the numbered ticks are symmetric about the axes.
 #
-# Change the format and both follow. `--format a3` gives the same sheet with
-# more room; `--device remarkable-paper-pro` puts it on the tablet.
+# **The margins are arithmetic, not taste.** The middle of the pattern area is
+# only *on* the grid when the area is an even multiple of the emphasised
+# period — here 10 mm, since every fifth millimetre line is heavy. 8.5 mm and
+# 5 mm leave 280 x 200 mm, so half of it is 140 and 100 mm and the cross lands
+# on a heavy line in both directions. Widen a margin by an odd millimetre and
+# the axes sit half a millimetre off every line, which looks almost right and
+# is the one thing this tool refuses to be (§ 5.1). If you change the format,
+# check the two halves the same way — or measure the sheet, which is what the
+# edge ruler is for.
+#
+# The margins also have to leave the ruler its strip — about 5.5 mm for tick,
+# gap and number — and the run says so if they do not (§ 8.12). `--format a3`
+# needs its own two numbers for both reasons: A3 landscape is 420 x 297, so
+# 10 mm and 8.5 mm leave 400 x 280 and both halves stay on the grid.
 version: 1
 
 defs:
@@ -27,7 +39,13 @@ defs:
 page:
   format: a4
   orientation: landscape
-  margin: 14mm
+  # 280 x 200 mm of pattern area — see the note above on why these two numbers
+  # are not free.
+  margin:
+    inner: 8.5mm
+    outer: 8.5mm
+    top: 10mm
+    bottom: 10mm
 
 pattern:
   # The leftover goes at the end rather than being split, so the grid starts on
@@ -40,31 +58,41 @@ generator: lines
 families:
   # The millimetre grid: every fifth line heavier and darker, as on ordinary
   # graph paper (§ 5.3 — one cycle for the weight, one for the colour).
+  #
+  # The heavy line is the **first** of each five, not the fifth: a cycle counts
+  # from mark 0, so `[2.4, 1, 1, 1, 1]` puts the emphasis on the pattern area's
+  # own edge and every 5 mm from there — which is what lets the centre of the
+  # area fall on a heavy line. Written the other way round (`[1, 1, 1, 1, 2.4]`,
+  # as ordinary millimetre paper has it) the heavy lines sit at 4, 9, 14 mm and
+  # the axes land between them.
   - direction: horizontal
     base_spacing: 1mm
     base_weight: 0.13pt
-    weight: [1, 1, 1, 1, 2.4]
-    color: [*grid, *grid, *grid, *grid, *accent]
+    weight: [2.4, 1, 1, 1, 1]
+    color: [*accent, *grid, *grid, *grid, *grid]
 
   - direction: vertical
     base_spacing: 1mm
     base_weight: 0.13pt
-    weight: [1, 1, 1, 1, 2.4]
-    color: [*grid, *grid, *grid, *grid, *accent]
+    weight: [2.4, 1, 1, 1, 1]
+    color: [*accent, *grid, *grid, *grid, *grid]
 
-  # The two axes: one line each, through the middle of the pattern area.
+  # The two axes: one line each, through the middle of the pattern area, and
+  # heavier than everything else so the eye finds the origin at once. Raise
+  # `base_weight` to 1.2pt for a bolder cross, or give them a colour of their
+  # own — they are ordinary families, so anything a family can do they can do.
   - direction: horizontal
     base_spacing: 1mm
     offset: 50%h
     count: 1
-    base_weight: 0.7pt
+    base_weight: 1pt
     color: [*axis]
 
   - direction: vertical
     base_spacing: 1mm
     offset: 50%w
     count: 1
-    base_weight: 0.7pt
+    base_weight: 1pt
     color: [*axis]
 
 # The scale: zero in the middle of each edge, negatives before it, centimetres.
