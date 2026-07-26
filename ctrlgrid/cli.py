@@ -501,6 +501,11 @@ def _report(document: Document, path: Path, geometry: Geometry, *, quiet: bool) 
     blade = generators.get(document.generator)
     for line in blade.describe(document.config):
         typer.echo(f"  {line}")
+    # § 12: a page nobody asked for is never inserted silently. Only a document
+    # that inserts one answers this, and only when it did.
+    leaves = getattr(blade, "alignment_leaves_report", None)
+    for line in leaves(document.config) if leaves else []:
+        typer.echo(f"  {line}")
     # Said once per run, never per page: a list that was cut (§ 9.4) or a
     # setting that cannot take effect where it stands (§ 8.3).
     for notice in (*document.notices, *geometry.notices):

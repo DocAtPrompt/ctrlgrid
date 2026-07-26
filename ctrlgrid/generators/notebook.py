@@ -176,10 +176,13 @@ class NotebookGenerator:
         raise AssertionError("notebook is a document generator; it produces pages")
 
     def page_count(self, cfg: NotebookConfig, *, area: Area) -> int:
-        """Title (opt-in) + contents + each section's divider and pages."""
+        """Title (opt-in) + contents + each section's divider, alignment
+        leaf and pages."""
+        leaves = self._alignment_leaves(cfg)
         total = 1 + (1 if cfg.title_page is not None else 0)
-        for section in cfg.sections:
+        for index, section in enumerate(cfg.sections):
             total += self._section_pages(section) + (1 if section.divider else 0)
+            total += 1 if leaves[index] else 0
         return total
 
     def pages(
@@ -188,6 +191,7 @@ class NotebookGenerator:
         from ctrlgrid.generators import notebook_layout as layout
 
         starts = self._section_starts(cfg)
+        leaves = self._alignment_leaves(cfg)
         if cfg.title_page is not None:
             yield layout.title_page(cfg.title_page, area, q=q, family=cfg.font.token)
         yield layout.contents_page(cfg, starts, area, q=q, family=cfg.font.token)
@@ -200,6 +204,16 @@ class NotebookGenerator:
                     name, section, area, dest=_section_dest(index), q=q,
                     placeholders=placeholders, contents_title=cfg.contents_title,
                     family=cfg.font.token,
+                )
+            if leaves[index]:
+                # A page, not the absence of one — unlike a booklet's padded
+                # cell (§ 14). It carries the bands and answers `{section}`;
+                # only its pattern area is empty (decision 55).
+                yield DocumentPage(
+                    dest=f"leaf-{index}",
+                    kind="alignment-leaf",
+                    marks=(),
+                    placeholders=placeholders,
                 )
             per_item = self._sheets_per_item(section)
             mirrored = self._mirrored_sub_sheets(section)
@@ -220,6 +234,37 @@ class NotebookGenerator:
                     placeholders=placeholders,
                     mirrored=(number - 1) % per_item in mirrored,
                 )
+
+    def _alignment_leaves(self, cfg: NotebookConfig) -> dict[int, bool]:
+        """Which sections need a blank leaf before their content (decision 55).
+
+        `back_mirrored` puts the solution on the back of the same physical
+        sheet, so the puzzle has to sit on a front — an odd 1-based page number
+        under duplex. Where a section lands depends on the title page and on
+        every divider before it, so the parity is computed here, once, and the
+        two functions that count pages both read it.
+        """
+        needed: dict[int, bool] = {}
+        number = 1 + (1 if cfg.title_page is not None else 0) + 1
+        for index, section in enumerate(cfg.sections):
+            if section.divider:
+                number += 1
+            leaf = bool(self._mirrored_sub_sheets(section)) and number % 2 == 0
+            needed[index] = leaf
+            number += self._section_pages(section) + (1 if leaf else 0)
+        return needed
+
+    def alignment_leaves_report(self, cfg: NotebookConfig) -> list[str]:
+        """§ 12: a page nobody asked for is never inserted silently."""
+        leaves = self._alignment_leaves(cfg)
+        return [
+            f'section "{section.name(index)}" starts on an even page, so a blank '
+            "leaf was inserted before it — with `back_mirrored` each puzzle has to "
+            "sit on the front of its sheet, or the solution shows through on the "
+            "wrong one (§ 7.5)"
+            for index, section in enumerate(cfg.sections)
+            if leaves[index]
+        ]
 
     def mirrored_sections(self, cfg: NotebookConfig) -> list[str]:
         """Sections whose blade draws a mirrored sheet (§ 7.5), by label.
@@ -265,11 +310,13 @@ class NotebookGenerator:
         One arithmetic with `page_count` above: both count the same pages in
         the same order, and the contents prints what the reader will find.
         """
+        leaves = self._alignment_leaves(cfg)
         number = 1 + (1 if cfg.title_page is not None else 0) + 1  # title, contents
         starts = []
-        for section in cfg.sections:
+        for index, section in enumerate(cfg.sections):
             starts.append(number)
             number += self._section_pages(section) + (1 if section.divider else 0)
+            number += 1 if leaves[index] else 0
         return starts
 
 

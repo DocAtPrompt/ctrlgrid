@@ -172,3 +172,70 @@ class TestBackMirrored:
         with pytest.raises(DefinitionError) as excinfo:
             build(loads(definition, source="t"), PdfWriter(tmp_path / "never.pdf"))
         assert "back_mirrored" in str(excinfo.value)
+
+
+class TestTheAlignmentLeaf:
+    """§ 7.5 needs each puzzle on the *front* of a sheet, which in duplex means
+    an odd page number. Whether a section starts there depends on the title page
+    and the dividers before it — unrelated furniture — so the notebook inserts a
+    blank leaf where the parity needs one (decision 55)."""
+
+    def walls(self, path: Path, page: int) -> int:
+        return len([p for p in pdfread.subpaths_um(path, page) if len(p) == 2])
+
+    def test_no_leaf_when_the_section_already_starts_on_a_front(
+        self, tmp_path: Path
+    ) -> None:
+        # Title 1, contents 2, so the puzzle would land on 3 — odd, a front.
+        # Nothing is inserted, and the puzzle really is the third page.
+        path = sheet(
+            tmp_path, notebook(maze_section(1, "back_mirrored"), title=True), "a.pdf"
+        )
+        assert pdfread.page_count(path) == 1 + 1 + 2
+        assert self.walls(path, 2) > 0
+
+    def test_a_leaf_is_inserted_when_it_would_start_on_a_back(
+        self, tmp_path: Path
+    ) -> None:
+        # Contents 1, so the puzzle would land on 2 — a back. A leaf goes in,
+        # and the puzzle moves to page 3.
+        #
+        # Both documents are four pages long, so the page *count* distinguishes
+        # nothing: what distinguishes them is which page carries the maze. An
+        # assertion that both are four pages would pass either way, and a probe
+        # that cannot fail proves nothing.
+        path = sheet(tmp_path, notebook(maze_section(1, "back_mirrored")), "b.pdf")
+        assert pdfread.page_count(path) == 1 + 1 + 2
+        assert self.walls(path, 1) == 0
+        assert self.walls(path, 2) > 0
+
+    def test_the_leaf_is_empty_but_still_a_page(self, tmp_path: Path) -> None:
+        # Unlike a booklet's padded cell (§ 14), this is a real page: it carries
+        # the bands and answers {section}, and only its pattern area is empty.
+        definition = (
+            "version: 1\n"
+            "page: {format: a5, margin: 10mm}\n"
+            'header: {height: 8mm, gap: 2mm, left: "{section}"}\n'
+            "generator: notebook\n"
+            "sections:\n" + maze_section(1, "back_mirrored")
+        )
+        path = sheet(tmp_path, definition)
+        leaf = 1                                    # contents is 0, leaf is 1
+        assert "Mazes" in pdfread.text_on(path, leaf)
+        assert self.walls(path, leaf) == 0
+
+    def test_the_run_says_it_inserted_one(self, tmp_path: Path) -> None:
+        from typer.testing import CliRunner
+
+        from ctrlgrid.cli import app
+
+        definition = tmp_path / "d.yaml"
+        definition.write_text(
+            notebook(maze_section(1, "back_mirrored")), encoding="utf-8"
+        )
+        result = CliRunner().invoke(
+            app, ["-d", str(definition), "-o", str(tmp_path / "o.pdf")]
+        )
+        assert result.exit_code == 0, result.output
+        assert "blank leaf" in result.output
+        assert "Mazes" in result.output
