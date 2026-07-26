@@ -126,6 +126,7 @@ edge, so a tick now carries its position *and* its value separately. `unit` says
 | post-M9 `notebook` | the **second document generator**, and the first that composes blades (§ 7.13, decision 50): sections, each filled by an ordinary generator, with a linked contents page, opt-in dividers and a cover. The seam: a `DocumentPage` may carry a `Fill` (generator name + validated config) instead of marks, and **the handle calls the blade** — `pages.document_page_marks` is the one function that says what is on a page, used by the writer, the capability pre-flight and the media check. A section is a definition in miniature, validated by that blade's own `config_model` with the loader's context (so `px`/`%w` resolve there too). Document bands are now laid out **per page**, so `{page}` counts and a per-page `{section}` names the section; `calendar-a4` stayed byte-identical. `page_layout.Page` extracted from `calendar_layout` and shared. Preset `notebook-a4`, example `15-notebook` |
 | post-M9 band colour | a header/footer `Band` takes `background` (a full-width strip, band height only) and `text_color`, both default off — drawn in `layout_band` so both the blade and document paths get them; resolves the title-page contrast (§ 8.9) |
 | pulled forward into M1 | format table, presets, `check`, overwrite protection, placeholders — the M1 acceptance criteria needed them |
+| 0.11.x — after the audit | **`tests/test_geometry_readback.py`**: every blade's geometry measured out of a finished PDF against numbers taken from the definition, never from the code — a hexagon's every edge exactly `size`, ring radii against the cumulative series, a mandala mapped onto itself by a twelfth of a turn, a perspective fan concurrent within a millimetre, `form`'s 8 mm ruling identical on A4 and A5, log positions against `math.log10`. **`check_page_furniture`**: the frame is checked on both page paths, not only drawn on both. **`check_text_glyphs`**: a generator's text is checked for missing glyphs (§ 12 point 13), which no code had ever done. **`words:` and `font:`** on the document generators, so every word on the sheet comes from the definition and there is a way out of Latin-1 for it (decision 53). **`labels: none`** accepted on `grid` and `polar`, the spelling § 7.10 documents |
 | 0.10.0 release-readiness | the audit above, in five commits: three degenerate values that hung or crashed instead of refusing; **`page_furniture`**, so the document path carries the page model (duplex, border, hole marks, ruler, stamp, background) instead of dropping it silently, plus three keys refused by name and a fourth (a multi-sheet blade in a notebook section) refused for now (decision 52); five messages made actionable and `--version` added; a ruler tick that ran off the edge, a ruler font that was never opened, an unreachable bookmark guard; and twenty-six stale comments |
 
 ### Not done
@@ -146,8 +147,9 @@ edge, so a tick now carries its position *and* its value separately. `unit` says
 
 **Two more things wait, and neither of them is code:**
 
-- ~~**PyPI.**~~ **Published on 2026-07-26 — `ctrlgrid 0.11.0`, MIT, Python ≥ 3.11,
-  wheel and sdist, under the repository's first tag `v0.11.0`.** M1's first
+- ~~**PyPI.**~~ **Published on 2026-07-26 — `ctrlgrid`, MIT, Python ≥ 3.11, wheel
+  and sdist. Two releases so far: `v0.11.0`, the repository's first tag ever, and
+  `v0.11.1` for the metadata it should have carried.** M1's first
   acceptance criterion is met at last, and measured rather than assumed: `uvx
   ctrlgrid millimeter-a4 --pages 3 -o out.pdf` installs from the network and
   produces a sheet whose MediaBox reads 210.000 × 297.000 mm with a 1.000 mm line
@@ -234,7 +236,8 @@ of the five serious findings were there. That is where to look first.
 ## Read this before writing anything
 
 **The specification is the source of truth, and it is unusually complete** —
-~2330 lines covering the architecture, all ten generators, the page model,
+~2800 lines covering the architecture, all thirteen generators — eleven blades
+and two documents — the page model,
 validation, milestones and the decisions that were explicitly rejected and why.
 
 Most questions that come up while implementing are already answered there, with
@@ -251,7 +254,7 @@ work around it.
 
 **Where the specification was genuinely silent**, the resolution is recorded in
 [`implementation-decisions.md`](implementation-decisions.md) —
-fifty-one of them so far, each with the section it belongs to and the
+fifty-three of them so far, each with the section it belongs to and the
 reasoning. Read it before changing a default; several look arbitrary and are not.
 
 ## Language split
@@ -278,7 +281,7 @@ and knows nothing about margins.
 | `axes.py` | `AxisPeriod` — what the handle needs from a blade for § 8.3/§ 8.5 |
 | `model.py` | pydantic sections; `Section` base with `extra="forbid"` + `deferred` |
 | `loader.py` | YAML → `Document`; formats, presets, devices, name lists |
-| `pages.py` | `Geometry`, page loop, placeholders, `preflight`, `build`, `snap: pixel`, and **`page_furniture`** — the one function that says what the handle draws around a page's own marks, used by the blade path *and* the document path |
+| `pages.py` | `Geometry`, page loop, placeholders, `preflight`, `build`, `snap: pixel`, and the three functions both page paths share: **`page_furniture`** (what the handle draws around a page's own marks), **`check_page_furniture`** (whether it fits) and **`check_text_glyphs`** (whether the font can draw it). Each exists because the blade path had it and the document path did not |
 | `frame.py` | header/footer layout, border, background, hole marks, the edge ruler's marks and its fit check, stamp |
 | `labels.py` | counting patterns `n`/`a`/`A`, explicit lists (§ 7.10) |
 | `clip.py` | Liang–Barsky in exact rationals, shared by `perspective` and slanted `lines` |
@@ -356,7 +359,10 @@ the pre-flight, never while pages are being written (§ 12 point 13).
 - **One coherent block per commit**, message explaining the decisions rather
   than the diff. `git log` is where the open-question resolutions live.
 - Verify against a real PDF, not just unit tests — `tests/pdfread.py` reads
-  geometry back out.
+  geometry back out (lines, dash arrays, whole subpaths and fitted circles), and
+  `tests/test_dimensional.py` plus `tests/test_geometry_readback.py` are where
+  that is done for every blade. **Every expected number in them comes from the
+  definition or from a sentence of the specification — never from the code.**
 
 ## Where to start
 
@@ -394,8 +400,13 @@ this project runs on — claims are backed by a command's output, never asserted
 
 ## What to do next
 
-**Nothing in the specification is unbuilt, and nothing from the 2026-07-25
-handover is left.** That handover
+**Nothing in the specification is unbuilt.** As of 2026-07-26 the tool is also
+*published* — the sessions since 0.9.0 audited it as a stranger meets it, read
+every blade's geometry back out of a finished PDF, and put it on PyPI. The user
+has said there is more to do and will say what; nothing below is a queue they
+have asked for, it is the state to start from.
+
+Nothing from the 2026-07-25 handover is left either. That handover
 ([`docs/superpowers/plans/2026-07-25-next-steps-handover.md`](superpowers/plans/2026-07-25-next-steps-handover.md))
 carries a *done* note on each of its phases saying what was built and what was
 decided against; the designs and plans behind the larger ones live beside it in
@@ -410,7 +421,7 @@ supply:
 |---|---|
 | a device | the empty `quirks` (decision 31), and the rM2 figures nobody has measured on the device — the Paper Pro is owner-checked, the rM2 is not |
 | a pair of scissors | print `examples/16-net-tray.yaml` and `box-tuck-a4` at 100 %, cut, fold. The tray checks the geometry; the tuck-top also checks the thickness rule. **No test can do this**, and until someone does, the tests only agree with themselves |
-| use | the three § 15 questions below, and 1.0.0 itself. 0.11.0 is *published*, so the DSL can now meet someone other than the test suite — which is the one thing 1.0.0 has always been waiting for |
+| use | the three § 15 questions below, and 1.0.0 itself. The DSL can now meet someone other than the test suite, which is the one thing 1.0.0 has always been waiting for |
 
 If a new feature *is* wanted, the recipe has not changed since M1: a design
 settled with the user first when there is a real fork in it, then a plan, then
@@ -431,11 +442,15 @@ Three habits earned their place the hard way and are worth keeping:
   the same centre. The third quantity, the grid, was the only one that could
   have contradicted it, and it was not looked at until the user did.
 - **A probe that does not fire proves nothing either — suspect the probe first.**
-  During the release audit I twice concluded a check was missing, and twice the
-  check was there and my test was wrong: a name list without `{name}` in any band
-  draws no text, so the glyph check has nothing to refuse; and a pipeline's `$?`
-  is `head`'s exit code, not the tool's. Both would have been reported as bugs.
-  Before writing "X is not checked", make the probe fail on purpose.
+  This happened *five* times over the release sessions, and not once was the code
+  at fault: a name list without `{name}` in any band draws no text, so the glyph
+  check had nothing to refuse; a pipeline's `$?` is `head`'s exit code, not the
+  tool's; a `--seed` that never reached the loop made the maze booklet look like
+  a regression; Vera has 256 glyphs and no Polish, so "a font file fixes it"
+  failed for the fixture's reason and not the check's; and a grep for a claim in
+  `docs/CLAUDE.md` missed it because the sentence wrapped across two lines.
+  Every one of them was about to be written up as a bug. **Before writing "X is
+  not checked", make the probe fail on purpose.**
 
 A specific paper aeroplane was considered and **refused**: it is a drawing, not
 a structure, and § 2 rules out a drawing language.
@@ -465,3 +480,12 @@ than on a design answer — **q4 was put to the user in July 2026 while building
 the slanted families and deliberately left out**: the angle is what unlocks
 calligraphy guides and origami pre-creasing, the unit would be a convenience on
 top of it (§ 7.1).
+
+**q2 changed shape on 2026-07-26 and is worth re-reading in § 15.** It used to be
+theoretical, because a missing glyph in a generator's text was never noticed: the
+check ran over the bands only, a Polish month name printed as a box, and a
+document generator took no font at all — so the documented remedy did not exist
+for it. Both are fixed (decision 53). Stage 2 is now *reachable* everywhere, and
+the question is no longer "does it work" but "is it reasonable to ask, or should
+a broad OFL font travel with the tool?". Still for use to answer — but now the
+user is shown the choice instead of a box.

@@ -1230,6 +1230,35 @@ auf dem Inhaltsverzeichnis, wird mitgezählt, wenn geprüft wird, ob die Seite
 passt, und bleibt leer, wenn keine angegeben ist — der Kalender erfindet keine
 Bedeutungen. Damit ist § 7.12 vollständig.
 
+#### Die Sprache des Blattes (ergänzt 2026-07-26)
+
+§ 7.8 entscheidet den Grundsatz — die Beschriftungen gehören zur Sprache des
+Formulars, also nimmt das Werkzeug sie entgegen und erfindet sie nicht — und
+§ 7.12 hatte ihn auf die **Namen** angewandt (`months`, `weekdays`, `label`)
+und auf das eigene Vokabular nicht. Ein deutscher Kalender kam deshalb gemischt
+heraus: `Jänner` unter einer englischen Navigationsleiste, daneben `Contents`,
+`Full-year overview` und `Half-year 1`. Das sind Wörter des *Werkzeugs* auf dem
+Blatt des Nutzers, und genau die schließt § 7.8 aus.
+
+**`words:`** benennt sie: `index`, `year`, `month`, `week`, `notes` (die
+Navigationsleiste), `contents`, `full_year_overview`, `half_year` und
+`full_year`. Jede Vorgabe ist das Englisch, das bisher gedruckt wurde, also
+ändert der Block keine bestehende Definition. Beim Notizbuch heißt das eine Wort
+`contents_title`, und der Rücklink auf einem Trennblatt folgt ihm.
+
+Das ist **keine Lokalisierung** (§ 3.4) und es wird weiterhin keine
+Übersetzungstabelle mitgeliefert: Das Werkzeug nimmt Wörter entgegen und kennt
+keine.
+
+**`font:` an einem Dokument-Generator.** Die Grenze dahinter ist die Glyphen-
+abdeckung (§ 10.3): Die Standardschriften reichen bis Latin-1, decken also
+Deutsch, Französisch, Spanisch, Italienisch, Portugiesisch und die nordischen
+Sprachen ab — aber nicht Polnisch, Tschechisch, Ungarisch, Türkisch, Rumänisch
+oder Kroatisch. Deshalb nimmt ein Dokument-Generator wie jede Klinge eine eigene
+Schrift entgegen, **eine für das ganze Dokument**; ohne sie lehnt die
+Vorabprüfung ein Zeichen ab, das die Schrift nicht zeichnen kann (§ 12 Punkt 13),
+statt ein Kästchen zu drucken.
+
 ### 7.13 `notebook` — verlinktes Notizbuch aus Abschnitten (Dokument-Generator)
 
 Ein PDF, das mehrere Papiere trägt: vierzig gepunktete Seiten zum Journalen,
@@ -2666,6 +2695,17 @@ Bewusst noch offen:
    Latin-1 ab. Zeigt sich, dass Namen mit `ł`, `ğ` oder `ő` häufig genug sind,
    um Stufe 2 zur Pflicht zu machen, wäre eine mitgelieferte OFL-Schrift der
    bequemere Weg. Erst nach Erfahrung entscheiden, nicht auf Verdacht.
+
+   **Der Boden dafür ist seit 2026-07-26 gelegt, die Frage bleibt offen.** Bis
+   dahin war sie theoretisch, weil ein fehlendes Zeichen in Generatortext gar
+   nicht auffiel: `missing_glyphs` lief nur über die Bänder, ein polnischer
+   Monatsname wurde still als Kästchen gedruckt, und ein Dokument-Generator nahm
+   überhaupt keine Schrift entgegen — die dokumentierte Abhilfe existierte für
+   ihn also nicht. Beides ist behoben (§ 7.12, § 12 Punkt 13). Damit ist Stufe 2
+   für jeden Fall *erreichbar*, und die Frage lautet jetzt sauber: ist sie
+   **zumutbar**, oder soll eine breite OFL-Schrift mitreisen? Das entscheidet
+   Gebrauch, nicht Verdacht — aber es entscheidet ihn jetzt an einer Stelle, wo
+   der Nutzer die Wahl überhaupt gezeigt bekommt.
 3. ~~**`reportlab`-Lizenz** am Repository gegenprüfen (BSD-3-Clause erwartet).~~
    **Geklärt (2026-07-24):** reportlab 5.0.0 steht unter **BSD-3-Clause** — der
    Lizenztext (`reportlab-5.0.0.dist-info/licenses/LICENSE`) führt exakt die drei

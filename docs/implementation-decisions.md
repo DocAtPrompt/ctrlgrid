@@ -1038,3 +1038,43 @@ redrew every maze because unrelated furniture shifted `page.index`. § 7.13 says
 nothing about what a per-section sheet plan should mean, so it is refused until
 it does rather than answered wrongly. Honouring it per section is a real design
 question, not an oversight, and is left open.
+
+
+## 53. The language of the sheet: the tool receives words, it does not know any (§ 7.12, § 7.8, § 10.3)
+
+Three changes on 2026-07-26 that are one decision, and they came out of a
+question the user asked rather than out of the audit: *can any Latin-script user
+set this up freely now?* The answer was no, in three places.
+
+**A generator's text was never checked for missing glyphs.** § 12 point 13 asks
+the pre-flight to measure "Kopf-, Fuß- **und Beschriftungstext**" and then
+whether every glyph is present; `missing_glyphs` was called from exactly two
+sites, both of them the bands. So `months: [styczeń, …]` passed `check`,
+reported a successful run, and put `stycze` and a box on the paper — the silent
+almost-right of § 5.1, in the one place the tool had a query built to prevent it.
+`check_text_glyphs` collects **characters as a set per font** over the marks —
+page 0 for a blade, every page for a document (decision 49's reason: a month name
+only appears on its own month's pages) — so a 386-page planner with tens of
+thousands of glyphs is checked against a few dozen distinct ones and the run
+still takes a second.
+
+**The tool wrote its own words on the user's sheet.** § 7.12 had applied § 7.8 to
+the *names* and not to the vocabulary, so a German calendar came out with
+`Jänner` under `Index Year Month Notes`. `words:` names the nine, defaulting to
+today's English so no definition moves. Rejected, and worth recording: shipping
+month/weekday tables for common locales. It would be a translation layer by
+another name (§ 3.4), it would need maintaining, and the very first user whose
+language was not in it would be worse off than today.
+
+**A document generator could not name a font**, which turned the first change
+from a fix into a trap: refusing a character with no way to draw it is worse
+advice than it looks. `CalendarConfig` and `NotebookConfig` take a `font:` like
+every blade, reaching the pages through `page_layout.Page`, which now carries the
+family token — so all seventeen call sites in `calendar_layout` and the
+notebook's three follow without knowing they do. **One font per document**: there
+is nothing on these pages that wants two, and the alternative (a font per view)
+would be a typographic system nobody asked for.
+
+The order these were done in is the lesson, not the code. Refusing the silent
+failure first and supplying the remedy second left a window in which a Polish
+calendar was *less* usable than before. Both belong in one step.
