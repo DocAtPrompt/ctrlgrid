@@ -8,7 +8,7 @@ name = "ctrlgrid"
 # release workflow compares the git tag against `ctrlgrid.__version__`, and
 # that check only means something if the package cannot disagree with itself.
 dynamic = ["version"]
-description = "Dimensionally accurate PDF templates for paper and e-ink: graph paper, dot grids, staff paper, calendars, notebooks, mazes, box nets"
+description = "Dimensionally accurate PDF templates for paper and e-ink: graph paper, dot grids, staff paper, calendars, notebooks, mazes, box nets, folded booklets"
 readme = "README.md"
 license = "MIT"
 license-files = ["LICENSE"]
@@ -33,6 +33,9 @@ keywords = [
     "perspective grid", "graph paper generator",
     # cut and fold
     "box net", "papercraft", "origami", "dieline",
+    # print finishing
+    "booklet", "booklet imposition", "imposition", "saddle stitch", "n-up",
+    "zine",
     # devices
     "eink", "e-ink", "remarkable", "remarkable tablet",
 ]

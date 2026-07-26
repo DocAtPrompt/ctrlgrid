@@ -16,6 +16,19 @@ uvx --from git+https://github.com/DocAtPrompt/ctrlgrid.git \
   ctrlgrid -d examples/01-lines-squared.yaml -o out.pdf
 ```
 
+The preview images are rasterised from the PDFs with one command, recorded here
+so the gallery can be rebuilt the same way every time — the tool was not written
+down before 0.12.0, and that is why bumping a version used to leave the previews
+looking slightly different from each other:
+
+```bash
+pdftoppm -png -scale-to-x 600 -scale-to-y 849 -f 1 -l 1 example.pdf previews/name
+```
+
+The calendar has no committed PDF, so its two previews come from a fresh render —
+page 6 for the month view and page 18 for the day view, which is where they fall
+once the title page is counted.
+
 Everything here is A4. Add `--format a5`, `--format letter` or a
 `--device remarkable-paper-pro` to the same command and it re-fits the new
 medium — the examples using `%w`/`%h`/`%s` (polar, mandala) fill it

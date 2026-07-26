@@ -27,8 +27,17 @@ Nothing refuses with "a later milestone" any more — that mechanism is still
 there (`Section.deferred`, `loader.DEFERRED_KEYS`) and currently empty, which is
 worth knowing when the next unbuilt key arrives.
 
-**0.11.1** is the version in the code (2026-07-26) — 0.11.0 plus the PyPI
-metadata it should have shipped with (see *Not done*); nothing about the tool
+**0.12.0** is the version in the code (2026-07-27), and it is the first release
+that carries something the specification never described: **`--booklet`**
+(§ 14, decision 54) with its turning edge (decision 56), and a notebook section
+that carries out its blade's **sheet plan** (§ 7.13, decision 55, lifting
+decision 52's temporary refusal). A minor and not a patch for the ordinary
+reason — new keys and a new flag — and not a major because nothing that built
+at 0.11.1 is refused now; the notebook change runs the other way, turning a
+refusal into a build.
+
+Before it: 0.11.1 was 0.11.0 plus the PyPI
+metadata it should have shipped with; nothing about the tool
 itself changed. 0.9.0 said the features were
 complete; 0.10.0 said they had been **audited against a first user**; 0.11.0 adds
 what that audit's last question turned up — every blade's geometry read back out
@@ -51,7 +60,13 @@ The version lives in **one** place, `ctrlgrid/__init__.py`; `pyproject.toml`
 reads it dynamically and the release workflow compares the git tag against it.
 It is also in every PDF's `/Creator` and `/Producer`, so **bumping it makes every
 committed gallery PDF stale** — rebuild them in the same commit, and the cover
-sheet's preview with them, since that sheet prints the version.
+sheet's preview with them, since that sheet prints the version. **The preview
+command is written down** in [`examples/README.md`](../examples/README.md) as of
+0.12.0 (`pdftoppm -png -scale-to-x 600 -scale-to-y 849`); before that it was not,
+so nobody could reproduce a preview and the instruction above could not be
+followed. Rebuilding one preview with a different rasteriser changes ~6 % of its
+pixels — antialiasing, not geometry — which is why all nineteen were rebuilt at
+once when the command was finally recorded.
 
 ```bash
 uv sync --extra dev && uv run pytest && uv run ruff check .

@@ -10,9 +10,10 @@ fillable forms, perspective grids and mandalas — plus a **linked, write-on
 calendar** and a **notebook** that binds any of them into one document — for
 paper formats **and** for e-ink tablets.
 
-> **Status: 0.11.1 — everything the specification describes is built, audited
-> against a first-time user, and every generator's geometry read back out of a
-> finished PDF.** The
+> **Status: 0.12.0 — everything the specification describes is built, audited
+> against a first-time user, every generator's geometry read back out of a
+> finished PDF, and one thing built that the specification never described:
+> folded booklets (`--booklet`).** The
 > eleven generators of the table below work, and so do the two *document*
 > generators (`calendar`, `notebook`); the dimensional test described below
 > measures `lines` out of a finished PDF on every commit, and `net` puts the
@@ -79,6 +80,9 @@ ctrlgrid millimeter-a4 --names class3b.txt
 
 # a different maze on every page, reproducibly
 ctrlgrid maze-medium --pages 20 --seed 4711
+
+# eight A5 pages as a folded, saddle-stitched booklet: 8-1, 2-7, 6-3, 4-5
+ctrlgrid millimeter-a4 --format a5 --pages 8 --booklet --nup-sheet 297x210mm
 
 # your own definition, on Letter, with a calibration cover sheet
 ctrlgrid -d my-def.yaml --format letter --pages 5 --cover
