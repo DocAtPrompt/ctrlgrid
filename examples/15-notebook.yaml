@@ -9,8 +9,9 @@
 # generator's own keys, exactly as at the top of this file. Anything a blade can
 # do, a section can do.
 #
-# Eleven pages here so the example stays small; the `notebook-a4` preset is the
-# real thing at 106.
+# Twelve pages here so the example stays small — a title, a contents page, and
+# three sections of three, two and two behind their dividers; the `notebook-a4`
+# preset is the real thing at 106.
 version: 1
 
 page:

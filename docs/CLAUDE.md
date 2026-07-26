@@ -57,7 +57,7 @@ sheet's preview with them, since that sheet prints the version.
 uv sync --extra dev && uv run pytest && uv run ruff check .
 ```
 
-1231 tests, all green, ruff clean, linear history on
+1247 tests, all green, ruff clean, linear history on
 **[github.com/DocAtPrompt/ctrlgrid](https://github.com/DocAtPrompt/ctrlgrid)**
 (public); CI runs green there on Linux (3.11–3.13), macOS and Windows. Nineteen
 presets — twelve that show a generator (`dots-5mm`, `grid-a4`, `mandala-a4`,
@@ -240,6 +240,17 @@ outgrown. All fixed, each test-first, one commit per coherent block.
 The document path is young, has two generators and far thinner coverage, and four
 of the five serious findings were there. That is where to look first.
 
+**Closed on 2026-07-26 for the geometry, at least.** `test_geometry_readback.py`
+covered all eleven blades and *no* document generator, so every number on a
+calendar page still came from the code that drew it. It now reads both documents
+back too — sixteen tests whose numbers come from the year's own calendar
+arithmetic, from § 8.1's page sum, or from a sentence of § 7.12 / § 7.13. Each
+probe was made to fail on purpose before it was kept (see the commit); the
+strongest are the two cross-checks, because neither side is computed from the
+other: a **month page and a week page** must lay out identical columns
+(`date_columns`), and the **contents' page number** for a notebook section must
+be the first page whose own header answers `{section}` with that label.
+
 ## Read this before writing anything
 
 **The specification is the source of truth, and it is unusually complete** —
@@ -366,10 +377,14 @@ the pre-flight, never while pages are being written (§ 12 point 13).
 - **One coherent block per commit**, message explaining the decisions rather
   than the diff. `git log` is where the open-question resolutions live.
 - Verify against a real PDF, not just unit tests — `tests/pdfread.py` reads
-  geometry back out (lines, dash arrays, whole subpaths and fitted circles), and
-  `tests/test_dimensional.py` plus `tests/test_geometry_readback.py` are where
-  that is done for every blade. **Every expected number in them comes from the
+  geometry back out (lines, dash arrays, whole subpaths, fitted circles, and
+  **placed text with its position**), and `tests/test_dimensional.py` plus
+  `tests/test_geometry_readback.py` are where that is done for every blade
+  **and for both documents**. **Every expected number in them comes from the
   definition or from a sentence of the specification — never from the code.**
+  `texts_um` is the newest of those readers and the one a document needs:
+  whether a nav strip sits at the right edge or a column of day numbers is
+  right-aligned is geometry, and `extract_text` throws exactly that away.
 
 ## Where to start
 

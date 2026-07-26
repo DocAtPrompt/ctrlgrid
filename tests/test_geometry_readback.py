@@ -1,10 +1,15 @@
-"""Every blade's geometry, read back out of a finished PDF (§ 13.2).
+"""Every generator's geometry, read back out of a finished PDF (§ 13.2).
 
 `test_dimensional.py` does this for `lines` and calls it the most important test
 in the suite: build a PDF, parse it, and check the coordinates against the
 numbers the definition asked for. This file extends that discipline to the other
-blades, because a test written beside the code inherits the code's assumptions,
-and reading the artefact back does not.
+blades **and to the two document generators**, because a test written beside the
+code inherits the code's assumptions, and reading the artefact back does not.
+
+The documents were added last and for a stated reason: the suite exercises the
+blade path, the document path is younger, and four of the five serious findings
+of the release-readiness pass were on it. Until then, every number on a calendar
+page came from the code that drew it.
 
 **The rule this file is written under.** Every expected number here is derived
 from the *definition* — or from a property the specification states in words —
@@ -21,8 +26,10 @@ its reason.
 
 from __future__ import annotations
 
+import calendar
 import math
 from collections import Counter
+from datetime import date, timedelta
 from pathlib import Path
 
 import pdfread
@@ -506,3 +513,405 @@ class TestLogarithmicAxis:
         drawn = segments(sheet(tmp_path, self.DEFINITION))
         ys = sorted({round(p[0][1]) for p in drawn if abs(p[0][1] - p[1][1]) < EXACT})
         assert abs((ys[-1] - ys[0]) - 120_000) <= EXACT, (ys[-1] - ys[0]) / 1000
+
+
+# --------------------------------------------------------------------------
+# The document generators (§ 7.12, § 7.13)
+#
+# A blade fills one pattern area, so page 0 shows everything it has. A document
+# *owns* its pages, and what there is to read back is therefore different in
+# kind: the page plan, the tables, the columns two views are required to share.
+# The rule above does not change — every number below comes from the definition,
+# from the calendar arithmetic of the year it names, or from a sentence of the
+# specification. Where a claim could only be checked against a quantity the code
+# also computed (the day page's block heights against "55 % of what"), it is
+# left out and said so.
+# --------------------------------------------------------------------------
+
+#: § 7.12 fixes the page order: contents, full-year overview, half-year 1 and 2,
+#: then the months. So January is the fifth page of a calendar with no title
+#: page — an index derived from that sentence, and every test that uses it
+#: asserts the page's own title as well, so a changed order fails here loudly.
+CONTENTS_PAGE = 0
+FULL_YEAR_PAGE = 1
+HALF_YEAR_1_PAGE = 2
+FIRST_MONTH_PAGE = 4
+
+CALENDAR_YEAR = 2026
+MONTH_NAMES = (
+    "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December",
+)
+WEEKDAY_NAMES = ("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
+
+CALENDAR = (
+    "version: 1\n"
+    "page: {format: a4, margin: 12mm}\n"
+    "generator: calendar\n"
+    f"year: {CALENDAR_YEAR}\n"
+    "week_start: monday\n"
+    "font: {family: sans}\n"
+)
+
+
+def digits(placed: list[pdfread.PlacedText], length: int) -> list[pdfread.PlacedText]:
+    return [t for t in placed if t.content.isdigit() and len(t.content) == length]
+
+
+@pytest.fixture(scope="module")
+def cal(tmp_path_factory: pytest.TempPathFactory) -> Path:
+    """The calendar above, built once — 381 pages is a second, and six tests
+    read the same artefact. Nothing writes to it."""
+    return sheet(tmp_path_factory.mktemp("cal"), CALENDAR, "calendar.pdf")
+
+
+@pytest.fixture(scope="module")
+def cal_with_weeks(tmp_path_factory: pytest.TempPathFactory) -> Path:
+    return sheet(tmp_path_factory.mktemp("weeks"), CALENDAR + "week_view: {}\n", "w.pdf")
+
+
+class TestCalendarDocument:
+    """§ 7.12: the pages a year makes, and the tables on them."""
+
+    def test_one_page_per_view_and_the_count_follows_from_the_year(
+        self, cal: Path
+    ) -> None:
+        # § 7.12: one page per view, never scrolled, never scaled. So the count
+        # is arithmetic on the definition's `year` and nothing else: a contents
+        # page, the full-year overview, two half-year tables, twelve months and
+        # one page for every day the year has. 2026 is not a leap year.
+        days = 366 if calendar.isleap(CALENDAR_YEAR) else 365
+        assert pdfread.page_count(cal) == 1 + 1 + 2 + 12 + days
+
+    def test_a_week_view_adds_the_weeks_that_touch_the_year(
+        self, cal_with_weeks: Path
+    ) -> None:
+        # § 7.12: weeks are opt-in and aligned to `week_start`, not to ISO. The
+        # number of them is therefore the count of Monday-started weeks that
+        # touch 2026 — computed here with `datetime`, which knows nothing about
+        # this codebase.
+        first = date(CALENDAR_YEAR, 1, 1)
+        monday = first - timedelta(days=first.weekday())
+        weeks = (date(CALENDAR_YEAR, 12, 31) - monday).days // 7 + 1
+        days = 366 if calendar.isleap(CALENDAR_YEAR) else 365
+        assert pdfread.page_count(cal_with_weeks) == 1 + 1 + 2 + 12 + weeks + days
+
+    def test_the_title_holds_the_left_edge_and_the_navigation_the_right(
+        self, cal: Path
+    ) -> None:
+        # § 7.12: "Die Navigationsleiste sitzt am *rechten* Rand: links gehört
+        # dem Seitentitel" — the two would otherwise fight over one corner.
+        # Left edge and right edge are § 8.1's: 12 mm in from each side of A4.
+        placed = pdfread.texts_um(cal, FIRST_MONTH_PAGE)
+        title = next(t for t in placed if t.content == f"January {CALENDAR_YEAR}")
+        assert abs(title.x - 12_000) <= EXACT, title.x / 1000
+        nav = [t for t in placed if t.content in ("Index", "Year", "Month")]
+        assert len(nav) == 3
+        assert all(t.x > title.x for t in nav)
+        # The strip ends flush with the pattern area's right edge, 210 - 12 mm.
+        # Its underlines are the topmost thing drawn on the page.
+        drawn = segments(cal, FIRST_MONTH_PAGE)
+        top = max(round(p[0][1]) for p in drawn)
+        edge = max(max(p[0][0], p[1][0]) for p in drawn if round(p[0][1]) == top)
+        assert abs(edge - 198_000) <= EXACT, edge / 1000
+
+    def test_the_full_year_is_twelve_mini_months_three_across(self, cal: Path) -> None:
+        # § 7.12: "zwölf Mini-Monate, drei nebeneinander". Twelve names in three
+        # columns is four rows, and both numbers are the sentence, not the code.
+        placed = pdfread.texts_um(cal, FULL_YEAR_PAGE)
+        names = [t for t in placed if t.content in MONTH_NAMES]
+        assert len(names) == 12
+        assert len({round(t.x) for t in names}) == 3
+        assert len({round(t.y) for t in names}) == 4
+
+    def test_a_mini_month_holds_its_days_right_of_the_name_and_its_weeks_left(
+        self, cal: Path
+    ) -> None:
+        # § 7.12: the month name begins at the edge of the first day column and
+        # not at the cell's, "sonst steht er über den Wochennummern, und eine
+        # Zahl unter einem Monatsnamen wird als Tag gelesen". Both sides of that
+        # are countable: January 2026 has 31 days, and it is spanned by five
+        # Monday-weeks — so five numbers stand left of the name and thirty-one
+        # at or right of it. Neither count is asked of the code.
+        block = self.mini_month(cal, 0)
+        name = next(t for t in block if t.content in MONTH_NAMES)
+        numbers = [t for t in block if t.content.isdigit()]
+        assert len([t for t in numbers if t.x < name.x]) == self.weeks_spanning(1)
+        assert len([t for t in numbers if t.x >= name.x]) == calendar.monthrange(
+            CALENDAR_YEAR, 1
+        )[1]
+
+    def test_the_week_number_column_stands_further_off_than_a_day_column(
+        self, cal: Path
+    ) -> None:
+        # § 7.12: "der Abstand neben der Wochennummer bleibt deutlich größer als
+        # der zwischen zwei Tagen". Measured left edge to left edge, and both
+        # numbers come off the same page, so the comparison is between two
+        # drawn distances rather than against a constant.
+        block = self.mini_month(cal, 0)
+        name = next(t for t in block if t.content in MONTH_NAMES)
+        columns = sorted({round(t.x) for t in digits(block, 2) if t.x >= name.x})
+        assert len(columns) == 7, columns
+        pitch = {b - a for a, b in zip(columns, columns[1:], strict=False)}
+        assert len(pitch) == 1, pitch
+        week_numbers = sorted({round(t.x) for t in block if t.x < name.x})
+        # The week numbers here are single digits and right-aligned like the
+        # days, so their left edge overstates how close they sit — which makes
+        # this assertion the conservative one.
+        assert columns[0] - week_numbers[-1] > pitch.pop()
+
+    def test_a_short_month_column_ends_and_leaves_no_empty_cells(
+        self, cal: Path
+    ) -> None:
+        # § 7.12: "kurzer Monate Spalten enden — keine leeren Zellen". A cell is
+        # a rectangle; a shaded weekend draws a second one at the same row, so
+        # the rows are the distinct positions, and their number must be the
+        # length of the month as the calendar has it.
+        cells = [q for q in pdfread.subpaths_um(cal, HALF_YEAR_1_PAGE) if len(q) == 4]
+        rows: dict[int, set[int]] = {}
+        for quad in cells:
+            left = round(min(x for x, _ in quad))
+            rows.setdefault(left, set()).add(round(min(y for _, y in quad)))
+        counted = [len(rows[left]) for left in sorted(rows)]
+        assert counted == [calendar.monthrange(CALENDAR_YEAR, m)[1] for m in range(1, 7)]
+
+    def test_and_a_leap_february_is_one_row_longer(self, tmp_path: Path) -> None:
+        # The test above would also pass against a table of constants, so here
+        # is the year moved and the drawing asked again: 2028 is a leap year,
+        # and its February column has to grow by exactly the day the year gained.
+        leap = sheet(tmp_path, CALENDAR.replace("year: 2026", "year: 2028"), "l.pdf")
+        cells = [q for q in pdfread.subpaths_um(leap, HALF_YEAR_1_PAGE) if len(q) == 4]
+        rows: dict[int, set[int]] = {}
+        for quad in cells:
+            left = round(min(x for x, _ in quad))
+            rows.setdefault(left, set()).add(round(min(y for _, y in quad)))
+        february = sorted(rows)[1]
+        assert calendar.isleap(2028) and len(rows[february]) == 29
+
+    def test_the_month_and_the_week_view_lay_out_the_same_columns(
+        self, cal_with_weeks: Path
+    ) -> None:
+        # § 7.12: "beide Ansichten rechnen dieselben Spalten über `date_columns`".
+        # A week page and a month page are built by different code paths on
+        # different pages, so agreeing to the micrometre is a real constraint.
+        first_week = FIRST_MONTH_PAGE + 12
+        assert "Week 1" in pdfread.text_on(cal_with_weeks, first_week)
+        month = self.columns(cal_with_weeks, FIRST_MONTH_PAGE)
+        # Two empty tuples would also be equal, and an equality that can pass on
+        # nothing is the probe that proves nothing. So the shape is asserted
+        # first, and it is § 7.12's sentence: one weekday column holding the
+        # left edge, and day numbers right-aligned into one column, which shows
+        # as the two starting points a one- and a two-digit day have.
+        assert (len(month[0]), len(month[1])) == (1, 2), month
+        assert month == self.columns(cal_with_weeks, first_week)
+
+    def test_the_weekday_holds_the_left_edge_and_the_day_numbers_are_right_aligned(
+        self, cal: Path, tmp_path: Path
+    ) -> None:
+        # § 7.12: "der Wochentag hält die linke Kante, die Tageszahlen stehen
+        # **rechtsbündig** in einer eigenen Spalte darunter". Right-aligned means
+        # a two-digit day starts exactly one digit earlier than a one-digit one.
+        # The width of that digit is font data, not this codebase's arithmetic
+        # (§ 10.3), so it is asked of a metrics oracle — the same stand-in the
+        # pre-flight measures with (decision 38) — at the size read off the page.
+        placed = pdfread.texts_um(cal, FIRST_MONTH_PAGE)
+        weekdays = [t for t in placed if t.content in WEEKDAY_NAMES]
+        assert len({round(t.x) for t in weekdays}) == 1
+        one, two = digits(placed, 1), digits(placed, 2)
+        assert len({round(t.x) for t in one}) == 1
+        assert len({round(t.x) for t in two}) == 1
+        oracle = PdfWriter(tmp_path / "never-written.pdf")
+        digit = oracle.text_width(
+            "1", family="sans", size=round(one[0].size_pt * 25400 / 72)
+        )
+        # Two micrometres, and the reason is that two independently rounded
+        # numbers meet here: the drawn position was rounded to µm when it was
+        # written, and the oracle's width is rounded again on the way out.
+        assert abs((one[0].x - two[0].x) - digit) <= 2 * EXACT
+
+    # ------------------------------------------------------------- helpers
+
+    def weeks_spanning(self, month: int) -> int:
+        """How many `week_start`-aligned weeks a month touches — from `datetime`."""
+        first = date(CALENDAR_YEAR, month, 1)
+        last = date(CALENDAR_YEAR, month, calendar.monthrange(CALENDAR_YEAR, month)[1])
+        monday = first - timedelta(days=first.weekday())
+        return (last - monday).days // 7 + 1
+
+    def mini_month(self, cal: Path, index: int) -> list[pdfread.PlacedText]:
+        """Every text inside one cell of the full-year overview's 3 x 4 grid.
+
+        The cell reaches *left* of the month name — that is the whole point of
+        the two tests that use this, since the week numbers live there. So the
+        cell cannot be bounded by the name, and it is found instead as a cluster:
+        within one row, the air between two mini-months is the widest gap there
+        is, wider even than the deliberate one that keeps the week numbers off
+        the day grid. Two cuts at the two widest gaps give the three cells.
+        """
+        placed = pdfread.texts_um(cal, FULL_YEAR_PAGE)
+        names = [t for t in placed if t.content in MONTH_NAMES]
+        ys = sorted({round(t.y) for t in names}, reverse=True)
+        column, row = index % 3, index // 3
+        bottom = ys[row + 1] if row + 1 < len(ys) else -float("inf")
+        band = [t for t in placed if bottom < t.y <= ys[row] + EXACT]
+        xs = sorted({round(t.x) for t in band})
+        widest = sorted((b - a, a) for a, b in zip(xs, xs[1:], strict=False))[-2:]
+        edges = sorted(last for _, last in widest)
+        lower = -float("inf") if column == 0 else edges[column - 1]
+        upper = float("inf") if column == 2 else edges[column]
+        return [t for t in band if lower < t.x <= upper + EXACT]
+
+    def columns(self, path: Path, page: int) -> tuple[list[int], list[int]]:
+        placed = pdfread.texts_um(path, page)
+        return (
+            sorted({round(t.x) for t in placed if t.content in WEEKDAY_NAMES}),
+            sorted({round(t.x) for t in placed if t.content.isdigit()}),
+        )
+
+
+#: § 8.1's arithmetic on the notebook definition below: A4 is 297 mm tall, the
+#: margin takes 15 off each end, and each band takes its 8 mm height plus its
+#: 3 mm gap. So the pattern area runs from 26 mm to 271 mm — which is also how a
+#: test tells a band's text from a page's own.
+NOTEBOOK_PATTERN_TOP = 271_000
+NOTEBOOK_PATTERN_BOTTOM = 26_000
+
+NOTEBOOK = (
+    "version: 1\n"
+    "page: {format: a4, margin: 15mm}\n"
+    'header: {height: 8mm, gap: 3mm, left: "{section}"}\n'
+    'footer: {height: 8mm, gap: 3mm, right: "{page} / {page_count}"}\n'
+    "generator: notebook\n"
+    'title_page: {title: "Notebook"}\n'
+    "sections:\n"
+    '  - {label: "Dots", pages: 3, divider: true, generator: dots,\n'
+    "     grid: {x: {base_spacing: 5mm}, y: {base_spacing: 5mm}}, base_size: 0.4mm}\n"
+    '  - {label: "Squares", pages: 2, divider: true, generator: lines,\n'
+    "     families: [{direction: horizontal, base_spacing: 5mm},\n"
+    "                {direction: vertical, base_spacing: 5mm}]}\n"
+    '  - {label: "Music", pages: 2, divider: true, generator: staves,\n'
+    "     count: 10, stave_space: 1.8mm, system_gap: 4sp}\n"
+)
+
+#: Page indices that follow from § 7.13's page order — title, contents, then per
+#: section its divider and its pages. Each test that uses one also asserts what
+#: is on the page, so a changed order fails here rather than passing quietly.
+FIRST_DOTS_PAGE = 3
+FIRST_LINES_PAGE = 7
+FIRST_STAVES_PAGE = 10
+
+
+@pytest.fixture(scope="module")
+def nb(tmp_path_factory: pytest.TempPathFactory) -> Path:
+    return sheet(tmp_path_factory.mktemp("nb"), NOTEBOOK, "notebook.pdf")
+
+
+class TestNotebookDocument:
+    """§ 7.13: sections filled by ordinary blades — so the thing to read back is
+    whether composing a blade bends its measure. It must not: the handle calls
+    the generator on the document path exactly as on the blade path (decision
+    50), and the only proof of that is the drawing."""
+
+    def test_the_page_plan_is_the_sections_plus_a_title_and_a_contents(
+        self, nb: Path
+    ) -> None:
+        # § 7.13: "optionale Titelseite, Inhaltsverzeichnis, dann je Abschnitt
+        # sein Trennblatt (falls verlangt) und seine Seiten." Every term of that
+        # sum is written in the definition: 1 + 1 + (1+3) + (1+2) + (1+2).
+        assert pdfread.page_count(nb) == 1 + 1 + (1 + 3) + (1 + 2) + (1 + 2)
+
+    def test_the_contents_names_the_page_a_section_really_begins_on(
+        self, nb: Path
+    ) -> None:
+        # § 7.13: "Das Verzeichnis nennt zu jedem Abschnitt die Seitenzahl, auf
+        # der er beginnt." Two independently drawn facts have to agree: the
+        # number printed on the contents page, and the page that first answers
+        # `{section}` with that label in its own header. Neither is computed
+        # from the other, and both come off the paper.
+        listed = self.contents_entries(nb)
+        assert set(listed) == {"Dots", "Squares", "Music"}
+        for label, page in listed.items():
+            begins = min(i for i, name in self.sections_by_page(nb).items()
+                         if name == label)
+            assert page == begins, (label, page, begins)
+
+    def test_a_section_gets_the_pattern_area_section_8_1_computes(
+        self, nb: Path
+    ) -> None:
+        # § 7.13: "ein Abschnitt nimmt den Musterbereich, wie er ist." A4 less
+        # 15 mm margins is 180 mm wide; less both bands it is 245 mm tall. A
+        # 5 mm lattice from the origin is therefore 37 columns by 50 rows, and
+        # both numbers are § 8.1's arithmetic, not the notebook's.
+        dots = [p for p in segments(nb, FIRST_DOTS_PAGE)
+                if pdfread.length_um(p[0], p[1]) < EXACT]
+        assert len({round(p[0][0]) for p in dots}) == 37
+        assert len({round(p[0][1]) for p in dots}) == 50
+
+    def test_two_sections_two_blades_one_declared_measure(self, nb: Path) -> None:
+        # The composition claim itself. `dots` and `lines` are different blades
+        # with different code, and both were told 5 mm in the same document. If
+        # the handle really hands each the same pattern area (§ 7.13), the two
+        # sections' lattices must fall on exactly the same lines — not merely
+        # have the same pitch.
+        dots = [p for p in segments(nb, FIRST_DOTS_PAGE)
+                if pdfread.length_um(p[0], p[1]) < EXACT]
+        ruled = segments(nb, FIRST_LINES_PAGE)
+        columns = sorted({round(p[0][0]) for p in ruled
+                          if abs(p[0][0] - p[1][0]) < EXACT})
+        rows = sorted({round(p[0][1]) for p in ruled
+                       if abs(p[0][1] - p[1][1]) < EXACT})
+        assert columns == sorted({round(p[0][0]) for p in dots})
+        assert rows == sorted({round(p[0][1]) for p in dots})
+        # And the declared 5 mm is what the gaps are, on both.
+        for axis in (columns, rows):
+            assert {b - a for a, b in zip(axis, axis[1:], strict=False)} == {5_000}
+
+    def test_the_music_section_keeps_its_declared_stave_space_and_system_gap(
+        self, nb: Path
+    ) -> None:
+        # § 7.3: `stave_space` is the distance between neighbouring lines, and
+        # `system_gap` is the **gap** — bottom line of one system to top line of
+        # the next — not the pitch. The definition says 1.8 mm and 4 sp, so ten
+        # five-line systems are 50 lines with 40 gaps of 1.8 mm and 9 of 7.2 mm.
+        ys = sorted({round(p[0][1]) for p in segments(nb, FIRST_STAVES_PAGE)
+                     if abs(p[0][1] - p[1][1]) < EXACT})
+        assert len(ys) == 10 * 5
+        gaps = Counter(b - a for a, b in zip(ys, ys[1:], strict=False))
+        assert gaps == Counter({1_800: 40, 7_200: 9}), gaps
+
+    def test_every_page_of_a_section_carries_the_same_paper(self, nb: Path) -> None:
+        # A section is `pages: 3` of one paper, so the three have to be the same
+        # drawing — the bands differ (`{page}` counts), the pattern must not.
+        first = sorted(round(p[0][0]) for p in segments(nb, FIRST_DOTS_PAGE))
+        for offset in (1, 2):
+            assert sorted(
+                round(p[0][0]) for p in segments(nb, FIRST_DOTS_PAGE + offset)
+            ) == first
+
+    # ------------------------------------------------------------- helpers
+
+    def contents_entries(self, nb: Path) -> dict[str, int]:
+        """Label to printed page, read off the contents page a line at a time."""
+        placed = [t for t in pdfread.texts_um(nb, 1)
+                  if NOTEBOOK_PATTERN_BOTTOM < t.y < NOTEBOOK_PATTERN_TOP]
+        rows: dict[int, list[pdfread.PlacedText]] = {}
+        for text in placed:
+            rows.setdefault(round(text.y), []).append(text)
+        entries = {}
+        for line in rows.values():
+            words = sorted(line, key=lambda t: t.x)
+            if len(words) == 2 and words[1].content.isdigit():
+                entries[words[0].content] = int(words[1].content)
+        return entries
+
+    def sections_by_page(self, nb: Path) -> dict[int, str]:
+        """Printed page number to the section its header names (§ 7.13)."""
+        found = {}
+        for index in range(pdfread.page_count(nb)):
+            placed = pdfread.texts_um(nb, index)
+            header = [t for t in placed if t.y >= NOTEBOOK_PATTERN_TOP]
+            footer = [t for t in placed if t.y <= NOTEBOOK_PATTERN_BOTTOM]
+            if not header or not footer:
+                continue        # the title page carries no bands
+            found[int(footer[0].content.split("/")[0])] = header[0].content
+        return found

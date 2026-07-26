@@ -96,6 +96,67 @@ def text_on(path: Path, page: int = 0) -> str:
     return PdfReader(str(path)).pages[page].extract_text()
 
 
+@dataclass(frozen=True)
+class PlacedText:
+    """One `Tj` and the position it was set at, in micrometres."""
+
+    x: float
+    y: float
+    content: str
+    size_pt: float
+
+
+_TEXT = re.compile(
+    (
+        rf"BT\s+{_NUMBER} {_NUMBER} {_NUMBER} {_NUMBER} {_NUMBER} {_NUMBER} Tm\s*"
+        r"\((?P<content>(?:\\.|[^\\)])*)\) Tj"
+    ).encode()
+)
+_FONT_SIZE = re.compile(rf"/F\d+ {_NUMBER} Tf".encode())
+_ESCAPE = re.compile(rb"\\([0-7]{1,3})|\\(.)")
+
+
+def _pdf_string(raw: bytes) -> str:
+    """A PDF literal string back to text: octal escapes and `\\(` `\\)` `\\\\`."""
+
+    def one(match: re.Match[bytes]) -> bytes:
+        octal, literal = match.group(1), match.group(2)
+        return bytes([int(octal, 8)]) if octal else literal
+    # Latin-1 because that is what the standard fonts encode (§ 10.3); a text
+    # this cannot decode is one the tool should have refused (§ 12 point 13).
+    return _ESCAPE.sub(one, raw).decode("latin-1")
+
+
+def texts_um(path: Path, page: int = 0) -> list[PlacedText]:
+    """Every drawn string with the point it was set at, in drawing order.
+
+    Positions, not just characters: whether a nav strip sits at the right edge
+    or a column of day numbers is right-aligned is *geometry*, and
+    `extract_text` throws exactly that away. Only the translation of the text
+    matrix is reported — a rotated string (§ 8.12) still gives its origin.
+    """
+    stream = PdfReader(str(path)).pages[page].get_contents().get_data()
+    placed: list[PlacedText] = []
+    size = 0.0
+    position = 0
+    while True:
+        found = _TEXT.search(stream, position)
+        if found is None:
+            return placed
+        for match in _FONT_SIZE.finditer(stream, position, found.start()):
+            size = float(match.group(1))
+        numbers = [float(found.group(index)) for index in range(1, 7)]
+        placed.append(
+            PlacedText(
+                um(numbers[4]),
+                um(numbers[5]),
+                _pdf_string(found.group("content")),
+                size,
+            )
+        )
+        position = found.end()
+
+
 _TOKEN = re.compile(rb"(-?(?:\d+\.?\d*|\.\d+))|([A-Za-z']+)")
 
 
