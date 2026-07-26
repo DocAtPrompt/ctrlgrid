@@ -8,26 +8,47 @@ name = "ctrlgrid"
 # release workflow compares the git tag against `ctrlgrid.__version__`, and
 # that check only means something if the package cannot disagree with itself.
 dynamic = ["version"]
-description = "Dimensionally accurate PDF templates: grid paper, staves, mazes, polar targets, tilings, forms"
+description = "Dimensionally accurate PDF templates for paper and e-ink: graph paper, dot grids, staff paper, calendars, notebooks, mazes, box nets"
 readme = "README.md"
 license = "MIT"
 license-files = ["LICENSE"]
 requires-python = ">=3.11"
 authors = [{ name = "DocAtPrompt (Alexander Erben)" }]
+# Written the way a person types them into a search box, which is why several
+# appear both hyphenated and as two words: a query for "graph paper" matches
+# `graph-paper` poorly. Deliberately absent: other e-ink makes (Supernote, Boox,
+# Kindle Scribe). Only reMarkable profiles ship, and a keyword is a claim.
 keywords = [
-    "pdf", "pdf-generation", "graph-paper", "grid-paper", "dot-grid",
-    "isometric", "printable", "template", "reproducible", "cli",
-    "eink", "remarkable", "mandala", "maze", "staff-paper", "sheet-music",
-    "polar-graph", "tiling", "perspective-grid",
+    "pdf", "pdf-generation", "printable", "template", "cli", "reproducible",
+    # the papers
+    "graph paper", "graph-paper", "grid paper", "squared paper", "ruled paper",
+    "millimeter paper", "dot grid", "dot-grid", "isometric paper",
+    "hexagonal paper", "calligraphy", "handwriting practice",
+    # the documents
+    "calendar", "printable calendar", "planner", "notebook", "bullet journal",
+    # music
+    "staff paper", "manuscript paper", "sheet music", "tablature",
+    # the rest of the blades
+    "maze", "maze generator", "mandala", "polar graph", "tiling",
+    "perspective grid", "graph paper generator",
+    # cut and fold
+    "box net", "papercraft", "origami", "dieline",
+    # devices
+    "eink", "e-ink", "remarkable", "remarkable tablet",
 ]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Environment :: Console",
     "Intended Audience :: End Users/Desktop",
+    "Intended Audience :: Education",
     "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
+    "Topic :: Artistic Software",
+    "Topic :: Multimedia :: Graphics",
     "Topic :: Printing",
     "Topic :: Utilities",
 ]

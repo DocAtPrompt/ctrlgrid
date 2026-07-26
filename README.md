@@ -10,7 +10,7 @@ fillable forms, perspective grids and mandalas — plus a **linked, write-on
 calendar** and a **notebook** that binds any of them into one document — for
 paper formats **and** for e-ink tablets.
 
-> **Status: 0.11.0 — everything the specification describes is built, audited
+> **Status: 0.11.1 — everything the specification describes is built, audited
 > against a first-time user, and every generator's geometry read back out of a
 > finished PDF.** The
 > eleven generators of the table below work, and so do the two *document*

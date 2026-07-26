@@ -27,7 +27,9 @@ Nothing refuses with "a later milestone" any more — that mechanism is still
 there (`Section.deferred`, `loader.DEFERRED_KEYS`) and currently empty, which is
 worth knowing when the next unbuilt key arrives.
 
-**0.11.0** is the version in the code (2026-07-26). 0.9.0 said the features were
+**0.11.1** is the version in the code (2026-07-26) — 0.11.0 plus the PyPI
+metadata it should have shipped with (see *Not done*); nothing about the tool
+itself changed. 0.9.0 said the features were
 complete; 0.10.0 said they had been **audited against a first user**; 0.11.0 adds
 what that audit's last question turned up — every blade's geometry read back out
 of a finished PDF (`tests/test_geometry_readback.py`), a glyph check on generator
@@ -165,6 +167,14 @@ edge, so a tick now carries its position *and* its value separately. `unit` says
   re-uploaded to PyPI, only yanked** — so the number is decided once — and the
   README's links are absolute on purpose, because a relative one resolves against
   pypi.org on the project page and dies there.
+
+  A third, learnt on 0.11.1: **the summary, keywords and classifiers are part of
+  a release and cannot be edited afterwards.** 0.11.0 went out naming six blades
+  and none of the documents, so `calendar`, `notebook` and `net` — one of them
+  the highest-volume search term in the package — were findable nowhere. Check
+  `pyproject.toml`'s `description` against what the tool actually does before a
+  release, not after. GitHub's description, topics and homepage are the other
+  half of the same question and can be changed at any time.
 - **Nobody has cut a net out and folded it.** `examples/16-net-tray.yaml` checks
   the geometry, `box-tuck-a4` also checks the thickness rule. The tests agree
   with the arithmetic; only paper can disagree with it (§ 7.14).
