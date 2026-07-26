@@ -1314,6 +1314,19 @@ on the **short** edge, fold the stack in half, staple through the fold. The run
 report names the flip and the one thing to check on the first sheet: page 2 must
 come out behind page 1.
 
+If your pages carry no numbers — plain grid paper, say — nothing on the sheet
+shows whether the flip was right, and the run says so. Add a footer for one test
+run:
+
+```yaml
+footer:
+  height: 10mm
+  center: "{page}"
+```
+
+Then blank the footer again. With genuinely identical pages the flip makes no
+visible difference anyway; it matters as soon as the pages differ.
+
 Three things to know before the first run:
 
 - **The sheet must be landscape.** Two portrait pages sit side by side, and

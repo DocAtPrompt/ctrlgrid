@@ -436,6 +436,23 @@ def _page_count(document: Document, geometry: Geometry) -> int:
     return document.pages.count * sheet_plan(document).per_item
 
 
+def _shows_page_numbers(document: Document) -> bool:
+    """Whether a printed page says which page it is (§ 8.10).
+
+    A band field holding `{page}` is the only way a blade's page gets a number
+    on it — document generators write their own, and they refuse imposition
+    anyway (decision 52). Asked so that advice about page numbers is given only
+    where the sheet cannot already answer it.
+    """
+    for band in (document.header, document.footer):
+        if band is None:
+            continue
+        for field in (band.left, band.center, band.right):
+            if isinstance(field, str) and "{page}" in field:
+                return True
+    return False
+
+
 def _report(document: Document, path: Path, geometry: Geometry, *, quiet: bool) -> None:
     if quiet:
         typer.echo(str(path))
@@ -464,6 +481,16 @@ def _report(document: Document, path: Path, geometry: Geometry, *, quiet: bool) 
                 "sheet, page 2 must come out behind page 1 — if it does not, "
                 "switch the flip"
             )
+            if not _shows_page_numbers(document):
+                # § 12: an instruction nobody can act on is a bug, and the one
+                # above is exactly that on blank grid paper — the commonest
+                # thing this tool makes, where no number is printed anywhere.
+                # Said only when the sheet really cannot answer it.
+                typer.echo(
+                    '  these pages carry no numbers, so nothing shows the flip — add '
+                    '`footer: {center: "{page}"}` for one test run (with identical '
+                    "pages the flip makes no difference anyway)"
+                )
         else:
             sheets = -(-pages // nup.per_sheet)  # ceil
             typer.echo(

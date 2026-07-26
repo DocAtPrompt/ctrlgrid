@@ -198,6 +198,40 @@ class TestTheReport:
         assert "SHORT edge" in result.output
         assert "page 2" in result.output
 
+    def report_for(self, tmp_path: Path, definition: str) -> str:
+        from typer.testing import CliRunner
+
+        from ctrlgrid.cli import app
+
+        path = tmp_path / "d.yaml"
+        path.write_text(definition, encoding="utf-8")
+        result = CliRunner().invoke(
+            app,
+            ["-d", str(path), "--pages", "8", "--booklet",
+             "--nup-sheet", "297x210mm", "-o", str(tmp_path / "b.pdf")],
+        )
+        assert result.exit_code == 0, result.output
+        return result.output
+
+    def test_pages_without_numbers_are_told_how_to_check_the_flip(
+        self, tmp_path: Path
+    ) -> None:
+        # § 12: an instruction the user cannot act on is a bug. "Page 2 must be
+        # behind page 1" is exactly that on blank grid paper, which is the
+        # commonest thing this tool makes — no number is printed anywhere.
+        output = self.report_for(tmp_path, A5_LINES)
+        assert "{page}" in output
+
+    def test_pages_that_carry_their_number_are_not_told_twice(
+        self, tmp_path: Path
+    ) -> None:
+        # The sheet already answers it, so the advice would be noise. The tool
+        # can tell: a band field holding `{page}` is the only way a blade's page
+        # gets a number on it.
+        output = self.report_for(tmp_path, NUMBERED)
+        assert "SHORT edge" in output
+        assert "{page}" not in output
+
 
 NUMBERED = (
     "version: 1\n"

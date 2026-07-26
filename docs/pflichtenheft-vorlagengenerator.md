@@ -2687,6 +2687,16 @@ kurzen Kanten. Der Laufbericht nennt die Einstellung *und* den einen Handgriff,
 der sie prüft (Seite 2 muss hinter Seite 1 liegen), wie § 8.2 es für die
 Skalierung verlangt. Kein Schalter: siehe § 15 Punkt 6.
 
+**Und er merkt, wenn dieser Handgriff nicht geht** (ergänzt 2026-07-26, nach dem
+ersten gedruckten Heft). Auf leerem Rasterpapier — dem häufigsten, was dieses
+Werkzeug erzeugt — steht überhaupt keine Zahl, „Seite 2 hinter Seite 1" ist dort
+also nicht falsch, sondern *unausführbar*, und § 12 zählt eine Anweisung, nach der
+niemand handeln kann, als Fehler. Trägt kein Band `{page}`, nennt der Bericht
+deshalb den einen Weg, es prüfbar zu machen (`footer: {center: "{page}"}` für
+einen Probelauf) — und sagt dazu, dass die Wendekante bei völlig gleichen Seiten
+ohnehin gleichgültig ist. Trägt ein Band die Zahl, schweigt er: das Blatt
+beantwortet die Frage dann selbst.
+
 **Abgelehnt wird, vor Seite eins:** `--booklet` neben `--nup` (zwei Wege für
 dasselbe), `--booklet` an einem Dokument-Generator (wie `--nup`, Entscheidung
 52), `--nup-sheet`/`--crop-marks` ohne beides, und ein Bogen, auf den zwei Seiten
