@@ -77,7 +77,7 @@ endobj
 endobj
 10 0 obj
 <<
-/Author () /CreationDate (D:20000101000000+00'00') /Creator (ctrlgrid 0.9.0) /Keywords () /ModDate (D:20000101000000+00'00') /Producer (ctrlgrid 0.9.0) 
+/Author () /CreationDate (D:20000101000000+00'00') /Creator (ctrlgrid 0.10.0) /Keywords () /ModDate (D:20000101000000+00'00') /Producer (ctrlgrid 0.10.0) 
   /Subject () /Title (ctrlgrid examples/05-maze-booklet.yaml) /Trapped /False
 >>
 endobj
@@ -141,13 +141,13 @@ xref
 0000001224 00000 n 
 0000001429 00000 n 
 0000001498 00000 n 
-0000001751 00000 n 
-0000001841 00000 n 
-0000007344 00000 n 
-0000014317 00000 n 
-0000019791 00000 n 
-0000027069 00000 n 
-0000032551 00000 n 
+0000001753 00000 n 
+0000001843 00000 n 
+0000007346 00000 n 
+0000014319 00000 n 
+0000019793 00000 n 
+0000027071 00000 n 
+0000032553 00000 n 
 trailer
 <<
 /ID 
@@ -159,5 +159,5 @@ trailer
 /Size 18
 >>
 startxref
-39503
+39505
 %%EOF

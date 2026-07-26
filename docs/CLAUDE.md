@@ -27,13 +27,17 @@ Nothing refuses with "a later milestone" any more — that mechanism is still
 there (`Section.deferred`, `loader.DEFERRED_KEYS`) and currently empty, which is
 worth knowing when the next unbuilt key arrives.
 
-**0.9.0** is the version in the code (2026-07-26), and the number is a claim:
-everything the specification describes is built, so the only thing between here
-and 1.0.0 is *use* — nobody outside has written a definition, and nobody has yet
-cut a net out and folded it. 1.0.0 is a promise about the **DSL**, and it should
-wait until the promise has been checked against paper by someone other than the
-test suite. Nothing has been released either way: releasing needs a human, and
-the user has chosen to defer PyPI for now (see *Not done*).
+**0.10.0** is the version in the code (2026-07-26). 0.9.0 said the features were
+complete; 0.10.0 says they have been **audited against a first user**, which is a
+different claim and was worth its own number. What that audit found is in the
+five commits before this one and summarised under *The release-readiness pass*
+below; the short version is that the core promises — dimensional accuracy and
+byte-identical output — held under measurement, and the edges did not.
+
+The only thing between here and 1.0.0 is still *use*: nobody outside has written
+a definition, and nobody has yet cut a net out and folded it. 1.0.0 is a promise
+about the **DSL**, and it should wait until that promise has been checked against
+paper by someone other than the test suite.
 
 The version lives in **one** place, `ctrlgrid/__init__.py`; `pyproject.toml`
 reads it dynamically and the release workflow compares the git tag against it.
@@ -45,15 +49,15 @@ sheet's preview with them, since that sheet prints the version.
 uv sync --extra dev && uv run pytest && uv run ruff check .
 ```
 
-1158 tests, all green, ruff clean. 151 commits on `main`, linear history,
-pushed to **[github.com/DocAtPrompt/ctrlgrid](https://github.com/DocAtPrompt/ctrlgrid)**
+1192 tests, all green, ruff clean, linear history on
+**[github.com/DocAtPrompt/ctrlgrid](https://github.com/DocAtPrompt/ctrlgrid)**
 (public); CI runs green there on Linux (3.11–3.13), macOS and Windows. Nineteen
-presets — one per blade (`lines`, `dots`, `polar`, `form`, `maze`,
-`perspective`, `mandala`, `staves`, `grid`, `tiling`, `net`), the two documents
-(`calendar-a4`, `notebook-a4`), and four papers that are all `lines` with
-different cycles (`calligraphy-a4`, `seyes-a4`, `mizige-a4`,
-`knitting-chart-a4`, `precrease-16-a4`, `plot-a4`) — and a
-rendered
+presets — twelve that show a generator (`dots-5mm`, `grid-a4`, `mandala-a4`,
+`maze-medium`, `perspective-2pt-a4`, `phone-log-a5`, `polar-a4`,
+`staves-treble-a4`, `tiling-hex-a4`, `box-tuck-a4`, and the two documents
+`calendar-a4` and `notebook-a4`) and **seven papers that are all `lines` with
+different cycles** (`millimeter-a4`, `calligraphy-a4`, `seyes-a4`, `mizige-a4`,
+`knitting-chart-a4`, `precrease-16-a4`, `plot-a4`) — and a rendered
 **example gallery** in [`examples/`](../examples/) — eighteen definitions:
 one A4 sheet per blade, a multi-page maze booklet, the cover sheet, a notebook,
 a calligraphy guide, an edge-ruler sheet, a box net and the calendar. Each is an
@@ -115,6 +119,7 @@ edge, so a tick now carries its position *and* its value separately. `unit` says
 | post-M9 `notebook` | the **second document generator**, and the first that composes blades (§ 7.13, decision 50): sections, each filled by an ordinary generator, with a linked contents page, opt-in dividers and a cover. The seam: a `DocumentPage` may carry a `Fill` (generator name + validated config) instead of marks, and **the handle calls the blade** — `pages.document_page_marks` is the one function that says what is on a page, used by the writer, the capability pre-flight and the media check. A section is a definition in miniature, validated by that blade's own `config_model` with the loader's context (so `px`/`%w` resolve there too). Document bands are now laid out **per page**, so `{page}` counts and a per-page `{section}` names the section; `calendar-a4` stayed byte-identical. `page_layout.Page` extracted from `calendar_layout` and shared. Preset `notebook-a4`, example `15-notebook` |
 | post-M9 band colour | a header/footer `Band` takes `background` (a full-width strip, band height only) and `text_color`, both default off — drawn in `layout_band` so both the blade and document paths get them; resolves the title-page contrast (§ 8.9) |
 | pulled forward into M1 | format table, presets, `check`, overwrite protection, placeholders — the M1 acceptance criteria needed them |
+| 0.10.0 release-readiness | the audit above, in five commits: three degenerate values that hung or crashed instead of refusing; **`page_furniture`**, so the document path carries the page model (duplex, border, hole marks, ruler, stamp, background) instead of dropping it silently, plus three keys refused by name and a fourth (a multi-sheet blade in a notebook section) refused for now (decision 52); five messages made actionable and `--version` added; a ruler tick that ran off the edge, a ruler font that was never opened, an unreachable bookmark guard; and twenty-six stale comments |
 
 ### Not done
 
@@ -134,15 +139,22 @@ edge, so a tick now carries its position *and* its value separately. `unit` says
 
 **Three more things wait, and none of them is code:**
 
-- **PyPI** is deferred by the user's own choice ("vorerst verzichten"), so
-  `uvx ctrlgrid` (the bare PyPI form) does not work and that is intended.
-  Install from git — `uvx --from git+https://github.com/DocAtPrompt/ctrlgrid.git
-  ctrlgrid …`, verified working, font and presets included. When it is wanted: a
-  human sets up trusted publishing (https://pypi.org/manage/account/publishing/
-  for `DocAtPrompt/ctrlgrid`, workflow `release.yml`, environment `pypi`), then
-  the first tag is pushed. **There are no tags at all** — the stale `v0.1.0` was
-  deleted on 2026-07-26 — so the next one is the first real release tag, and it
-  must carry the same number as `ctrlgrid.__version__`.
+- **PyPI: wanted now, and everything on this side is ready.** The user decided on
+  2026-07-26 to publish, after the release-readiness pass above. Checked since:
+  the name **`ctrlgrid` is free** (`https://pypi.org/pypi/ctrlgrid/json` → 404,
+  which is how PyPI says "no such project"); the built wheel carries all 19
+  presets, the clef font, its OFL text, `formats.yaml` and `devices.yaml`; the
+  release workflow gates on the suite and compares the tag against
+  `ctrlgrid.__version__`. What still needs a human: **trusted publishing** at
+  https://pypi.org/manage/account/publishing/ for `DocAtPrompt/ctrlgrid`,
+  workflow `release.yml`, environment `pypi` — then the tag is pushed.
+  **There are no tags at all** (the stale `v0.1.0` was deleted on 2026-07-26), so
+  the next one is the first real release tag and must read `v0.10.0`.
+  Two things worth knowing before it goes: a version can never be re-uploaded to
+  PyPI, only yanked; and the README's links were made absolute for exactly this,
+  because a relative link resolves against pypi.org on the project page and dies.
+  Until it is published, install from git —
+  `uvx --from git+https://github.com/DocAtPrompt/ctrlgrid.git ctrlgrid …`.
 - **Nobody has cut a net out and folded it.** `examples/16-net-tray.yaml` checks
   the geometry, `box-tuck-a4` also checks the thickness rule. The tests agree
   with the arithmetic; only paper can disagree with it (§ 7.14).
@@ -155,13 +167,49 @@ never silently: § 5.1 calls a PDF that is *almost* right the worst failure clas
 there is, so `border:` must never have read as an unknown key while it was
 unbuilt, and `snap:` must never have been quietly ignored.
 
-**`grep -rn "milestone M" ctrlgrid/` now finds only a docstring.** Everything the
-specification describes is built — `--skip-unsupported` (§ 10.2) was the last of
-it. The machinery stays and is worth knowing about, because the next unbuilt key
+**`grep -rn "milestone M" ctrlgrid/` and `grep -rn "this milestone" ctrlgrid/`
+both find nothing**, and neither does a search for TODO, FIXME or HACK. Both
+greps are needed: the first alone was the claim this file used to make, and it
+missed four live present-tense milestone comments that said "this milestone"
+without an M — including one declaring `border` unbuilt. Everything the
+specification describes is built; `--skip-unsupported` (§ 10.2) was the last of
+it. The remaining `M1`/`M6`/`M9` mentions are lineage ("complete from M1 on"),
+not claims about the present.
+
+The machinery stays and is worth knowing about, because the next unbuilt key
 will need it: `Section.deferred` (a per-section map of key → sentence) and
 `loader.DEFERRED_KEYS` (the same for the top level) both still work and are
 currently empty, except for `Margin.deferred`, which explains why margins are
-named `inner`/`outer` rather than `left`/`right` (§ 8.1).
+named `inner`/`outer` rather than `left`/`right` (§ 8.1). It also has a second
+use now, shown by the document generators: a key the tool **will not** honour on
+this path is refused by name rather than ignored (`--nup`, `--cover`,
+`pattern.align` on a `calendar` or `notebook` — decision 52).
+
+### The release-readiness pass (2026-07-26)
+
+Before publishing, the code was audited as a stranger would meet it — a wheel
+installed into a fresh venv and driven, plus four parallel readers over all 45
+modules. Worth knowing, because it says what has and has not been checked:
+
+**Measured and holding.** Integer micrometres: every one of the 19 presets and 18
+examples built with an instrumented writer, **zero** non-integer coordinates in
+anything drawn. Determinism: ten preset pairs built twice, byte-identical.
+Library confinement, `yield`-not-list, no silent `except` — clean across all 45
+modules. The blade→handle direction of § 3.3 is intact: no blade reaches up, no
+handle module names a blade.
+
+**What it found, and what was done.** Two `ZeroDivisionError` tracebacks and one
+infinite loop in `ctrlgrid check` (all three were degenerate zeros that arrived
+before the check that would judge them); the document write path silently
+dropping most of the page model; five error messages that could not be acted on,
+one of which printed raw micrometres against § 3.3; a missing `--version`; three
+things accepted and then ignored (a ruler font file, a tick off the edge, an
+unreachable capability guard); and twenty-six comments the code beside them had
+outgrown. All fixed, each test-first, one commit per coherent block.
+
+**Why 1192 tests had not caught the biggest one:** they exercise the blade path.
+The document path is young, has two generators and far thinner coverage, and four
+of the five serious findings were there. That is where to look first.
 
 ## Read this before writing anything
 
@@ -210,7 +258,7 @@ and knows nothing about margins.
 | `axes.py` | `AxisPeriod` — what the handle needs from a blade for § 8.3/§ 8.5 |
 | `model.py` | pydantic sections; `Section` base with `extra="forbid"` + `deferred` |
 | `loader.py` | YAML → `Document`; formats, presets, devices, name lists |
-| `pages.py` | `Geometry`, page loop, placeholders, `preflight`, `build`, `snap: pixel` |
+| `pages.py` | `Geometry`, page loop, placeholders, `preflight`, `build`, `snap: pixel`, and **`page_furniture`** — the one function that says what the handle draws around a page's own marks, used by the blade path *and* the document path |
 | `frame.py` | header/footer layout, border, background, hole marks, the edge ruler's marks and its fit check, stamp |
 | `labels.py` | counting patterns `n`/`a`/`A`, explicit lists (§ 7.10) |
 | `clip.py` | Liang–Barsky in exact rationals, shared by `perspective` and slanted `lines` |
@@ -298,14 +346,20 @@ that needed blade knowledge became a *query the handle asks* rather than geometr
 pushed into the blade. Keep that line. When a new feature tempts you to hand a
 blade the page, the margins, or the device, look first for the question the
 handle could ask instead — that is how `periodic_axes`, `check`, `sheets`,
-`supports_snap` and `capabilities` all came to be. Four recent features are the
+`supports_snap` and `capabilities` all came to be. Five recent features are the
 pattern worth studying: the relative measure resolves in the *loader's*
 validation context like `px` (no blade touched); `pattern.align` reflects
 finished marks in `pages.py` with `mirror_y` (the blade never learns which
 corner it anchored to, § 3.3); the edge ruler is drawn by the handle from the
-geometry, so no blade knows it exists; and `notebook` — the hardest case, since
+geometry, so no blade knows it exists; `notebook` — the hardest case, since
 it *composes* blades — still touches none, because a page carries a `Fill` and
-the **handle** calls the generator (§ 7.13, decision 50).
+the **handle** calls the generator (§ 7.13, decision 50); and `page_furniture`,
+which is the negative lesson made positive. It exists because the frame was
+written twice — once on the blade path, not at all on the document path — and
+six features were silently missing from half the tool for two whole generators
+(decision 52). **When something is drawn on more than one path, one function
+must say what it is.** That is the fourth time this codebase has learnt it, after
+`layout_band`, the writer wrapper and `document_page_marks`.
 
 **Nothing proper is left**; *Not done* above lists what is, and none of it is
 code. If you add a blade or option, the
@@ -336,8 +390,8 @@ supply:
 |---|---|
 | a device | the empty `quirks` (decision 31), and the rM2 figures nobody has measured on the device — the Paper Pro is owner-checked, the rM2 is not |
 | a pair of scissors | print `examples/16-net-tray.yaml` and `box-tuck-a4` at 100 %, cut, fold. The tray checks the geometry; the tuck-top also checks the thickness rule. **No test can do this**, and until someone does, the tests only agree with themselves |
-| a pypi.org login | trusted publishing, then the first real tag (there are no tags at all — the stale `v0.1.0` was deleted on 2026-07-26) |
-| use | the three § 15 questions below, and 1.0.0 itself: 0.9.0 says the features are done and the DSL has not yet met anyone else |
+| a pypi.org login | trusted publishing, then the first real tag — `v0.10.0`. Everything on this side is ready and the name is free; see *Not done* |
+| use | the three § 15 questions below, and 1.0.0 itself: 0.10.0 says the features are done and audited, and the DSL has not yet met anyone else |
 
 If a new feature *is* wanted, the recipe has not changed since M1: a design
 settled with the user first when there is a real fork in it, then a plan, then
@@ -345,7 +399,7 @@ test-first with the *why* and its § number in the comment, one coherent commit,
 a real rendered sheet read back — and the spec, `implementation-decisions.md`
 and this file updated in the same breath.
 
-Two habits earned their place the hard way and are worth keeping:
+Three habits earned their place the hard way and are worth keeping:
 
 - **Measure against the declared value, never against the drawing.** An angle
   read back with `atan2` from rounded endpoints, a position measured from the
@@ -357,6 +411,12 @@ Two habits earned their place the hard way and are worth keeping:
   because "the cross agrees with the scale" was verified — and both came from
   the same centre. The third quantity, the grid, was the only one that could
   have contradicted it, and it was not looked at until the user did.
+- **A probe that does not fire proves nothing either — suspect the probe first.**
+  During the release audit I twice concluded a check was missing, and twice the
+  check was there and my test was wrong: a name list without `{name}` in any band
+  draws no text, so the glyph check has nothing to refuse; and a pipeline's `$?`
+  is `head`'s exit code, not the tool's. Both would have been reported as bugs.
+  Before writing "X is not checked", make the probe fail on purpose.
 
 A specific paper aeroplane was considered and **refused**: it is a drawing, not
 a structure, and § 2 rules out a drawing language.

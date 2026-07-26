@@ -27,7 +27,7 @@ endobj
 endobj
 5 0 obj
 <<
-/Author () /CreationDate (D:20000101000000+00'00') /Creator (ctrlgrid 0.9.0) /Keywords () /ModDate (D:20000101000000+00'00') /Producer (ctrlgrid 0.9.0) 
+/Author () /CreationDate (D:20000101000000+00'00') /Creator (ctrlgrid 0.10.0) /Keywords () /ModDate (D:20000101000000+00'00') /Producer (ctrlgrid 0.10.0) 
   /Subject () /Title (ctrlgrid examples/01-lines-squared.yaml) /Trapped /False
 >>
 endobj
@@ -51,8 +51,8 @@ xref
 0000000199 00000 n 
 0000000402 00000 n 
 0000000470 00000 n 
-0000000723 00000 n 
-0000000782 00000 n 
+0000000725 00000 n 
+0000000784 00000 n 
 trailer
 <<
 /ID 
@@ -64,5 +64,5 @@ trailer
 /Size 8
 >>
 startxref
-2093
+2095
 %%EOF

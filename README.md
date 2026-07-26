@@ -10,7 +10,8 @@ fillable forms, perspective grids and mandalas — plus a **linked, write-on
 calendar** and a **notebook** that binds any of them into one document — for
 paper formats **and** for e-ink tablets.
 
-> **Status: 0.9.0 — everything the specification describes is built.** The
+> **Status: 0.10.0 — everything the specification describes is built, and
+> audited against a first-time user.** The
 > eleven generators of the table below work, and so do the two *document*
 > generators (`calendar`, `notebook`); the dimensional test described below
 > measures `lines` out of a finished PDF on every commit, and `net` puts the
