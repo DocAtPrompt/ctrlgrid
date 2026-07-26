@@ -483,6 +483,16 @@ supply:
 The scissors row is gone from this table because the scissors have been used —
 see *Not done*.
 
+**One idea is written down and waiting**, at the user's request rather than as a
+queue item: making the tool easy for an **LLM** to drive — a schema command, one
+page written for machines, and a marker for the small set of decisions the
+specification says the *user* must make rather than the tool
+([`2026-07-27-llm-friendly-handover.md`](superpowers/plans/2026-07-27-llm-friendly-handover.md)).
+Nothing is built; the forks in its section 5 need the user first. The framing to
+keep is the one in its section 1: **the tool does not talk to an LLM, it is easy
+for an LLM to talk to** — a language mode inside the tool would need a model, a
+key and a network, against § 2 and against § 10.1's byte-identical promise.
+
 If a new feature *is* wanted, the recipe has not changed since M1: a design
 settled with the user first when there is a real fork in it, then a plan, then
 test-first with the *why* and its § number in the comment, one coherent commit,
