@@ -12,26 +12,21 @@ no "fit to page", no stretching a grid so it comes out even.
 
 ## Current state — read this first
 
-**Every milestone (M1–M9) is complete**, and so are the four post-M9 features the
-handovers kept circling back to — all ten blades of § 7, device profiles, `px`,
-the media check, `snap: pixel`, N-up imposition, the PNG writer, `perspective`
-and `mandala` (M8, § 7.11) and the `staves` clefs (M9, § 15.3). Since M9, four
-things landed on the handle side, each small and each in the spec: the
-**interactive preset browser** (no-args, § 11.2), the **general relative measure**
-`%w`/`%h`/`%s` (§ 8.11), the cover sheet's **stroke-weight ladder** (§ 8.8), and
-**`pattern.align`** — anchor the grid at a chosen corner (§ 8.5). Since then,
-`--embed-def` — **the PDF carries its own source** as a file attachment (§ 8.8,
-was § 15 open question 5) — open question 3 closed (reportlab is BSD-3-Clause,
-verified), and **`mandala` grew five motif families** — `petals`, `beads`,
-`scallops`, `pinwheel` and a single-or-list `rosette` (§ 7.11). **The newest and
-largest addition is the `calendar` generator (§ 7.12)** — a linked, write-on
-planner PDF and the first *document generator* (owns pages, not one pattern
-area). It brought two clean new mechanisms (a `link` writer capability like
-`outline`, and a document-mode page loop in `pages.py`) and is **done through all
-its views** (title, contents, full-year overview of twelve mini-months, half-year
-1 & 2, months, opt-in weeks, days, notes) — and holidays now import from a file
-too (`holidays_file`, YAML or `.ics`, § 7.12) — the calendar is complete. Only
-M5's two device edges are otherwise left (see *Not done*).
+**Everything the specification describes is built** (2026-07-26). All eleven
+blades of § 7 — `lines`, `dots`, `grid`, `polar`, `tiling`, `maze`, `form`,
+`staves`, `perspective`, `mandala`, `net` — plus the two **document
+generators**, `calendar` (§ 7.12) and `notebook` (§ 7.13), which own their pages
+instead of one pattern area. The handle carries the whole page model: margins,
+bands, border, background, hole marks, stamp, the edge ruler (§ 8.12), the
+calibration cover, N-up, device profiles with `px` and `snap: pixel`, the media
+check, relative measures, embedded fonts, `--embed-def` and
+`--skip-unsupported`. The table below says which milestone each piece came from
+and what it decided; *Not done* says what is left, and it is short.
+
+Nothing refuses with "a later milestone" any more — that mechanism is still
+there (`Section.deferred`, `loader.DEFERRED_KEYS`) and currently empty, which is
+worth knowing when the next unbuilt key arrives.
+
 **0.9.0** is the version in the code (2026-07-26), and the number is a claim:
 everything the specification describes is built, so the only thing between here
 and 1.0.0 is *use* — nobody outside has written a definition, and nobody has yet
@@ -50,7 +45,7 @@ sheet's preview with them, since that sheet prints the version.
 uv sync --extra dev && uv run pytest && uv run ruff check .
 ```
 
-1156 tests, all green, ruff clean. Sixty-odd commits on `main`, linear history,
+1158 tests, all green, ruff clean. 151 commits on `main`, linear history,
 pushed to **[github.com/DocAtPrompt/ctrlgrid](https://github.com/DocAtPrompt/ctrlgrid)**
 (public); CI runs green there on Linux (3.11–3.13), macOS and Windows. Nineteen
 presets — one per blade (`lines`, `dots`, `polar`, `form`, `maze`,
@@ -59,12 +54,15 @@ presets — one per blade (`lines`, `dots`, `polar`, `form`, `maze`,
 different cycles (`calligraphy-a4`, `seyes-a4`, `mizige-a4`,
 `knitting-chart-a4`, `precrease-16-a4`, `plot-a4`) — and a
 rendered
-**example gallery** in [`examples/`](../examples/) — one A4 sheet per generator plus
-a multi-page maze booklet, a cover sheet and the calendar, each an ordinary
-definition, its PDF and a PNG preview, guarded by `test_every_example_validates`.
-The calendar example (`12-calendar-year.yaml`) is the one without a committed
-PDF: 405 pages and 1.6 MB, rebuilt in about a second, and the file's own comment
-says so.
+**example gallery** in [`examples/`](../examples/) — eighteen definitions:
+one A4 sheet per blade, a multi-page maze booklet, the cover sheet, a notebook,
+a calligraphy guide, an edge-ruler sheet, a box net and the calendar. Each is an
+ordinary definition with its PDF and a PNG preview, guarded by
+`test_every_example_validates`. The **calendar** is the one without a committed
+PDF (405 pages, 1.6 MB, rebuilt in about a second — its own comment says so).
+Before committing a rebuilt gallery, compare byte for byte: the maze booklet
+needs its documented `--seed 4711`, and everything else must come out identical
+unless the change was meant to move it.
 
 ### Done
 
@@ -134,50 +132,21 @@ edge, so a tick now carries its position *and* its value separately. `unit` says
   `color: color` since 2026-07.) The only device gap left is an on-device rM2
   check and the empty `quirks`.
 
-The **general relative measure** (§ 8.11) — the other M5 edge the handovers kept
-naming — is now **built**: `%w`/`%h`/`%s` (width, height, shorter side of the
-pattern area) resolve in seam 1 against the raw pattern area, the same way `px`
-resolves against a device density, so one definition fills paper and a 3:4 e-ink
-slate alike. Opted into per field via `RelativeLengthField`; refused in margins,
-bands, weights and sizes.
+**Three more things wait, and none of them is code:**
 
-**Every milestone proper is now done — M8 shipped `perspective` and `mandala`**
-(§ 7.11). Both compute their own law instead of a cycle (a generator may, § 5.3):
-`perspective` divides a base edge equally and clips its rays with Liang–Barsky,
-`mandala` counts sectors and rings on the shared `polar_geometry` (extracted
-from M3's polar so the two blades share one arithmetic, not two that drift).
-The `staves` clef conflict (§ 7.3 wanted stored vector paths, § 6 fixes the
-vocabulary at six primitives with no curve path) is **resolved and built**: § 15.3
-decided a clef is a `Text` mark in an embedded, subset music font — keeping the
-six primitives and § 15.2 intact, self-contained through embedding — and **M9
-shipped it**. The bundled font is Bravura (OFL) subset to four glyphs, converted
-CFF→TrueType (reportlab embeds no CFF), renamed off its reserved name; placement
-is pure SMuFL (`CLEF_FONT`, `CLEFS` in `staves.py`). Three things M3 built are
-still there to reuse for any new blade: `labels.py` (§ 7.10) is what `grid` and
-`tiling` label with, `generators/common.py` holds the cycle and dash fields
-every family needs, and `check()` is where a blade refuses what only the pattern
-area can disprove.
-
-**The remote is live and `main` is pushed** (public, CI green on Linux/macOS/
-Windows). Install today with `uvx --from git+https://github.com/DocAtPrompt/ctrlgrid.git
-ctrlgrid …` (README has the pip/clone forms) — that is verified working, font and
-presets included.
-
-**PyPI is deferred by the user's own choice** ("vorerst verzichten"), so `uvx
-ctrlgrid` (the bare PyPI form) does not work yet and that is intended, not a gap.
-When PyPI is wanted, two things: a human sets up trusted publishing
-(https://pypi.org/manage/account/publishing/ for `DocAtPrompt/ctrlgrid`, workflow
-`release.yml`, environment `pypi` — a pypi.org login), then a tag `v*` is pushed
-to trigger [`.github/workflows/release.yml`](../.github/workflows/release.yml).
-
-**There are no tags any more, locally or on the remote** (2026-07-26). The
-annotated `v0.1.0` used to sit on the M9 commit, 115 commits behind HEAD, where
-a stray `git push --tags` would have fired a release for a state nobody wanted
-released; it was deleted rather than moved, because a tag names a released
-state and that one never was. So the next tag is the first real one: create it
-on the commit that is to be released, with the same number as
-`ctrlgrid.__version__`, and push *that* tag deliberately. Plain
-`git push origin main` remains the everyday command.
+- **PyPI** is deferred by the user's own choice ("vorerst verzichten"), so
+  `uvx ctrlgrid` (the bare PyPI form) does not work and that is intended.
+  Install from git — `uvx --from git+https://github.com/DocAtPrompt/ctrlgrid.git
+  ctrlgrid …`, verified working, font and presets included. When it is wanted: a
+  human sets up trusted publishing (https://pypi.org/manage/account/publishing/
+  for `DocAtPrompt/ctrlgrid`, workflow `release.yml`, environment `pypi`), then
+  the first tag is pushed. **There are no tags at all** — the stale `v0.1.0` was
+  deleted on 2026-07-26 — so the next one is the first real release tag, and it
+  must carry the same number as `ctrlgrid.__version__`.
+- **Nobody has cut a net out and folded it.** `examples/16-net-tray.yaml` checks
+  the geometry, `box-tuck-a4` also checks the thickness rule. The tests agree
+  with the arithmetic; only paper can disagree with it (§ 7.14).
+- **1.0.0 waits on use**, not on features — see the version note at the top.
 
 ### Deferred features named their milestone — and the list is now empty
 
@@ -214,7 +183,7 @@ work around it.
 
 **Where the specification was genuinely silent**, the resolution is recorded in
 [`implementation-decisions.md`](implementation-decisions.md) —
-forty-five of them so far, each with the section it belongs to and the
+fifty-one of them so far, each with the section it belongs to and the
 reasoning. Read it before changing a default; several look arbitrary and are not.
 
 ## Language split
@@ -323,21 +292,23 @@ the pre-flight, never while pages are being written (§ 12 point 13).
 
 ## Where to start
 
-The architecture has held through all nine milestones and every post-M9 feature:
+The architecture has held through every milestone and everything after them:
 `generate(cfg, area, page, q)` has never changed signature, and every feature
 that needed blade knowledge became a *query the handle asks* rather than geometry
 pushed into the blade. Keep that line. When a new feature tempts you to hand a
 blade the page, the margins, or the device, look first for the question the
 handle could ask instead — that is how `periodic_axes`, `check`, `sheets`,
-`supports_snap` and `capabilities` all came to be. The recent features held it
-too and are worth studying as the pattern: the relative measure resolves in the
-*loader's* validation context like `px` (no blade touched), and `pattern.align`
-reflects finished marks in `pages.py` with `mirror_y` (the blade never learns
-which corner it anchored to, § 3.3).
+`supports_snap` and `capabilities` all came to be. Four recent features are the
+pattern worth studying: the relative measure resolves in the *loader's*
+validation context like `px` (no blade touched); `pattern.align` reflects
+finished marks in `pages.py` with `mirror_y` (the blade never learns which
+corner it anchored to, § 3.3); the edge ruler is drawn by the handle from the
+geometry, so no blade knows it exists; and `notebook` — the hardest case, since
+it *composes* blades — still touches none, because a page carries a `Fill` and
+the **handle** calls the generator (§ 7.13, decision 50).
 
-**Nothing proper is left.** What remains is small, and each names its reason in
-*Not done* above: M5's empty `quirks` and the two unverified device figures, plus
-the deferred PyPI release (the user's choice). If you add a blade or option, the
+**Nothing proper is left**; *Not done* above lists what is, and none of it is
+code. If you add a blade or option, the
 recipe is unchanged: for a blade, a registry entry in `generators/__init__.py`
 with a `config_model` and the seam-2 methods; for either, a failing test first
 (or, when a design is genuinely uncertain, validate on a real sheet then codify —
@@ -349,47 +320,51 @@ this project runs on — claims are backed by a command's output, never asserted
 
 ## What to do next
 
-A handover written at the end of the 2026-07-25 session names the order:
-[`docs/superpowers/plans/2026-07-25-next-steps-handover.md`](superpowers/plans/2026-07-25-next-steps-handover.md).
-**Phase 0 and all of phase 1 (1a–1d) are done.**
+**Nothing in the specification is unbuilt, and nothing from the 2026-07-25
+handover is left.** That handover
+([`docs/superpowers/plans/2026-07-25-next-steps-handover.md`](superpowers/plans/2026-07-25-next-steps-handover.md))
+carries a *done* note on each of its phases saying what was built and what was
+decided against; the designs and plans behind the larger ones live beside it in
+`docs/superpowers/specs/` and `docs/superpowers/plans/`, and the reasoning of
+every one is in `git log`. Read those when you need the *why* of something you
+find in the code.
 
-Phase 0: the README has its own calendar
-section, `examples/12-calendar-year.yaml` is the worked example (405 pages, two
-previews, no committed PDF), and the handbook's calendar section now covers
-`holidays_file`, marked-day colours, `legend`, the title page's image and bands,
-`day_numbers`, `half_hours` and note pads — with the band colours documented
-where they belong, in the header/footer section. The gallery itself needed no
-rebuild: every committed example PDF was regenerated and compared byte for byte,
-and all thirteen matched (the maze booklet with its documented `--seed 4711`).
-Phase 1a is built: `ruler:` (§ 8.12, decision 47), designed with the user first
-— [`docs/superpowers/specs/2026-07-25-edge-ruler-design.md`](superpowers/specs/2026-07-25-edge-ruler-design.md)
-and its plan — and the gallery's `13-ruler-edge` is the sheet you can hold a real
-ruler against. **Phase 1b is built too:** slanted `lines` families (§ 7.1,
-decision 48, its own design and plan under `docs/superpowers/`), with the
-`calligraphy-a4` preset and `14-calligraphy-italic`. The nib-width unit of § 15
-question 4 was deliberately left out of it — the angle is what unlocks
-calligraphy guides *and* origami pre-creasing; the unit is a convenience on top,
-and § 15 says that class waits on real use. 1c shipped `seyes-a4`, `mizige-a4` and `knitting-chart-a4` (Genkō yōshi was
-dropped with its reason: its furigana strip needs interrupted rules, and § 2
-rules out a drawing language), and 1d shipped `notebook`. **Phase 2 is built as well** — `net` (2b: § 7.14, decision 51, `box-tuck-a4`,
-`16-net-tray`), and 2a and 2c together in one move: the **fold notation is a
-documented convention**, not new keys (valley `style: dashed`, mountain
-`dash: [3, 1, 1, 1]`, reference `dotted`, cut `solid` — handbook and § 7.14
-carry the table, and `valley`/`mountain` as DSL values were **rejected**: two
-ways to say one thing, and the second needs maintaining), and `precrease-16-a4`
-is the sheet that shows it — a 16 × 16 grid of valleys with both diagonals as
-mountains, its margins chosen so the *pattern area itself* is the 176 mm square
-field, which is what clips the diagonals to it.
+So there is no queue. What remains needs something this session could not
+supply:
 
-**Nothing from the handover is left.** What remains is what always remained:
-the empty `quirks`, the rM2 figures nobody has checked on the device, the
-deferred PyPI release — and the box nobody has cut out and folded yet.
+| Waiting on | What |
+|---|---|
+| a device | the empty `quirks` (decision 31), and the rM2 figures nobody has measured on the device — the Paper Pro is owner-checked, the rM2 is not |
+| a pair of scissors | print `examples/16-net-tray.yaml` and `box-tuck-a4` at 100 %, cut, fold. The tray checks the geometry; the tuck-top also checks the thickness rule. **No test can do this**, and until someone does, the tests only agree with themselves |
+| a pypi.org login | trusted publishing, then the first real tag (there are no tags at all — the stale `v0.1.0` was deleted on 2026-07-26) |
+| use | the three § 15 questions below, and 1.0.0 itself: 0.9.0 says the features are done and the DSL has not yet met anyone else |
+
+If a new feature *is* wanted, the recipe has not changed since M1: a design
+settled with the user first when there is a real fork in it, then a plan, then
+test-first with the *why* and its § number in the comment, one coherent commit,
+a real rendered sheet read back — and the spec, `implementation-decisions.md`
+and this file updated in the same breath.
+
+Two habits earned their place the hard way and are worth keeping:
+
+- **Measure against the declared value, never against the drawing.** An angle
+  read back with `atan2` from rounded endpoints, a position measured from the
+  sheet's corner instead of the pattern's origin, a dash length judged by
+  arithmetic instead of by looking — each of those cost a debugging round, and
+  in every case the code was right and the ruler was wrong.
+- **A check that compares two things computed from the same number proves
+  nothing.** `plot-a4` shipped with its axes half a millimetre off the grid
+  because "the cross agrees with the scale" was verified — and both came from
+  the same centre. The third quantity, the grid, was the only one that could
+  have contradicted it, and it was not looked at until the user did.
+
 A specific paper aeroplane was considered and **refused**: it is a drawing, not
 a structure, and § 2 rules out a drawing language.
 
 ## Open questions
 
-Two of § 15's six are now settled since the last handover. **Question 3 closed**
+Of § 15's questions, only three remain, and all three are
+*decide-after-experience* calls rather than gaps. **Question 3 closed**
 — reportlab 5.0.0 is BSD-3-Clause, verified against the shipped licence text and
 package metadata (2026-07-24), permissive-compatible with ctrlgrid's MIT and
 nothing to do. **Question 5 is built** — `--embed-def` / `pages.embed_def`
@@ -404,8 +379,10 @@ owner-confirmed a colour device, § 9.2.) If you are tempted to guess at a
 number, don't — that is exactly the failure mode `source`/`verified` exists to
 prevent. The seventh — the `staves` clef — is answered in § 15.3
 (embedded music font, built in M9), and it settled part of open question 2: for
-the music case, a font *is* shipped. What remains are genuine
-*decide-after-experience* calls, not gaps: whether a font must be shipped for
-non-Latin-1 names (q2), extra domain units like nib widths / `lpi` / rastral
-sizes (q4), and the short-edge duplex flip (q6) — each cheap, each waiting on
-real use rather than a design answer.
+the music case, a font *is* shipped. The three that remain: whether a font must be shipped for non-Latin-1 names
+(q2), extra domain units like nib widths / `lpi` / rastral sizes (q4), and the
+short-edge duplex flip (q6). Each is cheap and each waits on real use rather
+than on a design answer — **q4 was put to the user in July 2026 while building
+the slanted families and deliberately left out**: the angle is what unlocks
+calligraphy guides and origami pre-creasing, the unit would be a convenience on
+top of it (§ 7.1).

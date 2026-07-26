@@ -10,20 +10,20 @@ fillable forms, perspective grids and mandalas — plus a **linked, write-on
 calendar** and a **notebook** that binds any of them into one document — for
 paper formats **and** for e-ink tablets.
 
-> **Status: M1–M9 complete (M5 core), plus the calendar.** All ten generators of
-> the table
-> below work, and the dimensional test described below measures `lines` out of
-> a finished PDF on every commit. The handle around them is finished — multi-page output, headers
+> **Status: 0.9.0 — everything the specification describes is built.** The
+> eleven generators of the table below work, and so do the two *document*
+> generators (`calendar`, `notebook`); the dimensional test described below
+> measures `lines` out of a finished PDF on every commit, and `net` puts the
+> same promise in your hands — print a box net, cut it, fold it. The handle around them is finished — multi-page output, headers
 > and footers, name lists, snapping, remainder handling, double-sided margins,
 > border, background, hole marks, stamp, an edge ruler, the calibration cover sheet, embedded
 > font files, dashed and dotted styles, free page sizes, logos in bands, and
 > relative measures (`%w`/`%h`/`%s`) so one definition fills paper and a 3:4
 > e-ink slate alike.
 >
-> Every generator in the table further down works. The options marked below as
-> arriving later are specified but not built yet; asking for one gets you a
-> message naming the milestone it arrives with — never a silently different
-> sheet.
+> Nothing in the specification is left unbuilt, so nothing refuses with "a
+> later milestone" any more. What is left is not code: a device to verify two
+> profile figures on, and a pair of scissors for the box nets.
 >
 > Working today:
 >
